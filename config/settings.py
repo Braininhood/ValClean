@@ -93,11 +93,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 # Use DATABASE_URL if available (for production), otherwise use SQLite (for development)
-import dj_database_url
+try:
+    import dj_database_url  # type: ignore
+except ImportError:
+    dj_database_url = None
 
 DATABASE_URL = config('DATABASE_URL', default=None)
 
-if DATABASE_URL:
+if DATABASE_URL and dj_database_url:
     # Production: Use PostgreSQL from DATABASE_URL (Render, Heroku, etc.)
     DATABASES = {
         'default': dj_database_url.config(
