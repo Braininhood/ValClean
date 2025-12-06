@@ -13,6 +13,8 @@ DEBUG=False
 ALLOWED_HOSTS=localhost,127.0.0.1,valclean.onrender.com
 
 # Database (Auto-provided by Render PostgreSQL)
+# IMPORTANT: You must create a PostgreSQL database service first!
+# DATABASE_URL will be automatically set when you link the database to your web service
 DATABASE_URL=<automatically-set-by-render>
 
 # Optional: Redis (if you add Redis service)
