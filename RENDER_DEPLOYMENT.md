@@ -54,29 +54,45 @@ gunicorn config.wsgi:application
 
 Once deployed, you need to run migrations and create a superuser:
 
-1. Go to Render Dashboard → Your Service → Shell
-2. Run:
-   ```bash
-   python manage.py migrate
-   python manage.py createsuperuser
-   ```
+**How to Access Render Shell:**
+1. Go to [Render Dashboard](https://dashboard.render.com)
+2. Click on your **Web Service** (the service you created, e.g., "booking-system" or "valclean")
+3. In the left sidebar, click on **"Shell"** (or look for a terminal icon)
+4. A terminal window will open in your browser
+5. You can now run Django commands directly
+
+**Run these commands in the Shell:**
+```bash
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+**Alternative: Using Render CLI**
+If you prefer using command line, you can also use Render CLI:
+1. Install Render CLI: `npm install -g render-cli`
+2. Login: `render login`
+3. Connect to shell: `render shell --service your-service-name`
 
 ### 4. Update Site Domain
 
 After deployment, update the Site framework domain:
 
-1. Go to Shell in Render Dashboard
-2. Run:
+**Access Render Shell:**
+1. Go to [Render Dashboard](https://dashboard.render.com)
+2. Click on your **Web Service**
+3. Click **"Shell"** in the left sidebar
+4. Run:
    ```bash
    python manage.py shell
    ```
-3. Execute:
+5. Execute:
    ```python
    from django.contrib.sites.models import Site
    site = Site.objects.get_current()
    site.domain = 'valclean.onrender.com'
    site.name = 'ValClean Booking System'
    site.save()
+   exit()
    ```
 
 ### 5. Access Your Application
