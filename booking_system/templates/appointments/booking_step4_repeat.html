@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Book Appointment - Repeat Options{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <h2>Book an Appointment</h2>
+            <p class="text-muted">Step 4 of 8: Repeat Options (Optional)</p>
+            
+            <!-- Progress Bar -->
+            <div class="progress mb-4" style="height: 25px;">
+                <div class="progress-bar" role="progressbar" style="width: 50%;" aria-valuenow="4" aria-valuemin="0" aria-valuemax="8">Step 4</div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5>Appointment Details</h5>
+                    <p class="mb-1"><strong>Service:</strong> {{ service.title }}</p>
+                    <p class="mb-1"><strong>Staff:</strong> {{ staff.full_name }}</p>
+                    <p class="mb-0"><strong>Date & Time:</strong> {{ start_datetime|date:"F d, Y H:i" }}</p>
+                </div>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Recurring Appointment</h5>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="make_recurring" id="make_recurring" onchange="toggleRecurringOptions()">
+                            <label class="form-check-label" for="make_recurring">
+                                Make this a recurring appointment
+                            </label>
+                        </div>
+                        
+                        <div id="recurringOptions" style="display: none;">
+                            <div class="mb-3">
+                                <label for="repeat_type" class="form-label">Repeat Type:</label>
+                                <select class="form-select" name="repeat_type" id="repeat_type">
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="daily">Daily</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="repeat_interval" class="form-label">Repeat Every:</label>
+                                <input type="number" class="form-control" name="repeat_interval" id="repeat_interval" value="1" min="1">
+                                <small class="form-text text-muted">Repeat every X weeks/months/days</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="until_date" class="form-label">Until Date (Optional):</label>
+                                <input type="date" class="form-control" name="until_date" id="until_date">
+                                <small class="form-text text-muted">Leave blank for no end date</small>
+                            </div>
+                        </div>
+                        
+                        <p class="text-muted small mt-3">Recurring appointments functionality will be fully available in a future update.</p>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'appointments:booking_step3_time' %}" class="btn btn-secondary">Back</a>
+                    <button type="submit" class="btn btn-primary">Continue to Cart</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleRecurringOptions() {
+    const checkbox = document.getElementById('make_recurring');
+    const options = document.getElementById('recurringOptions');
+    options.style.display = checkbox.checked ? 'block' : 'none';
+}
+</script>
+{% endblock %}
+

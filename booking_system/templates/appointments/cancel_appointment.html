@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cancel Appointment{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0">Cancel Appointment</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> Are you sure you want to cancel this appointment? This action cannot be undone.
+                    </div>
+                    
+                    <h5>Appointment Details</h5>
+                    <table class="table">
+                        <tr>
+                            <th>Booking Reference:</th>
+                            <td>#{{ customer_appointment.id }}</td>
+                        </tr>
+                        <tr>
+                            <th>Service:</th>
+                            <td>{{ appointment.service.title }}</td>
+                        </tr>
+                        <tr>
+                            <th>Staff:</th>
+                            <td>{{ appointment.staff.full_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date & Time:</th>
+                            <td>{{ appointment.start_date|date:"F d, Y" }} at {{ appointment.start_date|date:"H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                <span class="badge bg-{% if customer_appointment.status == 'approved' %}success{% elif customer_appointment.status == 'pending' %}warning{% elif customer_appointment.status == 'cancelled' %}danger{% else %}secondary{% endif %}">
+                                    {{ customer_appointment.get_status_display }}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-danger btn-lg">Yes, Cancel Appointment</button>
+                            <a href="{% url 'appointments:view_appointment_by_token' customer_appointment.token %}" class="btn btn-secondary btn-lg">No, Keep Appointment</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

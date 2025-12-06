@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Book Appointment - Select Service{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>Book an Appointment</h2>
+            <p class="text-muted">Step 1 of 8: Select Service</p>
+            
+            <!-- Progress Bar -->
+            <div class="progress mb-4" style="height: 25px;">
+                <div class="progress-bar" role="progressbar" style="width: 12.5%;" aria-valuenow="1" aria-valuemin="0" aria-valuemax="8">Step 1</div>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <!-- Category Filter -->
+                {% if categories %}
+                <div class="mb-4">
+                    <label class="form-label">Filter by Category:</label>
+                    <select class="form-select" id="categoryFilter" onchange="filterByCategory()">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"s" %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                
+                <!-- Service Selection -->
+                <div class="row">
+                    {% for service in services %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 {% if selected_service_id == service.id|stringformat:'s' %}border-primary{% endif %}">
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="service_id" 
+                                           id="service_{{ service.id }}" value="{{ service.id }}"
+                                           {% if selected_service_id == service.id|stringformat:'s' %}checked{% endif %}>
+                                    <label class="form-check-label" for="service_{{ service.id }}">
+                                        <h5 class="card-title">{{ service.title }}</h5>
+                                    </label>
+                                </div>
+                                {% if service.category %}
+                                <p class="text-muted small mb-2">{{ service.category.name }}</p>
+                                {% endif %}
+                                {% if service.description %}
+                                <p class="card-text small">{{ service.description|truncatewords:20 }}</p>
+                                {% endif %}
+                                <div class="mt-2">
+                                    <span class="badge bg-info">Duration: {{ service.duration }} min</span>
+                                    <span class="badge bg-success">Price: £{{ service.price }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12">
+                        <div class="alert alert-info">No services available.</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Staff Selection (Optional) -->
+                <div class="mb-3">
+                    <label for="staff_id" class="form-label">Select Staff (Optional):</label>
+                    <select class="form-select" name="staff_id" id="staff_id">
+                        <option value="">Any Available Staff</option>
+                        {% for staff in all_staff %}
+                        <option value="{{ staff.id }}">{{ staff.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">Leave blank to let the system assign the first available staff member.</small>
+                </div>
+                
+                <!-- Number of Persons -->
+                <div class="mb-3">
+                    <label for="number_of_persons" class="form-label">Number of Persons:</label>
+                    <input type="number" class="form-control" name="number_of_persons" id="number_of_persons" 
+                           value="1" min="1" required>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Continue to Extras</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterByCategory() {
+    const categoryId = document.getElementById('categoryFilter').value;
+    const url = new URL(window.location.href);
+    if (categoryId) {
+        url.searchParams.set('category', categoryId);
+    } else {
+        url.searchParams.delete('category');
+    }
+    window.location.href = url.toString();
+}
+</script>
+{% endblock %}
+

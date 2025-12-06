@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Booking System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h3>{{ title }}</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.user.label_tag }}
+                            {{ form.user }}
+                            {% if form.user.errors %}
+                                <div class="text-danger">{{ form.user.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.full_name.label_tag }}
+                            {{ form.full_name }}
+                            {% if form.full_name.errors %}
+                                <div class="text-danger">{{ form.full_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.email.label_tag }}
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-danger">{{ form.email.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.phone.label_tag }}
+                            {{ form.phone }}
+                            {% if form.phone.errors %}
+                                <div class="text-danger">{{ form.phone.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        {{ form.photo.label_tag }}
+                        {{ form.photo }}
+                        {% if form.photo.errors %}
+                            <div class="text-danger">{{ form.photo.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.info.label_tag }}
+                        {{ form.info }}
+                        {% if form.info.errors %}
+                            <div class="text-danger">{{ form.info.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.calendar_provider.label_tag }}
+                            {{ form.calendar_provider }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.calendar_id.label_tag }}
+                            {{ form.calendar_id }}
+                        </div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        {{ form.is_active }}
+                        {{ form.is_active.label_tag }}
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'staff:staff_list' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

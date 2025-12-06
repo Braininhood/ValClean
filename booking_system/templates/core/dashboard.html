@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Booking System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2>Dashboard</h2>
+        <p class="text-muted">Welcome to the Booking System</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Services</h5>
+                <h2 class="mb-0">{{ total_services }}</h2>
+                <a href="{% url 'services:service_list' %}" class="text-white">View all →</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Staff Members</h5>
+                <h2 class="mb-0">{{ total_staff }}</h2>
+                <a href="{% url 'staff:staff_list' %}" class="text-white">View all →</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Customers</h5>
+                <h2 class="mb-0">{{ total_customers }}</h2>
+                <a href="{% url 'customers:customer_list' %}" class="text-white">View all →</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Appointments</h5>
+                <h2 class="mb-0">{{ total_appointments }}</h2>
+                <a href="{% url 'admin:appointments_appointment_changelist' %}" class="text-white">View all →</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'services:service_create' %}" class="btn btn-primary">Create New Service</a>
+                    <a href="{% url 'staff:staff_create' %}" class="btn btn-success">Add Staff Member</a>
+                    <a href="{% url 'customers:customer_create' %}" class="btn btn-info">Add Customer</a>
+                    <a href="{% url 'admin:index' %}" class="btn btn-secondary">Admin Panel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>System Information</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-6">User Role:</dt>
+                    <dd class="col-sm-6">{{ user.get_role_display }}</dd>
+                    
+                    <dt class="col-sm-6">Username:</dt>
+                    <dd class="col-sm-6">{{ user.username }}</dd>
+                    
+                    <dt class="col-sm-6">Email:</dt>
+                    <dd class="col-sm-6">{{ user.email }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

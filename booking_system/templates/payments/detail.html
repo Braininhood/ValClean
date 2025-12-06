@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payment Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Payment Details #{{ payment.id }}</h4>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <tr>
+                            <th>Payment ID:</th>
+                            <td>#{{ payment.id }}</td>
+                        </tr>
+                        <tr>
+                            <th>Payment Method:</th>
+                            <td>{{ payment.get_type_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                {% if payment.status == 'completed' %}
+                                <span class="badge bg-success">{{ payment.get_status_display }}</span>
+                                {% elif payment.status == 'pending' %}
+                                <span class="badge bg-warning">{{ payment.get_status_display }}</span>
+                                {% elif payment.status == 'failed' %}
+                                <span class="badge bg-danger">{{ payment.get_status_display }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ payment.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Total Amount:</th>
+                            <td><strong>£{{ payment.total }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Amount Paid:</th>
+                            <td><strong>£{{ payment.paid }}</strong></td>
+                        </tr>
+                        {% if payment.remaining_amount > 0 %}
+                        <tr>
+                            <th>Remaining Amount:</th>
+                            <td><strong>£{{ payment.remaining_amount }}</strong></td>
+                        </tr>
+                        {% endif %}
+                        {% if payment.refund_amount > 0 %}
+                        <tr>
+                            <th>Refunded Amount:</th>
+                            <td><strong class="text-danger">£{{ payment.refund_amount }}</strong></td>
+                        </tr>
+                        {% endif %}
+                        {% if payment.transaction_id %}
+                        <tr>
+                            <th>Transaction ID:</th>
+                            <td><code>{{ payment.transaction_id }}</code></td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>Created At:</th>
+                            <td>{{ payment.created_at|date:"F d, Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Updated:</th>
+                            <td>{{ payment.updated_at|date:"F d, Y H:i" }}</td>
+                        </tr>
+                    </table>
+                    
+                    {% if payment.details %}
+                    <div class="mt-4">
+                        <h5>Additional Details</h5>
+                        <pre class="bg-light p-3">{{ payment.details|pprint }}</pre>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-4">
+                        {% if user.role == 'customer' %}
+                        <a href="{% url 'customers:customer_dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+                        {% elif user.role == 'staff' %}
+                        <a href="{% url 'staff:staff_dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+                        {% else %}
+                        <a href="{% url 'admin:index' %}" class="btn btn-primary">Back to Admin</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

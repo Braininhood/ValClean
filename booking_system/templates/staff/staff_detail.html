@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ staff.full_name }} - Booking System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 mx-auto">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3>{{ staff.full_name }}</h3>
+                <div>
+                    <a href="{% url 'staff:staff_edit' staff.pk %}" class="btn btn-sm btn-primary">Edit</a>
+                    <a href="{% url 'staff:staff_schedule_edit' staff.pk %}" class="btn btn-sm btn-info">Edit Schedule</a>
+                    <a href="{% url 'staff:staff_list' %}" class="btn btn-sm btn-secondary">Back to List</a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        {% if staff.photo %}
+                            <img src="{{ staff.photo.url }}" alt="{{ staff.full_name }}" class="img-fluid rounded">
+                        {% else %}
+                            <div class="bg-secondary text-white rounded d-flex align-items-center justify-content-center" style="height: 200px;">
+                                No Photo
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-9">
+                        <dl class="row">
+                            <dt class="col-sm-3">Email:</dt>
+                            <dd class="col-sm-9">{{ staff.email }}</dd>
+                            
+                            <dt class="col-sm-3">Phone:</dt>
+                            <dd class="col-sm-9">{{ staff.phone|default:"Not provided" }}</dd>
+                            
+                            <dt class="col-sm-3">Calendar Provider:</dt>
+                            <dd class="col-sm-9">{{ staff.get_calendar_provider_display }}</dd>
+                            
+                            <dt class="col-sm-3">Info:</dt>
+                            <dd class="col-sm-9">{{ staff.info|default:"No information" }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Weekly Schedule</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Day</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in schedule_items %}
+                        <tr>
+                            <td>{{ item.get_day_index_display }}</td>
+                            <td>{{ item.start_time }}</td>
+                            <td>{{ item.end_time }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center">No schedule set</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Services -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Services</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th>Price</th>
+                            <th>Capacity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for staff_service in staff_services %}
+                        <tr>
+                            <td>{{ staff_service.service.title }}</td>
+                            <td>£{{ staff_service.price|default:staff_service.service.price }}</td>
+                            <td>{{ staff_service.capacity|default:staff_service.service.capacity }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center">No services assigned</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

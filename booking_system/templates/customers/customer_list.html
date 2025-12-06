@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Customers - Booking System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Customers</h2>
+    <a href="{% url 'customers:customer_create' %}" class="btn btn-primary">Create Customer</a>
+</div>
+
+<!-- Search -->
+<form method="get" class="mb-4">
+    <div class="row g-3">
+        <div class="col-md-8">
+            <input type="text" name="search" class="form-control" placeholder="Search customers..." value="{{ search_query }}">
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-secondary">Search</button>
+            <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary">Clear</a>
+        </div>
+    </div>
+</form>
+
+<!-- Customers Table -->
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>City</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in page_obj %}
+                <tr>
+                    <td><a href="{% url 'customers:customer_detail' customer.pk %}">{{ customer.name }}</a></td>
+                    <td>{{ customer.email }}</td>
+                    <td>{{ customer.phone|default:"-" }}</td>
+                    <td>{{ customer.city|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'customers:customer_detail' customer.pk %}" class="btn btn-sm btn-outline-info">View</a>
+                        <a href="{% url 'customers:customer_edit' customer.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <a href="{% url 'customers:customer_delete' customer.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">No customers found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page=1">First</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                
+                <li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

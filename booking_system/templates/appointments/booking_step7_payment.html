@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Book Appointment - Payment{% endblock %}
+
+{% block extra_css %}
+<style>
+    .payment-method-card {
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .payment-method-card:hover {
+        border-color: #0d6efd;
+        background-color: #f8f9fa;
+    }
+    .payment-method-card.selected {
+        border-color: #0d6efd;
+        background-color: #e7f1ff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <h2>Book an Appointment</h2>
+            <p class="text-muted">Step 7 of 8: Payment</p>
+            
+            <!-- Progress Bar -->
+            <div class="progress mb-4" style="height: 25px;">
+                <div class="progress-bar" role="progressbar" style="width: 87.5%;" aria-valuenow="7" aria-valuemin="0" aria-valuemax="8">Step 7</div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5>Payment Summary</h5>
+                    <table class="table">
+                        <tr>
+                            <th>Service:</th>
+                            <td>{{ service.title }}</td>
+                        </tr>
+                        <tr>
+                            <th>Staff:</th>
+                            <td>{{ staff.full_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Total Amount:</th>
+                            <td><strong>£{{ total_price }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Select Payment Method</h5>
+                        
+                        <div class="payment-method-card selected" onclick="selectPaymentMethod('local')">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="payment_method" 
+                                       id="payment_local" value="local" checked>
+                                <label class="form-check-label w-100" for="payment_local">
+                                    <strong>Pay on Site</strong>
+                                    <br>
+                                    <small class="text-muted">Pay when you arrive at the appointment</small>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        {% if STRIPE_PUBLISHABLE_KEY %}
+                        <div class="payment-method-card" onclick="selectPaymentMethod('stripe')">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="payment_method" 
+                                       id="payment_stripe" value="stripe">
+                                <label class="form-check-label w-100" for="payment_stripe">
+                                    <strong>Credit/Debit Card</strong>
+                                    <br>
+                                    <small class="text-muted">Secure payment via Stripe</small>
+                                </label>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if PAYPAL_CLIENT_ID %}
+                        <div class="payment-method-card" onclick="selectPaymentMethod('paypal')">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="payment_method" 
+                                       id="payment_paypal" value="paypal">
+                                <label class="form-check-label w-100" for="payment_paypal">
+                                    <strong>PayPal</strong>
+                                    <br>
+                                    <small class="text-muted">Pay with your PayPal account</small>
+                                </label>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'appointments:booking_step6_customer' %}" class="btn btn-secondary">Back</a>
+                    <button type="submit" class="btn btn-primary">Complete Booking</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectPaymentMethod(method) {
+    // Update radio button
+    document.getElementById('payment_' + method).checked = true;
+    
+    // Update card styling
+    document.querySelectorAll('.payment-method-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    event.currentTarget.classList.add('selected');
+}
+</script>
+{% endblock %}
+
