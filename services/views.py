@@ -110,15 +110,45 @@ def service_list(request):
 @user_passes_test(is_admin_or_staff)
 def service_create(request):
     """Create a new service."""
+    # Check if this is a staff member creating a service
+    is_staff = request.user.role == 'staff'
+    staff = None
+    if is_staff:
+        try:
+            from staff.models import Staff
+            staff = Staff.objects.get(user=request.user)
+        except:
+            pass
+    
     if request.method == 'POST':
         form = ServiceForm(request.POST)
         if form.is_valid():
             service = form.save()
-            messages.success(request, f'Service "{service.title}" created successfully.')
-            return redirect('services:service_list')
+            
+            # If staff created the service, automatically assign it to them
+            if staff:
+                from staff.models import StaffService
+                StaffService.objects.get_or_create(
+                    staff=staff,
+                    service=service,
+                    defaults={
+                        'price': service.price,
+                        'capacity': service.capacity,
+                    }
+                )
+                messages.success(request, f'Service "{service.title}" created and assigned to you successfully.')
+                return redirect('staff:staff_dashboard')
+            else:
+                messages.success(request, f'Service "{service.title}" created successfully.')
+                return redirect('services:service_list')
     else:
         form = ServiceForm()
-    return render(request, 'services/service_form.html', {'form': form, 'title': 'Create Service'})
+    
+    return render(request, 'services/service_form.html', {
+        'form': form, 
+        'title': 'Create Service',
+        'is_staff': is_staff,
+    })
 
 
 @login_required
