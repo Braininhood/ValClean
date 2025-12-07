@@ -43,14 +43,9 @@ def staff_dashboard(request):
     try:
         staff = Staff.objects.get(user=request.user)
     except Staff.DoesNotExist:
-        # If staff profile doesn't exist, show message
-        messages.info(request, 'Please complete your staff profile.')
-        return render(request, 'staff/staff_dashboard.html', {
-            'staff': None,
-            'upcoming_appointments': [],
-            'today_appointments': [],
-            'total_appointments': 0,
-        })
+        # If staff profile doesn't exist, redirect to profile completion
+        messages.warning(request, 'Please complete your staff profile to continue.')
+        return redirect('staff:staff_complete_profile')
     
     # Get upcoming appointments for this staff member (with customer info)
     now = timezone.now()
@@ -125,6 +120,60 @@ def staff_create(request):
 
 
 @login_required
+def staff_complete_profile(request):
+    """Allow staff to complete their profile after registration."""
+    # Check if user is staff
+    if request.user.role != 'staff':
+        messages.error(request, 'This page is only for staff members.')
+        return redirect('home')
+    
+    # Check if profile already exists
+    try:
+        staff = Staff.objects.get(user=request.user)
+        messages.info(request, 'Your staff profile already exists. You can edit it below.')
+        return redirect('staff:staff_edit', pk=staff.pk)
+    except Staff.DoesNotExist:
+        pass
+    
+    if request.method == 'POST':
+        form = StaffForm(request.POST, request.FILES)
+        if form.is_valid():
+            staff = form.save(commit=False)
+            # Automatically link to current user
+            staff.user = request.user
+            # Set default values
+            if not staff.email:
+                staff.email = request.user.email
+            if not staff.full_name:
+                staff.full_name = f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username
+            staff.is_active = True
+            staff.visibility = 'public'
+            staff.save()
+            messages.success(request, 'Staff profile created successfully! You can now manage your schedule and services.')
+            return redirect('staff:staff_dashboard')
+    else:
+        # Pre-fill form with user data
+        initial_data = {
+            'user': request.user,
+            'email': request.user.email,
+            'full_name': f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username,
+            'phone': request.user.phone if hasattr(request.user, 'phone') else '',
+            'is_active': True,
+            'visibility': 'public',
+        }
+        form = StaffForm(initial=initial_data)
+        # Make user field read-only (it's automatically set)
+        form.fields['user'].widget.attrs['readonly'] = True
+        form.fields['user'].widget.attrs['disabled'] = True
+    
+    return render(request, 'staff/staff_form.html', {
+        'form': form,
+        'title': 'Complete Your Staff Profile',
+        'is_completion': True,
+    })
+
+
+@login_required
 def staff_edit(request, pk):
     """Edit a staff member - accessible by admin or the staff member themselves."""
     staff = get_object_or_404(Staff, pk=pk)
@@ -143,7 +192,7 @@ def staff_edit(request, pk):
             messages.success(request, f'Staff profile updated successfully.')
             # Redirect based on user role
             if request.user.role == 'staff':
-                return redirect('profile')
+                return redirect('staff:staff_dashboard')
             return redirect('staff:staff_list')
     else:
         form = StaffForm(instance=staff)

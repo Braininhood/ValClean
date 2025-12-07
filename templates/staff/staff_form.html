@@ -12,7 +12,15 @@
             <div class="card-body">
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
+                    
+                    {% if is_completion %}
+                    <div class="alert alert-info">
+                        <strong>Welcome!</strong> Please complete your staff profile. All fields marked with * are required.
+                    </div>
+                    {% endif %}
+                    
                     <div class="row">
+                        {% if not is_completion %}
                         <div class="col-md-6 mb-3">
                             {{ form.user.label_tag }}
                             {{ form.user }}
@@ -27,6 +35,16 @@
                                 <div class="text-danger">{{ form.full_name.errors }}</div>
                             {% endif %}
                         </div>
+                        {% else %}
+                        <div class="col-md-12 mb-3">
+                            {{ form.full_name.label_tag }}
+                            {{ form.full_name }}
+                            <small class="form-text text-muted">Your full name as it will appear to customers</small>
+                            {% if form.full_name.errors %}
+                                <div class="text-danger">{{ form.full_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -54,27 +72,53 @@
                     <div class="mb-3">
                         {{ form.info.label_tag }}
                         {{ form.info }}
+                        <small class="form-text text-muted">Tell customers about yourself, your experience, and specialties</small>
                         {% if form.info.errors %}
                             <div class="text-danger">{{ form.info.errors }}</div>
                         {% endif %}
                     </div>
+                    
+                    {% if not is_completion %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.visibility.label_tag }}
+                            {{ form.visibility }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.position.label_tag }}
+                            {{ form.position }}
+                            <small class="form-text text-muted">Display order (lower numbers appear first)</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             {{ form.calendar_provider.label_tag }}
                             {{ form.calendar_provider }}
+                            <small class="form-text text-muted">Optional: Connect your calendar for automatic sync</small>
                         </div>
                         <div class="col-md-6 mb-3">
                             {{ form.calendar_id.label_tag }}
                             {{ form.calendar_id }}
+                            <small class="form-text text-muted">Required if calendar provider is selected</small>
                         </div>
                     </div>
+                    
+                    {% if not is_completion %}
                     <div class="mb-3 form-check">
                         {{ form.is_active }}
                         {{ form.is_active.label_tag }}
                     </div>
+                    {% endif %}
+                    
                     <div class="d-flex justify-content-between">
+                        {% if is_completion %}
+                        <a href="{% url 'home' %}" class="btn btn-secondary">Skip for Now</a>
+                        {% else %}
                         <a href="{% url 'staff:staff_list' %}" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary">Save</button>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary">{% if is_completion %}Complete Profile{% else %}Save{% endif %}</button>
                     </div>
                 </form>
             </div>

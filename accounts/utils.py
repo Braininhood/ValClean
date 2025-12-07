@@ -11,7 +11,13 @@ def get_redirect_url_for_user(user):
     if user.is_superuser or user.role == 'admin':
         return 'admin:index'
     elif user.role == 'staff':
-        return 'staff:staff_dashboard'
+        # Check if staff profile exists, if not redirect to completion
+        try:
+            from staff.models import Staff
+            Staff.objects.get(user=user)
+            return 'staff:staff_dashboard'
+        except Staff.DoesNotExist:
+            return 'staff:staff_complete_profile'
     elif user.role == 'customer':
         return 'customers:customer_dashboard'
     else:

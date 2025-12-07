@@ -59,8 +59,8 @@ def booking_step1_service(request):
     """Step 1: Service Selection"""
     from appointments.utils import get_staff_for_service
     
-    categories = Category.objects.filter(is_active=True)
-    services = Service.objects.filter(is_active=True)
+    categories = Category.objects.filter(is_active=True, visibility='public')
+    services = Service.objects.filter(is_active=True, visibility='public')
     
     # Filter by category if provided
     category_id = request.GET.get('category')

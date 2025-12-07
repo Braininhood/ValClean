@@ -8,6 +8,7 @@ app_name = 'staff'
 
 urlpatterns = [
     path('dashboard/', views.staff_dashboard, name='staff_dashboard'),
+    path('complete-profile/', views.staff_complete_profile, name='staff_complete_profile'),
     path('', views.staff_list, name='staff_list'),
     path('create/', views.staff_create, name='staff_create'),
     path('<int:pk>/', views.staff_detail, name='staff_detail'),
