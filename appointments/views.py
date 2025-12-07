@@ -117,6 +117,8 @@ def booking_step1_service(request):
 @login_required
 def booking_step2_extras(request):
     """Step 2: Extras Selection (Optional)"""
+    from services.models import ServiceExtra
+    
     booking_data = get_booking_data(request)
     
     if 'service_id' not in booking_data:
@@ -129,12 +131,32 @@ def booking_step2_extras(request):
         messages.error(request, 'Service not found.')
         return redirect('appointments:booking_step1_service')
     
+    # Get available extras for this service
+    extras = ServiceExtra.objects.filter(service=service, is_active=True).order_by('position', 'title')
+    
     context = {
         'service': service,
+        'extras': extras,
     }
     
     if request.method == 'POST':
-        # TODO: Implement extras when Extras model is created
+        selected_extras = []
+        # Get selected extras
+        for extra in extras:
+            extra_id = request.POST.get(f'extra_{extra.id}')
+            if extra_id:
+                quantity = int(request.POST.get(f'extra_quantity_{extra.id}', 1))
+                selected_extras.append({
+                    'id': extra.id,
+                    'title': extra.title,
+                    'price': float(extra.price),
+                    'duration': extra.duration,
+                    'quantity': quantity,
+                })
+        
+        save_booking_data(request, {
+            'extras': selected_extras,
+        })
         request.session[SESSION_KEY_BOOKING_STEP] = 2
         return redirect('appointments:booking_step3_time')
     

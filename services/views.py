@@ -6,8 +6,8 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
-from .models import Category, Service
-from .forms import CategoryForm, ServiceForm
+from .models import Category, Service, ServiceExtra
+from .forms import CategoryForm, ServiceForm, ServiceExtraForm
 
 
 def is_admin_or_staff(user):
@@ -124,6 +124,49 @@ def service_create(request):
         form = ServiceForm(request.POST)
         if form.is_valid():
             service = form.save()
+            
+            # Handle extras if provided
+            # Get all extra fields from POST
+            extra_titles = request.POST.getlist('extra_title')
+            extra_descriptions = request.POST.getlist('extra_description')
+            extra_prices = request.POST.getlist('extra_price')
+            extra_durations = request.POST.getlist('extra_duration')
+            
+            # Also check for pipe-separated format (from JavaScript)
+            extras_data = request.POST.getlist('extras')
+            if extras_data:
+                for i, extra_data in enumerate(extras_data):
+                    if extra_data and extra_data.strip():
+                        # Parse extra data (format: title|description|price|duration)
+                        parts = extra_data.split('|')
+                        if len(parts) >= 1 and parts[0].strip():
+                            try:
+                                ServiceExtra.objects.create(
+                                    service=service,
+                                    title=parts[0].strip() if parts[0] else f'Extra {i+1}',
+                                    description=parts[1].strip() if len(parts) > 1 and parts[1] else '',
+                                    price=float(parts[2]) if len(parts) > 2 and parts[2] else 0.00,
+                                    duration=int(parts[3]) if len(parts) > 3 and parts[3] else 0,
+                                    position=i,
+                                )
+                            except (ValueError, IndexError):
+                                pass
+            
+            # Also handle individual extra fields if provided
+            if extra_titles:
+                for i, title in enumerate(extra_titles):
+                    if title and title.strip():
+                        try:
+                            ServiceExtra.objects.create(
+                                service=service,
+                                title=title.strip(),
+                                description=extra_descriptions[i] if i < len(extra_descriptions) else '',
+                                price=float(extra_prices[i]) if i < len(extra_prices) and extra_prices[i] else 0.00,
+                                duration=int(extra_durations[i]) if i < len(extra_durations) and extra_durations[i] else 0,
+                                position=i,
+                            )
+                        except (ValueError, IndexError):
+                            pass
             
             # If staff created the service, automatically assign it to them
             if staff:

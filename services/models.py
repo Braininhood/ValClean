@@ -104,3 +104,35 @@ class Service(BaseModel):
     def is_all_day(self):
         """Check if service is all-day."""
         return self.start_time is not None and self.end_time is not None
+
+
+class ServiceExtra(BaseModel):
+    """Service extra/add-on model."""
+    service = models.ForeignKey(
+        Service,
+        on_delete=models.CASCADE,
+        related_name='extras'
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00
+    )
+    duration = models.IntegerField(
+        default=0,
+        help_text="Additional duration in minutes (0 if no time added)"
+    )
+    position = models.IntegerField(
+        default=9999,
+        help_text="For ordering"
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['position', 'title']
+        verbose_name_plural = "Service Extras"
+
+    def __str__(self):
+        return f"{self.service.title} - {self.title}"

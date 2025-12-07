@@ -2,7 +2,7 @@
 Forms for services app.
 """
 from django import forms
-from .models import Category, Service
+from .models import Category, Service, ServiceExtra
 
 
 class CategoryForm(forms.ModelForm):
@@ -14,6 +14,21 @@ class CategoryForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'visibility': forms.Select(attrs={'class': 'form-control'}),
+            'position': forms.NumberInput(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class ServiceExtraForm(forms.ModelForm):
+    """Service extra form."""
+    class Meta:
+        model = ServiceExtra
+        fields = ['title', 'description', 'price', 'duration', 'position', 'is_active']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'duration': forms.NumberInput(attrs={'class': 'form-control'}),
             'position': forms.NumberInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }

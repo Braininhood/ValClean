@@ -78,8 +78,29 @@
                         {{ form.is_active }}
                         {{ form.is_active.label_tag }}
                     </div>
-                    <div class="d-flex justify-content-between">
+                    
+                    <!-- Service Extras Section -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5>Service Extras (Optional)</h5>
+                            <small class="text-muted">Add optional extras that customers can select when booking</small>
+                        </div>
+                        <div class="card-body">
+                            <div id="extras-container">
+                                <!-- Extras will be added here dynamically -->
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addExtra()">
+                                <i class="bi bi-plus-circle"></i> Add Extra
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        {% if is_staff %}
+                        <a href="{% url 'staff:staff_dashboard' %}" class="btn btn-secondary">Cancel</a>
+                        {% else %}
                         <a href="{% url 'services:service_list' %}" class="btn btn-secondary">Cancel</a>
+                        {% endif %}
                         <button type="submit" class="btn btn-primary">Save</button>
                     </div>
                 </form>
@@ -87,5 +108,86 @@
         </div>
     </div>
 </div>
+
+<script>
+let extraCount = 0;
+
+function addExtra() {
+    const container = document.getElementById('extras-container');
+    const extraDiv = document.createElement('div');
+    extraDiv.className = 'card mb-3';
+    extraDiv.id = `extra-${extraCount}`;
+    extraDiv.innerHTML = `
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Extra ${extraCount + 1}</h6>
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeExtra(${extraCount})">
+                    <i class="bi bi-trash"></i> Remove
+                </button>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <label class="form-label">Title *</label>
+                    <input type="text" name="extra_title_${extraCount}" class="form-control" required placeholder="e.g., Deep Cleaning">
+                </div>
+                <div class="col-md-6 mb-2">
+                    <label class="form-label">Price (£)</label>
+                    <input type="number" name="extra_price_${extraCount}" class="form-control" step="0.01" min="0" value="0.00" placeholder="0.00">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <label class="form-label">Description</label>
+                    <textarea name="extra_description_${extraCount}" class="form-control" rows="2" placeholder="Optional description"></textarea>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <label class="form-label">Additional Duration (minutes)</label>
+                    <input type="number" name="extra_duration_${extraCount}" class="form-control" min="0" value="0" placeholder="0">
+                </div>
+            </div>
+            <input type="hidden" name="extras" id="extra_data_${extraCount}" value="">
+        </div>
+    `;
+    container.appendChild(extraDiv);
+    extraCount++;
+}
+
+function removeExtra(id) {
+    const extraDiv = document.getElementById(`extra-${id}`);
+    if (extraDiv) {
+        extraDiv.remove();
+    }
+}
+
+// Collect extras data before form submission
+document.querySelector('form').addEventListener('submit', function(e) {
+    const extrasInputs = document.querySelectorAll('input[name^="extra_title_"]');
+    const extrasData = [];
+    
+    extrasInputs.forEach((input, index) => {
+        const title = input.value.trim();
+        if (title) {
+            const priceInput = document.querySelector(`input[name="extra_price_${index}"]`);
+            const descInput = document.querySelector(`textarea[name="extra_description_${index}"]`);
+            const durationInput = document.querySelector(`input[name="extra_duration_${index}"]`);
+            
+            const price = priceInput ? priceInput.value : '0.00';
+            const description = descInput ? descInput.value.trim() : '';
+            const duration = durationInput ? durationInput.value : '0';
+            
+            extrasData.push(`${title}|${description}|${price}|${duration}`);
+        }
+    });
+    
+    // Create hidden inputs for extras
+    extrasData.forEach((data, index) => {
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'extras';
+        hiddenInput.value = data;
+        this.appendChild(hiddenInput);
+    });
+});
+</script>
 {% endblock %}
 
