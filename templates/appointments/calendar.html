@@ -93,8 +93,13 @@
                                              style="color: white; cursor: pointer;"
                                              data-bs-toggle="tooltip" 
                                              data-bs-placement="top"
-                                             title="{{ appointment.start_date|date:'H:i' }} - {{ ca.customer.name }} - {{ appointment.service.title }}">
-                                            <div class="fw-bold">{{ appointment.start_date|date:"H:i" }}</div>
+                                             title="{% if appointment.series %}[Repeat: {{ appointment.series.get_repeat_type_display }}] {% endif %}{{ appointment.start_date|date:'H:i' }} - {{ ca.customer.name }} - {{ appointment.service.title }}">
+                                            <div class="fw-bold">
+                                                {{ appointment.start_date|date:"H:i" }}
+                                                {% if appointment.series %}
+                                                <i class="bi bi-arrow-repeat" style="font-size: 0.6rem;"></i>
+                                                {% endif %}
+                                            </div>
                                             <div class="text-truncate" style="font-size: 0.75rem;">
                                                 {% if user.role == 'customer' %}
                                                     {{ appointment.staff.full_name|truncatewords:2 }}

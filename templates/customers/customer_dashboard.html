@@ -53,7 +53,17 @@
             <tbody>
                 {% for ca in upcoming_appointments %}
                 <tr>
-                    <td>{{ ca.appointment.start_date|date:"M d, Y H:i" }}</td>
+                    <td>
+                        {{ ca.appointment.start_date|date:"M d, Y H:i" }}
+                        {% if ca.appointment.series %}
+                        <br><small class="text-muted">
+                            <i class="bi bi-arrow-repeat"></i> Repeat: {{ ca.appointment.series.get_repeat_type_display }}
+                            {% if ca.appointment.series.until_date %}
+                            <br>Until: {{ ca.appointment.series.until_date|date:"M d, Y" }}
+                            {% endif %}
+                        </small>
+                        {% endif %}
+                    </td>
                     <td>{{ ca.appointment.service.title }}</td>
                     <td>{{ ca.appointment.staff.full_name }}</td>
                     <td>

@@ -35,6 +35,20 @@
                             <th>Date & Time:</th>
                             <td>{{ appointment.start_date|date:"F d, Y" }} at {{ appointment.start_date|date:"H:i" }}</td>
                         </tr>
+                        {% if series %}
+                        <tr>
+                            <th>Repeat:</th>
+                            <td>
+                                <i class="bi bi-arrow-repeat"></i> {{ series.get_repeat_type_display }} (every {{ series.repeat_interval }})
+                                {% if series.until_date %}
+                                <br><small class="text-muted">Until: {{ series.until_date|date:"F d, Y" }}</small>
+                                {% endif %}
+                                {% if total_created > 1 %}
+                                <br><small class="text-success">{{ total_created }} appointments created</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
                         <tr>
                             <th>Duration:</th>
                             <td>{{ appointment.service.duration }} minutes</td>
@@ -46,6 +60,29 @@
                             </td>
                         </tr>
                     </table>
+                    
+                    {% if conflict_appointments %}
+                    <div class="alert alert-warning mt-3">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Some Repeat Appointments Could Not Be Scheduled</h6>
+                        <p class="mb-2">The following dates were unavailable at the requested time. Alternative times are shown:</p>
+                        <ul class="mb-0">
+                            {% for conflict in conflict_appointments %}
+                            <li>
+                                <strong>{{ conflict.date|date:"F d, Y" }}</strong> at {{ conflict.original_time|time:"H:i" }} - Staff busy
+                                {% if conflict.available_slots %}
+                                <br><small class="text-muted">Available alternatives:
+                                    {% for slot in conflict.available_slots %}
+                                    {{ slot.start|date:"H:i" }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </small>
+                                {% else %}
+                                <br><small class="text-muted">No available slots on this date</small>
+                                {% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
                     
                     <div class="mt-4">
                         <h6>What's Next?</h6>

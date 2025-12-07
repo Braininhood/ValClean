@@ -101,7 +101,17 @@
                 {% for appointment in today_appointments %}
                 {% for ca in appointment.customer_appointments.all %}
                 <tr>
-                    <td>{{ appointment.start_date|date:"H:i" }}</td>
+                    <td>
+                        {{ appointment.start_date|date:"H:i" }}
+                        {% if appointment.series %}
+                        <br><small class="text-muted">
+                            <i class="bi bi-arrow-repeat"></i> Repeat: {{ appointment.series.get_repeat_type_display }}
+                            {% if appointment.series.until_date %}
+                            <br>Until: {{ appointment.series.until_date|date:"M d, Y" }}
+                            {% endif %}
+                        </small>
+                        {% endif %}
+                    </td>
                     <td>{{ appointment.service.title }}</td>
                     <td>{{ ca.customer.name }}</td>
                     <td>
@@ -141,7 +151,17 @@
                 {% for appointment in upcoming_appointments %}
                 {% for ca in appointment.customer_appointments.all %}
                 <tr>
-                    <td>{{ appointment.start_date|date:"M d, Y H:i" }}</td>
+                    <td>
+                        {{ appointment.start_date|date:"M d, Y H:i" }}
+                        {% if appointment.series %}
+                        <br><small class="text-muted">
+                            <i class="bi bi-arrow-repeat"></i> Repeat: {{ appointment.series.get_repeat_type_display }}
+                            {% if appointment.series.until_date %}
+                            <br>Until: {{ appointment.series.until_date|date:"M d, Y" }}
+                            {% endif %}
+                        </small>
+                        {% endif %}
+                    </td>
                     <td>{{ appointment.service.title }}</td>
                     <td>{{ ca.customer.name }}</td>
                     <td>

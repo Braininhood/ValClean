@@ -13,6 +13,11 @@ from decimal import Decimal
 import calendar
 import logging
 import base64
+try:
+    from dateutil.relativedelta import relativedelta
+except ImportError:
+    # Fallback if dateutil not available
+    relativedelta = None
 
 logger = logging.getLogger(__name__)
 
@@ -676,13 +681,111 @@ def booking_step8_confirmation(request):
     except:
         end_datetime = start_datetime + timedelta(minutes=service.duration)
     
+    # Check for repeat appointment settings
+    series = None
+    repeat_type = booking_data.get('repeat_type')
+    repeat_interval = booking_data.get('repeat_interval', 1)
+    until_date_str = booking_data.get('until_date', '')
+    
+    if repeat_type:
+        from .models import Series
+        # Create series
+        until_date = None
+        if until_date_str:
+            try:
+                until_date = datetime.strptime(until_date_str, '%Y-%m-%d').date()
+            except:
+                pass
+        
+        series = Series.objects.create(
+            repeat_type=repeat_type,
+            repeat_interval=int(repeat_interval),
+            until_date=until_date,
+        )
+    
     appointment = Appointment.objects.create(
         staff=staff,
         service=service,
         start_date=start_datetime,
         end_date=end_datetime,
         extras_duration=0,
+        series=series,
     )
+    
+    # Create repeat appointments if series exists
+    created_appointments = [appointment]
+    conflict_appointments = []
+    
+    if series:
+        from appointments.utils import get_available_time_slots
+        
+        current_date = start_datetime
+        occurrence_count = 0
+        max_occurrences = 100  # Safety limit
+        
+        while occurrence_count < max_occurrences:
+            # Calculate next date based on repeat type
+            if repeat_type == 'daily':
+                next_date = current_date + timedelta(days=repeat_interval)
+            elif repeat_type == 'weekly':
+                next_date = current_date + timedelta(weeks=repeat_interval)
+            elif repeat_type == 'monthly':
+                if relativedelta:
+                    next_date = current_date + relativedelta(months=repeat_interval)
+                else:
+                    # Fallback: approximate month as 30 days
+                    next_date = current_date + timedelta(days=30 * repeat_interval)
+            else:
+                break
+            
+            # Check if we've reached the until_date
+            if until_date and next_date.date() > until_date:
+                break
+            
+            # Check if staff is available at this time
+            next_date_date = next_date.date()
+            available_slots = get_available_time_slots(staff, service, next_date_date)
+            
+            # Find the closest available slot to the original time
+            original_time = start_datetime.time()
+            best_slot = None
+            min_time_diff = None
+            
+            for slot in available_slots:
+                slot_time = slot['start'].time()
+                time_diff = abs((datetime.combine(date.today(), slot_time) - datetime.combine(date.today(), original_time)).total_seconds())
+                
+                if min_time_diff is None or time_diff < min_time_diff:
+                    min_time_diff = time_diff
+                    best_slot = slot
+            
+            if best_slot:
+                # Staff is available, create appointment
+                repeat_start = best_slot['start']
+                repeat_end = repeat_start + timedelta(minutes=service.duration)
+                
+                repeat_appointment = Appointment.objects.create(
+                    staff=staff,
+                    service=service,
+                    start_date=repeat_start,
+                    end_date=repeat_end,
+                    extras_duration=0,
+                    series=series,
+                )
+                created_appointments.append(repeat_appointment)
+                current_date = repeat_start
+            else:
+                # Staff is busy, record conflict with available alternatives
+                alternative_slots = get_available_time_slots(staff, service, next_date_date)
+                conflict_appointments.append({
+                    'date': next_date_date,
+                    'original_time': original_time,
+                    'available_slots': [{'start': s['start'], 'end': s['end']} for s in alternative_slots[:3]]  # Show up to 3 alternatives
+                })
+                # Still advance to next date to continue series
+                current_date = next_date
+            
+            occurrence_count += 1
     
     # Create payment record if not already created
     payment = None
@@ -757,12 +860,29 @@ def booking_step8_confirmation(request):
     
     appointment_links = get_appointment_links(appointment, customer_appointment, request)
     
+    # Create customer appointments for all repeat appointments
+    if series and len(created_appointments) > 1:
+        for repeat_appt in created_appointments[1:]:  # Skip the first one (already created)
+            CustomerAppointment.objects.create(
+                customer=customer,
+                appointment=repeat_appt,
+                number_of_persons=booking_data.get('number_of_persons', 1),
+                extras=booking_data.get('extras', []),
+                custom_fields=booking_data.get('custom_fields', []),
+                status=CustomerAppointment.STATUS_PENDING if (payment and payment.status == PaymentModel.STATUS_PENDING) else CustomerAppointment.STATUS_APPROVED,
+                payment=payment,
+                time_zone_offset=booking_data.get('time_zone_offset', 0),
+            )
+    
     context = {
         'appointment': appointment,
         'customer_appointment': customer_appointment,
         'customer': customer,
         'qr_code': qr_code_base64,
         'appointment_links': appointment_links,
+        'series': series,
+        'conflict_appointments': conflict_appointments,
+        'total_created': len(created_appointments),
     }
     
     # Clear booking session
