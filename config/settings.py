@@ -55,9 +55,19 @@ INSTALLED_APPS = [
     'api',
 ]
 
+# Build middleware list conditionally
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Serve static files in production
+]
+
+# Add WhiteNoise if available (for production static file serving)
+try:
+    import whitenoise  # type: ignore
+    MIDDLEWARE.append('whitenoise.middleware.WhiteNoiseMiddleware')
+except ImportError:
+    pass  # WhiteNoise not installed, skip it (development mode)
+
+MIDDLEWARE.extend([
     'core.middleware.ForceHTTPSMiddleware',  # Force HTTPS for all pages
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -66,7 +76,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
+])
 
 ROOT_URLCONF = 'config.urls'
 
@@ -172,7 +182,13 @@ STATICFILES_DIRS = [
 ]
 
 # WhiteNoise configuration for serving static files in production
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# WhiteNoise storage for static files (only if whitenoise is installed)
+try:
+    import whitenoise  # type: ignore
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+except ImportError:
+    # Fallback to default static files storage if whitenoise not installed
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Media files
 MEDIA_URL = '/media/'
