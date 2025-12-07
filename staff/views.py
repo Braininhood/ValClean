@@ -241,10 +241,16 @@ def staff_detail(request, pk):
 
 
 @login_required
-@user_passes_test(is_admin)
 def staff_schedule_edit(request, staff_pk):
-    """Edit staff schedule."""
+    """Edit staff schedule - accessible by admin or the staff member themselves."""
     staff = get_object_or_404(Staff, pk=staff_pk)
+    
+    # Check permissions - staff can only edit their own schedule
+    if not can_edit_staff(request.user, staff):
+        messages.error(request, 'You do not have permission to edit this schedule.')
+        if request.user.role == 'staff':
+            return redirect('staff:staff_dashboard')
+        return redirect('staff:staff_list')
     
     if request.method == 'POST':
         # Handle schedule items
@@ -266,10 +272,109 @@ def staff_schedule_edit(request, staff_pk):
                 )
         
         messages.success(request, 'Schedule updated successfully.')
+        # Redirect based on user role
+        if request.user.role == 'staff':
+            return redirect('staff:staff_dashboard')
         return redirect('staff:staff_detail', pk=staff_pk)
     
     schedule_items = staff.schedule_items.all().order_by('day_index')
     return render(request, 'staff/staff_schedule_edit.html', {
         'staff': staff,
         'schedule_items': schedule_items,
+        'is_own_schedule': request.user.role == 'staff' and staff.user == request.user,
+    })
+
+
+@login_required
+def staff_my_schedule(request):
+    """Staff can edit their own schedule directly from dashboard."""
+    if request.user.role != 'staff':
+        messages.error(request, 'This page is only for staff members.')
+        return redirect('home')
+    
+    try:
+        staff = Staff.objects.get(user=request.user)
+    except Staff.DoesNotExist:
+        messages.warning(request, 'Please complete your staff profile first.')
+        return redirect('staff:staff_complete_profile')
+    
+    return redirect('staff:staff_schedule_edit', staff_pk=staff.pk)
+
+
+@login_required
+def staff_my_services(request):
+    """Staff can manage their assigned services."""
+    if request.user.role != 'staff':
+        messages.error(request, 'This page is only for staff members.')
+        return redirect('home')
+    
+    try:
+        staff = Staff.objects.get(user=request.user)
+    except Staff.DoesNotExist:
+        messages.warning(request, 'Please complete your staff profile first.')
+        return redirect('staff:staff_complete_profile')
+    
+    from services.models import Service
+    
+    # Get all active public services
+    all_services = Service.objects.filter(is_active=True, visibility='public').order_by('category', 'title')
+    
+    # Get currently assigned services
+    assigned_services = staff.staff_services.all().select_related('service')
+    assigned_service_ids = [ss.service.id for ss in assigned_services]
+    
+    if request.method == 'POST':
+        # Handle service assignment/removal
+        action = request.POST.get('action')
+        service_id = request.POST.get('service_id')
+        
+        if action == 'add' and service_id:
+            try:
+                service = Service.objects.get(id=service_id, is_active=True)
+                # Check if already assigned
+                if not StaffService.objects.filter(staff=staff, service=service).exists():
+                    StaffService.objects.create(
+                        staff=staff,
+                        service=service,
+                        price=service.price,  # Use service default price
+                        capacity=service.capacity,  # Use service default capacity
+                    )
+                    messages.success(request, f'Service "{service.title}" added successfully.')
+                else:
+                    messages.info(request, f'Service "{service.title}" is already assigned.')
+            except Service.DoesNotExist:
+                messages.error(request, 'Invalid service selected.')
+        
+        elif action == 'remove' and service_id:
+            try:
+                staff_service = StaffService.objects.get(staff=staff, service_id=service_id)
+                service_title = staff_service.service.title
+                staff_service.delete()
+                messages.success(request, f'Service "{service_title}" removed successfully.')
+            except StaffService.DoesNotExist:
+                messages.error(request, 'Service not found.')
+        
+        elif action == 'update' and service_id:
+            # Update price/capacity for assigned service
+            try:
+                staff_service = StaffService.objects.get(staff=staff, service_id=service_id)
+                price = request.POST.get('price')
+                capacity = request.POST.get('capacity')
+                
+                if price:
+                    staff_service.price = price
+                if capacity:
+                    staff_service.capacity = int(capacity)
+                staff_service.save()
+                messages.success(request, f'Service "{staff_service.service.title}" updated successfully.')
+            except (StaffService.DoesNotExist, ValueError):
+                messages.error(request, 'Invalid update data.')
+        
+        return redirect('staff:staff_my_services')
+    
+    return render(request, 'staff/staff_my_services.html', {
+        'staff': staff,
+        'all_services': all_services,
+        'assigned_services': assigned_services,
+        'assigned_service_ids': assigned_service_ids,
     })

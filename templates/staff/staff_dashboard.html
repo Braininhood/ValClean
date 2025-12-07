@@ -15,9 +15,44 @@
 
 {% if not staff %}
 <div class="alert alert-warning">
-    <strong>Profile Incomplete:</strong> Please contact an administrator to set up your staff profile.
+    <strong>Profile Incomplete:</strong> Please complete your staff profile to continue.
+    <a href="{% url 'staff:staff_complete_profile' %}" class="btn btn-sm btn-primary ms-2">Complete Profile</a>
 </div>
 {% else %}
+<!-- Quick Actions -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5>Quick Actions</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3 mb-2">
+                <a href="{% url 'staff:staff_edit' staff.pk %}" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-person-gear"></i><br>
+                    Edit Profile
+                </a>
+            </div>
+            <div class="col-md-3 mb-2">
+                <a href="{% url 'staff:staff_my_schedule' %}" class="btn btn-outline-info w-100">
+                    <i class="bi bi-calendar-week"></i><br>
+                    Manage Schedule
+                </a>
+            </div>
+            <div class="col-md-3 mb-2">
+                <a href="{% url 'staff:staff_my_services' %}" class="btn btn-outline-success w-100">
+                    <i class="bi bi-list-check"></i><br>
+                    My Services
+                </a>
+            </div>
+            <div class="col-md-3 mb-2">
+                <a href="{% url 'appointments:calendar_view' %}" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-calendar3"></i><br>
+                    View Calendar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 <div class="row mb-4">
     <div class="col-md-4">
         <div class="card text-white bg-primary">

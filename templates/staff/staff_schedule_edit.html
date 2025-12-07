@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_own_schedule %}My Schedule{% else %}Edit Schedule - {{ staff.full_name }}{% endif %} - Booking System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 mx-auto">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3>{% if is_own_schedule %}My Weekly Schedule{% else %}Edit Schedule - {{ staff.full_name }}{% endif %}</h3>
+                <div>
+                    {% if is_own_schedule %}
+                    <a href="{% url 'staff:staff_dashboard' %}" class="btn btn-sm btn-secondary">Back to Dashboard</a>
+                    {% else %}
+                    <a href="{% url 'staff:staff_detail' staff.pk %}" class="btn btn-sm btn-secondary">Back to Staff Detail</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="alert alert-info">
+                        <strong>Instructions:</strong> Set your working hours for each day of the week. Leave blank for days you don't work.
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Day</th>
+                                    <th>Start Time</th>
+                                    <th>End Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for day_num in "0123456" %}
+                                {% with day_index=forloop.counter0 %}
+                                {% with existing_item=None %}
+                                {% for item in schedule_items %}
+                                    {% if item.day_index == day_index %}
+                                        {% with existing_item=item %}
+                                        {% endwith %}
+                                    {% endif %}
+                                {% endfor %}
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            {% if day_index == 0 %}Monday
+                                            {% elif day_index == 1 %}Tuesday
+                                            {% elif day_index == 2 %}Wednesday
+                                            {% elif day_index == 3 %}Thursday
+                                            {% elif day_index == 4 %}Friday
+                                            {% elif day_index == 5 %}Saturday
+                                            {% elif day_index == 6 %}Sunday
+                                            {% endif %}
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        <input type="hidden" name="day_index" value="{{ day_index }}">
+                                        <input type="time" name="start_time" class="form-control" 
+                                               value="{% for item in schedule_items %}{% if item.day_index == day_index %}{{ item.start_time|time:'H:i' }}{% endif %}{% endfor %}">
+                                    </td>
+                                    <td>
+                                        <input type="time" name="end_time" class="form-control"
+                                               value="{% for item in schedule_items %}{% if item.day_index == day_index %}{{ item.end_time|time:'H:i' }}{% endif %}{% endfor %}">
+                                    </td>
+                                </tr>
+                                {% endwith %}
+                                {% endwith %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        {% if is_own_schedule %}
+                        <a href="{% url 'staff:staff_dashboard' %}" class="btn btn-secondary">Cancel</a>
+                        {% else %}
+                        <a href="{% url 'staff:staff_detail' staff.pk %}" class="btn btn-secondary">Cancel</a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary">Save Schedule</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
