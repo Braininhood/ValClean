@@ -317,6 +317,18 @@ BOOKING_SLOT_LENGTH_MINUTES = config('BOOKING_SLOT_LENGTH_MINUTES', default=15, 
 SESSION_COOKIE_AGE = 1800  # 30 minutes
 SESSION_SAVE_EVERY_REQUEST = True
 
+# CSRF Settings
+# Trusted origins for CSRF protection
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='http://localhost:8000,https://valclean.onrender.com',
+    cast=lambda v: [s.strip() for s in str(v).split(',') if s.strip()]
+)
+
+# CSRF Cookie Settings
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF token if needed
+CSRF_USE_SESSIONS = False  # Use cookie-based CSRF (default)
+
 # Security Settings - HTTPS Enforcement
 # In production (DEBUG=False): HTTPS is ALWAYS enforced
 # In development (DEBUG=True): HTTPS is disabled (Django dev server doesn't support SSL)
@@ -330,6 +342,10 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
     CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=True, cast=bool)
     
+    # Cookie SameSite settings for cross-site requests
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+    
     # HSTS - Only in production
     SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=31536000, cast=int)  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
@@ -340,6 +356,14 @@ else:
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
     SECURE_HSTS_SECONDS = 0  # Disable HSTS in development
+    
+    # Cookie SameSite settings for development
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+    
+    # Cookie SameSite settings for development
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
 
 # Security Headers (always enabled)
 SECURE_BROWSER_XSS_FILTER = True
