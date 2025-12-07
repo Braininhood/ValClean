@@ -40,7 +40,8 @@
                                                    name="extra_{{ extra.id }}" 
                                                    id="extra_{{ extra.id }}"
                                                    value="{{ extra.id }}"
-                                                   onchange="toggleExtraQuantity({{ extra.id }})">
+                                                   data-extra-id="{{ extra.id }}"
+                                                   onchange="toggleExtraQuantity(this)">
                                             <label class="form-check-label" for="extra_{{ extra.id }}">
                                                 <strong>{{ extra.title }}</strong>
                                             </label>
@@ -77,8 +78,8 @@
                 </div>
                 
                 <script>
-                function toggleExtraQuantity(extraId) {
-                    const checkbox = document.getElementById('extra_' + extraId);
+                function toggleExtraQuantity(checkbox) {
+                    const extraId = checkbox.getAttribute('data-extra-id');
                     const quantityDiv = document.getElementById('quantity_' + extraId);
                     if (checkbox.checked) {
                         quantityDiv.style.display = 'block';
