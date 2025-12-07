@@ -20,5 +20,8 @@ urlpatterns = [
     path('calendar/', views.calendar_view, name='calendar_view'),
     path('view/<str:token>/', views.view_appointment_by_token, name='view_appointment_by_token'),
     path('cancel/<str:token>/', views.cancel_appointment_by_token, name='cancel_appointment_by_token'),
+    # Appointment confirmation/approval
+    path('confirm/<int:pk>/', views.confirm_appointment, name='confirm_appointment'),
+    path('reject/<int:pk>/', views.reject_appointment, name='reject_appointment'),
 ]
 

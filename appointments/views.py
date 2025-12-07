@@ -1076,3 +1076,87 @@ def cancel_appointment_by_token(request, token):
     }
     
     return render(request, 'appointments/cancel_appointment.html', context)
+
+
+@login_required
+def confirm_appointment(request, pk):
+    """Confirm/approve a customer appointment - accessible by admin or staff."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    customer_appointment = get_object_or_404(CustomerAppointment, pk=pk)
+    
+    # Check permissions - admin or staff assigned to the appointment
+    if not (request.user.is_superuser or request.user.role == User.ROLE_ADMIN):
+        if request.user.role == User.ROLE_STAFF:
+            try:
+                from staff.models import Staff
+                staff = Staff.objects.get(user=request.user)
+                if customer_appointment.appointment.staff != staff:
+                    messages.error(request, 'You can only confirm appointments assigned to you.')
+                    return redirect('staff:staff_dashboard')
+            except Staff.DoesNotExist:
+                messages.error(request, 'Staff profile not found.')
+                return redirect('staff:staff_dashboard')
+        else:
+            messages.error(request, 'You do not have permission to confirm appointments.')
+            return redirect('home')
+    
+    if request.method == 'POST':
+        customer_appointment.status = CustomerAppointment.STATUS_APPROVED
+        customer_appointment.save()
+        messages.success(request, f'Appointment for {customer_appointment.customer.name} has been confirmed.')
+        
+        # Redirect based on user role
+        if request.user.role == User.ROLE_STAFF:
+            return redirect('staff:staff_dashboard')
+        else:
+            return redirect('appointments:calendar_view')
+    
+    context = {
+        'customer_appointment': customer_appointment,
+        'appointment': customer_appointment.appointment,
+    }
+    return render(request, 'appointments/confirm_appointment.html', context)
+
+
+@login_required
+def reject_appointment(request, pk):
+    """Reject a customer appointment - accessible by admin or staff."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    customer_appointment = get_object_or_404(CustomerAppointment, pk=pk)
+    
+    # Check permissions - admin or staff assigned to the appointment
+    if not (request.user.is_superuser or request.user.role == User.ROLE_ADMIN):
+        if request.user.role == User.ROLE_STAFF:
+            try:
+                from staff.models import Staff
+                staff = Staff.objects.get(user=request.user)
+                if customer_appointment.appointment.staff != staff:
+                    messages.error(request, 'You can only reject appointments assigned to you.')
+                    return redirect('staff:staff_dashboard')
+            except Staff.DoesNotExist:
+                messages.error(request, 'Staff profile not found.')
+                return redirect('staff:staff_dashboard')
+        else:
+            messages.error(request, 'You do not have permission to reject appointments.')
+            return redirect('home')
+    
+    if request.method == 'POST':
+        customer_appointment.status = CustomerAppointment.STATUS_REJECTED
+        customer_appointment.save()
+        messages.success(request, f'Appointment for {customer_appointment.customer.name} has been rejected.')
+        
+        # Redirect based on user role
+        if request.user.role == User.ROLE_STAFF:
+            return redirect('staff:staff_dashboard')
+        else:
+            return redirect('appointments:calendar_view')
+    
+    context = {
+        'customer_appointment': customer_appointment,
+        'appointment': customer_appointment.appointment,
+    }
+    return render(request, 'appointments/reject_appointment.html', context)
