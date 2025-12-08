@@ -16,8 +16,8 @@ class StaffForm(forms.ModelForm):
         ]
         widgets = {
             'user': forms.Select(attrs={'class': 'form-control'}),
-            'full_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'full_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'required': True}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'photo': forms.FileInput(attrs={'class': 'form-control'}),
             'info': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
@@ -27,6 +27,25 @@ class StaffForm(forms.ModelForm):
             'position': forms.NumberInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        self.is_completion = kwargs.pop('is_completion', False)
+        super().__init__(*args, **kwargs)
+        
+        # For completion form, hide user field and make certain fields required
+        if self.is_completion:
+            if 'user' in self.fields:
+                self.fields['user'].widget = forms.HiddenInput()
+            # Make required fields
+            self.fields['full_name'].required = True
+            self.fields['email'].required = True
+            # Hide fields not needed for completion
+            if 'visibility' in self.fields:
+                self.fields['visibility'].widget = forms.HiddenInput()
+            if 'position' in self.fields:
+                self.fields['position'].widget = forms.HiddenInput()
+            if 'is_active' in self.fields:
+                self.fields['is_active'].widget = forms.HiddenInput()
 
 
 class StaffScheduleItemForm(forms.ModelForm):

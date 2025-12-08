@@ -123,7 +123,13 @@ def service_create(request):
     if request.method == 'POST':
         form = ServiceForm(request.POST)
         if form.is_valid():
-            service = form.save()
+            service = form.save(commit=False)
+            # Ensure service is active and public by default (so it appears in booking)
+            if not hasattr(service, 'is_active') or service.is_active is None:
+                service.is_active = True
+            if not service.visibility:
+                service.visibility = 'public'
+            service.save()
             
             # Handle extras if provided
             # Get all extra fields from POST

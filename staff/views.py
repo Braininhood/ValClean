@@ -6,8 +6,11 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
+import logging
 from .models import Staff, StaffScheduleItem, StaffService, Holiday
 from .forms import StaffForm, StaffScheduleItemForm, StaffServiceForm, HolidayForm
+
+logger = logging.getLogger(__name__)
 
 
 def is_admin(user):
@@ -136,12 +139,12 @@ def staff_complete_profile(request):
         pass
     
     if request.method == 'POST':
-        form = StaffForm(request.POST, request.FILES)
+        form = StaffForm(request.POST, request.FILES, is_completion=True)
         if form.is_valid():
             staff = form.save(commit=False)
             # Automatically link to current user
             staff.user = request.user
-            # Set default values
+            # Set default values if not provided
             if not staff.email:
                 staff.email = request.user.email
             if not staff.full_name:
@@ -151,20 +154,17 @@ def staff_complete_profile(request):
             staff.save()
             messages.success(request, 'Staff profile created successfully! You can now manage your schedule and services.')
             return redirect('staff:staff_dashboard')
+        else:
+            # Show form errors
+            messages.error(request, 'Please correct the errors below.')
     else:
         # Pre-fill form with user data
         initial_data = {
-            'user': request.user,
             'email': request.user.email,
             'full_name': f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username,
-            'phone': request.user.phone if hasattr(request.user, 'phone') else '',
-            'is_active': True,
-            'visibility': 'public',
+            'phone': getattr(request.user, 'phone', '') if hasattr(request.user, 'phone') else '',
         }
-        form = StaffForm(initial=initial_data)
-        # Make user field read-only (it's automatically set)
-        form.fields['user'].widget.attrs['readonly'] = True
-        form.fields['user'].widget.attrs['disabled'] = True
+        form = StaffForm(initial=initial_data, is_completion=True)
     
     return render(request, 'staff/staff_form.html', {
         'form': form,

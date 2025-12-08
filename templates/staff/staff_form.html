@@ -10,13 +10,30 @@
                 <h3>{{ title }}</h3>
             </div>
             <div class="card-body">
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    <strong>Please correct the following errors:</strong>
+                    <ul class="mb-0">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>{{ field }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     
                     {% if is_completion %}
                     <div class="alert alert-info">
-                        <strong>Welcome!</strong> Please complete your staff profile. All fields marked with * are required.
+                        <strong>Welcome!</strong> Please complete your staff profile. All fields marked with <span class="text-danger">*</span> are required.
                     </div>
+                    {% endif %}
+                    
+                    {% if form.user %}
+                    {{ form.user }}
                     {% endif %}
                     
                     <div class="row">
@@ -29,7 +46,10 @@
                             {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
-                            {{ form.full_name.label_tag }}
+                            <label for="{{ form.full_name.id_for_label }}">
+                                {{ form.full_name.label }}
+                                {% if form.full_name.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
                             {{ form.full_name }}
                             {% if form.full_name.errors %}
                                 <div class="text-danger">{{ form.full_name.errors }}</div>
@@ -37,7 +57,10 @@
                         </div>
                         {% else %}
                         <div class="col-md-12 mb-3">
-                            {{ form.full_name.label_tag }}
+                            <label for="{{ form.full_name.id_for_label }}">
+                                {{ form.full_name.label }}
+                                {% if form.full_name.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
                             {{ form.full_name }}
                             <small class="form-text text-muted">Your full name as it will appear to customers</small>
                             {% if form.full_name.errors %}
@@ -48,14 +71,20 @@
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            {{ form.email.label_tag }}
+                            <label for="{{ form.email.id_for_label }}">
+                                {{ form.email.label }}
+                                {% if form.email.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
                             {{ form.email }}
                             {% if form.email.errors %}
                                 <div class="text-danger">{{ form.email.errors }}</div>
                             {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
-                            {{ form.phone.label_tag }}
+                            <label for="{{ form.phone.id_for_label }}">
+                                {{ form.phone.label }}
+                                {% if form.phone.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
                             {{ form.phone }}
                             {% if form.phone.errors %}
                                 <div class="text-danger">{{ form.phone.errors }}</div>
@@ -63,14 +92,20 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        {{ form.photo.label_tag }}
+                        <label for="{{ form.photo.id_for_label }}">
+                            {{ form.photo.label }}
+                            {% if form.photo.field.required %}<span class="text-danger">*</span>{% endif %}
+                        </label>
                         {{ form.photo }}
                         {% if form.photo.errors %}
                             <div class="text-danger">{{ form.photo.errors }}</div>
                         {% endif %}
                     </div>
                     <div class="mb-3">
-                        {{ form.info.label_tag }}
+                        <label for="{{ form.info.id_for_label }}">
+                            {{ form.info.label }}
+                            {% if form.info.field.required %}<span class="text-danger">*</span>{% endif %}
+                        </label>
                         {{ form.info }}
                         <small class="form-text text-muted">Tell customers about yourself, your experience, and specialties</small>
                         {% if form.info.errors %}
@@ -81,27 +116,55 @@
                     {% if not is_completion %}
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            {{ form.visibility.label_tag }}
+                            <label for="{{ form.visibility.id_for_label }}">
+                                {{ form.visibility.label }}
+                                {% if form.visibility.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
                             {{ form.visibility }}
+                            {% if form.visibility.errors %}
+                                <div class="text-danger">{{ form.visibility.errors }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
-                            {{ form.position.label_tag }}
+                            <label for="{{ form.position.id_for_label }}">
+                                {{ form.position.label }}
+                                {% if form.position.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
                             {{ form.position }}
                             <small class="form-text text-muted">Display order (lower numbers appear first)</small>
+                            {% if form.position.errors %}
+                                <div class="text-danger">{{ form.position.errors }}</div>
+                            {% endif %}
                         </div>
                     </div>
+                    {% else %}
+                    {{ form.visibility }}
+                    {{ form.position }}
+                    {{ form.is_active }}
                     {% endif %}
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            {{ form.calendar_provider.label_tag }}
+                            <label for="{{ form.calendar_provider.id_for_label }}">
+                                {{ form.calendar_provider.label }}
+                                {% if form.calendar_provider.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
                             {{ form.calendar_provider }}
                             <small class="form-text text-muted">Optional: Connect your calendar for automatic sync</small>
+                            {% if form.calendar_provider.errors %}
+                                <div class="text-danger">{{ form.calendar_provider.errors }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
-                            {{ form.calendar_id.label_tag }}
+                            <label for="{{ form.calendar_id.id_for_label }}">
+                                {{ form.calendar_id.label }}
+                                {% if form.calendar_id.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
                             {{ form.calendar_id }}
                             <small class="form-text text-muted">Required if calendar provider is selected</small>
+                            {% if form.calendar_id.errors %}
+                                <div class="text-danger">{{ form.calendar_id.errors }}</div>
+                            {% endif %}
                         </div>
                     </div>
                     
