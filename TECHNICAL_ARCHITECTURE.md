@@ -61,7 +61,7 @@ This document provides a detailed technical architecture for the VALClean bookin
 │                                                                   │
 │  ┌──────────────────────────────────────────────────────┐       │
 │  │         External Services Integration                  │       │
-│  │  Stripe | PayPal | Twilio | SendGrid | Google Maps   │       │
+│  │  Stripe | PayPal | Twilio | SendGrid | Google Maps | Google Places API   │       │
 │  └──────────────────────────────────────────────────────┘       │
 └───────────────────────────────────────────────────────────────────┘
 ```
@@ -343,7 +343,13 @@ profiles
 ├── phone
 ├── avatar_url
 ├── timezone
-└── preferences (JSONB)
+├── preferences (JSONB)
+├── calendar_sync_enabled (boolean)
+├── calendar_provider (enum: google, outlook, apple, none)
+├── calendar_access_token (encrypted, nullable)
+├── calendar_refresh_token (encrypted, nullable)
+├── calendar_calendar_id (string, nullable)
+└── calendar_sync_settings (JSONB) - sync preferences
 
 -- Services
 categories
@@ -380,11 +386,9 @@ staff
 ├── phone
 ├── photo_url
 ├── bio
-├── calendar_provider (enum)
-├── calendar_id
-├── calendar_data (JSONB)
 ├── is_active
 └── position
+# Note: Calendar sync now handled in profiles table for all users
 
 staff_schedules
 ├── id (PK)
@@ -400,6 +404,15 @@ staff_services
 ├── service_id (FK → services)
 ├── price_override
 └── duration_override
+
+staff_areas
+├── id (PK)
+├── staff_id (FK → staff)
+├── postcode (string) - center postcode
+├── radius_km (decimal) - service radius in kilometers
+├── is_active (boolean)
+├── created_at
+└── updated_at
 
 -- Customers
 customers
@@ -427,8 +440,8 @@ appointments
 ├── start_time (timestamp)
 ├── end_time (timestamp)
 ├── status (enum)
-├── calendar_event_id
-├── calendar_provider (enum)
+├── calendar_event_id (JSONB) - stores event IDs for each provider
+├── calendar_synced_to (JSONB) - tracks which calendars event is synced to
 ├── location_id (FK → locations, nullable)
 ├── internal_notes (text)
 └── created_at
@@ -482,6 +495,9 @@ CREATE INDEX idx_customer_appointments_appointment ON customer_appointments(appo
 CREATE INDEX idx_payments_status ON payments(status);
 CREATE INDEX idx_customers_email ON customers(email);
 CREATE INDEX idx_staff_schedules_staff_day ON staff_schedules(staff_id, day_of_week);
+CREATE INDEX idx_staff_areas_staff ON staff_areas(staff_id);
+CREATE INDEX idx_staff_areas_postcode ON staff_areas(postcode);
+CREATE INDEX idx_customers_postcode ON customers(postcode);
 ```
 
 ### 4.3 Database Optimization
@@ -495,9 +511,12 @@ CREATE INDEX idx_staff_schedules_staff_day ON staff_schedules(staff_id, day_of_w
 
 **Caching Strategy:**
 - Cache service listings (1 hour)
+- Cache services by postcode (30 minutes)
+- Cache staff by postcode (30 minutes)
 - Cache available slots (5 minutes)
 - Cache staff schedules (1 hour)
 - Cache customer data (30 minutes)
+- Cache postcode-to-area mappings (24 hours)
 
 ---
 
@@ -515,20 +534,26 @@ CREATE INDEX idx_staff_schedules_staff_day ON staff_schedules(staff_id, day_of_w
 │   └── POST   /password-reset/
 │
 ├── services/
-│   ├── GET    /
+│   ├── GET    /                           # List all services
+│   ├── GET    /by-postcode/               # Get services by postcode area
 │   ├── GET    /{id}/
-│   └── GET    /{id}/staff/
+│   └── GET    /{id}/staff/                # Get staff for service in area
 │
 ├── staff/
-│   ├── GET    /
+│   ├── GET    /                           # List all staff
+│   ├── GET    /by-postcode/               # Get staff by postcode area
 │   └── GET    /{id}/
 │
 ├── bookings/
-│   ├── GET    /available-slots/
+│   ├── GET    /available-slots/           # Get slots (filtered by postcode)
 │   ├── POST   /
 │   ├── GET    /{id}/
 │   ├── POST   /{id}/cancel/
 │   └── POST   /{id}/reschedule/
+│
+├── address/
+│   ├── POST   /autocomplete/              # Google Places autocomplete
+│   └── POST   /validate/                  # Address validation
 │
 ├── customers/
 │   ├── GET    /profile/

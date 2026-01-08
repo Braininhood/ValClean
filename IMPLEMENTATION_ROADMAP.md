@@ -47,11 +47,14 @@ This document provides a **step-by-step implementation guide** for building the 
 #### Day 5: Database Models
 **Tasks:**
 - [ ] Create User and Profile models (with role: admin, manager, staff, customer)
+- [ ] Add calendar sync fields to Profile model (calendar_provider, tokens, settings)
 - [ ] Create Manager model (with permissions configuration)
 - [ ] Create Service and Category models
 - [ ] Create Staff and StaffSchedule models
+- [ ] Create StaffArea model (postcode, radius_km)
 - [ ] Create Customer model
 - [ ] Create Appointment and CustomerAppointment models
+- [ ] Add calendar_event_id (JSON) and calendar_synced_to (JSON) to Appointment
 - [ ] Create initial migrations
 - [ ] Run migrations (SQLite)
 - [ ] Create admin superuser
@@ -133,20 +136,38 @@ This document provides a **step-by-step implementation guide** for building the 
 
 ### Week 3: Basic Booking Flow
 
-#### Day 1-2: Booking Step 1 - Service Selection
+#### Day 1-2: Booking Step 1 - Postcode Entry
 **Tasks:**
-- [ ] Create service listing page
+- [ ] Create postcode input component
+- [ ] Postcode validation (UK format)
+- [ ] API endpoint: Get services by postcode
+- [ ] API endpoint: Get staff by postcode/area
+- [ ] Postcode-to-area mapping logic
+- [ ] Service filtering by area
+- [ ] Navigation to service selection
+
+**Deliverables:**
+- Postcode entry UI
+- Postcode validation
+- Area-based service filtering
+- State management for postcode
+
+#### Day 3-4: Booking Step 2 - Service Selection (Area-Based)
+**Tasks:**
+- [ ] Create service listing page (filtered by postcode area)
 - [ ] Service card component
 - [ ] Service detail modal/page
+- [ ] Show available staff in area
 - [ ] Service selection state management
 - [ ] Navigation to next step
 
 **Deliverables:**
-- Service selection UI
+- Area-based service selection UI
 - Service details display
+- Staff availability by area
 - State management for booking
 
-#### Day 3-4: Booking Step 2 - Date & Time Selection
+#### Day 5: Booking Step 3 - Date & Time Selection
 **Tasks:**
 - [ ] Create calendar component
 - [ ] Implement time slot calculation logic
@@ -160,9 +181,11 @@ This document provides a **step-by-step implementation guide** for building the 
 - Time slot selection
 - Available slots API
 
-#### Day 5: Booking Step 3 & 4 - Details & Payment
+#### Day 5: Booking Step 4 - Details & Payment
 **Tasks:**
 - [ ] Create customer details form
+- [ ] Google Places API integration for address autocomplete
+- [ ] Address auto-fill from postcode
 - [ ] Form validation
 - [ ] Create payment page (basic)
 - [ ] Booking confirmation page
@@ -170,12 +193,16 @@ This document provides a **step-by-step implementation guide** for building the 
 - [ ] Complete booking flow
 
 **Deliverables:**
-- Complete booking flow
+- Complete booking flow (postcode-first)
+- Google Places address autocomplete
 - Form validation
 - Booking confirmation
 
 **Acceptance Criteria:**
-- Complete booking flow works end-to-end
+- Postcode-first booking flow works end-to-end
+- Services filtered by postcode area
+- Staff filtered by postcode area
+- Google Places autocomplete works
 - Data persists between steps
 - Booking creates appointment in database
 - User receives confirmation
@@ -212,43 +239,62 @@ This document provides a **step-by-step implementation guide** for building the 
 - PayPal payment integration
 - Multiple payment options
 
-#### Day 4-5: Google Calendar Integration
+#### Day 4-5: Multi-Calendar Integration (All Roles)
 **Tasks:**
 - [ ] Set up Google Calendar API
-- [ ] OAuth 2.0 flow
-- [ ] Create calendar event on booking
-- [ ] Update calendar event
+- [ ] Set up Microsoft Graph API (Outlook)
+- [ ] Set up Apple Calendar (iCal/CalDAV)
+- [ ] OAuth 2.0 flow for Google and Outlook
+- [ ] Calendar sync in Profile model (all users)
+- [ ] Calendar connection UI for all roles
+- [ ] Create calendar event on booking (auto-sync)
+- [ ] Update calendar event on changes
 - [ ] Delete calendar event on cancellation
-- [ ] Calendar sync status
+- [ ] Add custom events to external calendars (all roles)
+- [ ] Two-way sync (optional)
+- [ ] Calendar sync status dashboard
+- [ ] Bulk sync operations (admin)
+- [ ] Download .ics files
 
 **Deliverables:**
-- Google Calendar sync
-- Event creation/update/delete
-- OAuth flow
+- Google Calendar sync (all roles)
+- Outlook Calendar sync (all roles)
+- Apple Calendar support (all roles)
+- Custom event creation (all roles)
+- Calendar sync management UI
+- OAuth flow for all providers
 
 **Acceptance Criteria:**
 - Payments process successfully
-- Calendar events created automatically
+- Calendar events created automatically for all roles
+- Staff can sync schedule to personal calendar
+- Customer can sync appointments to personal calendar
+- Manager can sync appointments to personal calendar
+- Admin can sync all appointments to personal calendar
+- All roles can add custom events to external calendars
 - Webhooks handle payment status
-- OAuth flow works smoothly
+- OAuth flow works smoothly for all providers
 
 ---
 
 ### Week 5: Address Integration & Notifications
 
-#### Day 1-2: Royal Mail AddressNow Integration
+#### Day 1-2: Google Places API Integration
 **Tasks:**
-- [ ] Set up AddressNow API
-- [ ] Create address lookup endpoint
-- [ ] Implement JavaScript SDK
-- [ ] Address autocomplete component
-- [ ] Form population on selection
+- [ ] Set up Google Places API
+- [ ] Get Google API key
+- [ ] Create address autocomplete endpoint
+- [ ] Implement Google Places Autocomplete widget
+- [ ] Address form population on selection
+- [ ] Postcode extraction from address
 - [ ] Manual address entry fallback
+- [ ] Address validation
 
 **Deliverables:**
-- Address autocomplete
-- UK address validation
+- Google Places address autocomplete
+- Address validation
 - Form integration
+- Postcode extraction
 
 #### Day 3-4: Email Notifications
 **Tasks:**
@@ -344,12 +390,19 @@ This document provides a **step-by-step implementation guide** for building the 
 - [ ] Staff detail/edit pages
 - [ ] Schedule management UI
 - [ ] Service assignments
+- [ ] **Area/Postcode Assignment** (NEW)
+  - [ ] Postcode assignment interface
+  - [ ] Radius configuration (km)
+  - [ ] Multiple areas per staff
+  - [ ] Area coverage map visualization
+  - [ ] Postcode-to-area distance calculation
 - [ ] Performance metrics
 - [ ] Calendar integration per staff
 
 **Deliverables:**
 - Staff management system
 - Schedule editor
+- Area/postcode assignment system
 - Performance tracking
 
 #### Day 3-4: Customer Management
@@ -559,37 +612,43 @@ This document provides a **step-by-step implementation guide** for building the 
 - Map visualization
 - Travel time estimates
 
-#### Day 3-4: Outlook Calendar Integration
+#### Day 3-4: Calendar Sync UI & Management
 **Tasks:**
-- [ ] Microsoft Graph API setup
-- [ ] OAuth 2.0 flow
-- [ ] Calendar event creation
-- [ ] Event updates
-- [ ] Event deletion
-- [ ] Two-way sync
+- [ ] Calendar connection interface (all roles)
+- [ ] Calendar sync settings page
+- [ ] Sync status indicators
+- [ ] Manual sync trigger
+- [ ] Bulk sync operations (admin)
+- [ ] Custom event creation UI
+- [ ] Calendar event management
+- [ ] Sync error handling and retry
 
 **Deliverables:**
-- Outlook calendar sync
-- Event management
-- Sync status
+- Calendar sync UI for all roles
+- Sync management dashboard
+- Custom event creation
+- Error handling
 
-#### Day 5: Apple Calendar Support
+#### Day 5: Calendar Sync Testing & Optimization
 **Tasks:**
-- [ ] iCal file generation
-- [ ] CalDAV support (optional)
-- [ ] Calendar download
-- [ ] Event formatting
-- [ ] Recurring event support
+- [ ] Test calendar sync for all roles
+- [ ] Test custom event creation
+- [ ] Test two-way sync (if enabled)
+- [ ] Performance optimization
+- [ ] Error recovery mechanisms
+- [ ] Sync conflict resolution
 
 **Deliverables:**
-- Apple Calendar support
-- iCal downloads
-- Calendar compatibility
+- Tested calendar sync system
+- Optimized sync performance
+- Error recovery
 
 **Acceptance Criteria:**
 - Route optimization saves time
-- Calendar syncs work reliably
-- All calendar formats supported
+- Calendar syncs work reliably for all roles (Staff, Customer, Manager, Admin)
+- All calendar formats supported (Google, Outlook, Apple)
+- Custom events can be added by all roles
+- Sync errors handled gracefully
 
 ---
 

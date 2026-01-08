@@ -19,7 +19,7 @@ Welcome! This document provides a quick overview of the complete professional so
 **Key Highlights:**
 - ⚡ Fastest booking process (2.5 minutes)
 - 📱 Mobile-first design
-- 🇬🇧 UK-specific features (Royal Mail AddressNow)
+- 📍 Location-based booking (Postcode-first with Google Places API)
 - 🗺️ Route optimization
 - 📊 Advanced analytics
 
@@ -73,6 +73,8 @@ Welcome! This document provides a quick overview of the complete professional so
 - Payment history
 - Service history
 - Profile management
+- Calendar sync (Google, Outlook, Apple)
+- Add appointments to personal calendar
 
 ### For Staff (Powerful Tools)
 ✅ **Staff Portal & Mobile App**
@@ -87,6 +89,12 @@ Welcome! This document provides a quick overview of the complete professional so
 - Break management
 - Holiday management
 - Calendar integration
+
+✅ **Calendar Sync**
+- Connect Google, Outlook, or Apple Calendar
+- Sync schedule to personal calendar
+- Add custom events to external calendars
+- Two-way sync (optional)
 
 ### For Managers (Flexible Management)
 ✅ **Manager Dashboard**
@@ -155,7 +163,7 @@ Welcome! This document provides a quick overview of the complete professional so
 - **SMS:** Twilio
 - **Email:** SendGrid or Resend
 - **Calendar:** Google, Outlook, Apple
-- **Address:** Royal Mail AddressNow (UK)
+- **Address:** Google Places API (autocomplete)
 - **Maps:** Google Maps API
 
 ---
@@ -174,7 +182,9 @@ Welcome! This document provides a quick overview of the complete professional so
 **Goal:** Professional booking experience
 - Payment integration (Stripe, PayPal)
 - Calendar sync (Google, Outlook)
-- Address autocomplete (Royal Mail)
+- Postcode-first booking flow
+- Google Places address autocomplete
+- Area-based service filtering
 - Email/SMS notifications
 
 ### Phase 3: Management Tools (Weeks 6-8)
@@ -221,8 +231,9 @@ Welcome! This document provides a quick overview of the complete professional so
 - Works offline (future)
 
 ### 🇬🇧 UK-Specific
-- Royal Mail AddressNow integration
-- UK address validation
+- Google Places API integration
+- Postcode-first booking flow
+- Staff area/postcode assignment with radius
 - Local payment methods
 - UK business compliance
 

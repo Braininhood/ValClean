@@ -83,7 +83,9 @@ Based on VALClean's cleaning services business:
 
 **Must-Have Features:**
 - 🎯 **Easy Booking** - Simple, fast booking for cleaning services
-- 🎯 **Address Management** - UK address lookup and validation
+- 🎯 **Address Management** - Google Places API for address autocomplete
+- 🎯 **Postcode-First Booking** - Start with postcode, show area-specific services
+- 🎯 **Staff Area Assignment** - Staff assigned to postcodes/areas with radius
 - 🎯 **Service Packages** - Different cleaning service types
 - 🎯 **Staff Assignment** - Assign cleaners to jobs
 - 🎯 **Route Optimization** - Efficient scheduling for field staff
@@ -247,7 +249,7 @@ Based on VALClean's cleaning services business:
 - **SMS**: Twilio
 - **Email**: SendGrid or Resend
 - **Calendar**: Google Calendar API, Microsoft Graph API
-- **Address**: Royal Mail AddressNow API
+- **Address**: Google Places API (address autocomplete)
 - **Maps**: Google Maps API
 - **Storage**: AWS S3 or Cloudflare R2
 
@@ -259,28 +261,37 @@ Based on VALClean's cleaning services business:
 
 #### 4.1.1 Booking Flow - Simplified 4-Step Process
 
-**Step 1: Service Selection** (30 seconds)
+**Step 1: Enter Postcode** (10 seconds)
+- Postcode input field
+- Real-time validation
+- Show available services in area
+- Display service coverage map (optional)
+- Mobile-optimized input
+
+**Step 2: Service Selection** (30 seconds)
+- Show only services available in postcode area
 - Visual service cards with images
 - Clear pricing and duration
 - One-click selection
 - Service comparison view
+- Shows available staff for selected service in area
 - Mobile-optimized layout
 
-**Step 2: Date & Time** (20 seconds)
+**Step 3: Date & Time** (20 seconds)
 - Visual calendar picker
-- Available time slots highlighted
+- Available time slots highlighted (only for staff in area)
 - Smart suggestions (next available)
 - Time zone detection
 - Quick selection buttons
+- Shows staff availability in postcode area
 
-**Step 3: Your Details** (60 seconds)
+**Step 4: Your Details & Payment** (60 seconds)
 - Simple form (name, email, phone, address)
-- Address autocomplete (Royal Mail AddressNow)
+- Address autocomplete (Google Places API)
+- Auto-fill address from postcode
 - Auto-save progress
 - Guest checkout option
 - Social login (Google, Facebook)
-
-**Step 4: Confirm & Pay** (30 seconds)
 - Clear pricing breakdown
 - Multiple payment options
 - Secure payment processing
@@ -316,6 +327,16 @@ Based on VALClean's cleaning services business:
 - Saved addresses
 - Notification preferences
 - Service preferences
+
+**Calendar Sync:**
+- Connect Google Calendar
+- Connect Outlook Calendar
+- Connect Apple Calendar (iCal/CalDAV)
+- Sync appointments to personal calendar
+- Add appointments to external calendars
+- Two-way sync (optional)
+- Download .ics files
+- Calendar sync status
 
 ### 4.2 Staff Experience (Powerful Management)
 
@@ -359,6 +380,16 @@ Based on VALClean's cleaning services business:
 - Filter by service, customer
 - Export to personal calendar
 
+**Calendar Sync:**
+- Connect Google Calendar
+- Connect Outlook Calendar
+- Connect Apple Calendar (iCal/CalDAV)
+- Sync schedule to personal calendar
+- Add custom events to external calendars
+- Two-way sync (optional)
+- Download .ics files
+- Calendar sync status
+
 **Customer Management:**
 - Customer history
 - Notes and preferences
@@ -382,6 +413,16 @@ Based on VALClean's cleaning services business:
 - View reports for assigned scope
 - Staff scheduling (if permission granted)
 - Customer management (if permission granted)
+
+**Calendar Sync:**
+- Connect Google Calendar
+- Connect Outlook Calendar
+- Connect Apple Calendar (iCal/CalDAV)
+- Sync appointments to personal calendar
+- Add custom events to external calendars
+- Two-way sync (optional)
+- Download .ics files
+- Calendar sync status
 
 ### 4.4 Admin Experience (Complete Control)
 
@@ -427,6 +468,17 @@ Based on VALClean's cleaning services business:
 - Auto-assignment suggestions
 - Route optimization view
 
+**Calendar Sync:**
+- Connect Google Calendar
+- Connect Outlook Calendar
+- Connect Apple Calendar (iCal/CalDAV)
+- Sync all appointments to personal calendar
+- Add custom events to external calendars
+- Two-way sync (optional)
+- Bulk sync operations
+- Download .ics files
+- Calendar sync status and management
+
 #### 4.4.3 Staff Management
 
 **Staff Profiles:**
@@ -436,6 +488,11 @@ Based on VALClean's cleaning services business:
 - Pricing per service
 - Schedule management
 - Performance metrics
+- **Area/Postcode Assignment** (NEW)
+  - Assign postcodes with radius (km)
+  - Multiple postcode areas per staff
+  - Service radius configuration
+  - Area coverage map view
 
 **Scheduling:**
 - Weekly schedule editor
@@ -444,11 +501,19 @@ Based on VALClean's cleaning services business:
 - Availability rules
 - Calendar integration per staff
 
+**Area Management:**
+- Postcode assignment interface
+- Radius configuration (km)
+- Multiple areas per staff
+- Area coverage visualization
+- Staff availability by area
+
 **Performance:**
 - Jobs completed
 - Customer ratings
 - Revenue generated
 - Utilization rate
+- Area coverage statistics
 
 #### 4.4.4 Customer Management
 
@@ -582,8 +647,12 @@ Based on VALClean's cleaning services business:
 
 **Features:**
 - ✅ Time slot calculation
-- ✅ Calendar integration (Google, Outlook)
-- ✅ Address autocomplete (Royal Mail)
+- ✅ Multi-calendar integration (Google, Outlook, Apple) - All roles
+- ✅ Calendar sync for Staff, Customer, Manager, Admin
+- ✅ Custom event creation to external calendars
+- ✅ Address autocomplete (Google Places API)
+- ✅ Postcode-first booking flow
+- ✅ Area-based service filtering
 - ✅ Payment integration (Stripe)
 - ✅ Email notifications
 - ✅ Booking confirmation
@@ -677,30 +746,38 @@ Based on VALClean's cleaning services business:
    └─> Finds VALClean website
    └─> Clicks "Book Now" button
 
-2. Service Selection
-   └─> Views service options
+2. Postcode Entry
+   └─> Enters postcode
+   └─> System validates postcode
+   └─> Shows available services in area
+   └─> Shows service coverage map (optional)
+
+3. Service Selection
+   └─> Views services available in postcode area
    └─> Selects service (e.g., "Deep Clean")
    └─> Sees price and duration
+   └─> Sees available staff in area
 
-3. Scheduling
+4. Scheduling
    └─> Views calendar
    └─> Selects date
-   └─> Selects time slot
+   └─> Selects time slot (only staff in area shown)
    └─> Confirms selection
 
-4. Details Entry
+5. Details Entry
    └─> Enters name and email
    └─> Enters phone number
-   └─> Enters address (with autocomplete)
+   └─> Enters address (Google Places autocomplete)
+   └─> Address auto-filled from postcode
    └─> Adds special instructions (optional)
 
-5. Payment
+6. Payment
    └─> Reviews booking summary
    └─> Selects payment method
    └─> Enters payment details
    └─> Confirms payment
 
-6. Confirmation
+7. Confirmation
    └─> Receives confirmation email
    └─> Receives SMS reminder (optional)
    └─> Downloads calendar file
@@ -801,6 +878,12 @@ Profile
 - phone, avatar
 - timezone
 - preferences (JSON)
+- calendar_sync_enabled (boolean)
+- calendar_provider (enum: google, outlook, apple, none)
+- calendar_access_token (encrypted, nullable)
+- calendar_refresh_token (encrypted, nullable)
+- calendar_calendar_id (string, nullable)
+- calendar_sync_settings (JSON) - sync preferences
 
 Manager (extends User)
 - user (OneToOne)
@@ -835,9 +918,8 @@ Staff
 - name, email, phone
 - photo, bio
 - services (M2M)
-- calendar_provider
-- calendar_id
 - is_active
+# Note: Calendar sync now handled in Profile model for all users
 
 StaffSchedule
 - staff (FK)
@@ -849,6 +931,13 @@ StaffService
 - staff (FK), service (FK)
 - price_override
 - duration_override
+
+StaffArea
+- staff (FK)
+- postcode (string) - center postcode
+- radius_km (decimal) - service radius in kilometers
+- is_active (boolean)
+- created_at, updated_at
 ```
 
 #### Customers
@@ -875,7 +964,8 @@ Appointment
 - service (FK)
 - start_time, end_time
 - status (pending, confirmed, completed, cancelled)
-- calendar_event_id
+- calendar_event_id (JSON) - stores event IDs for each provider
+- calendar_synced_to (JSON) - tracks which calendars event is synced to
 - location (FK, if multi-location)
 - internal_notes
 
@@ -915,14 +1005,17 @@ Invoice
 
 #### Public Endpoints
 ```
-GET  /api/services/              # List services
-GET  /api/services/{id}/         # Service details
-GET  /api/staff/                 # List staff
-GET  /api/available-slots/       # Get available time slots
-POST /api/bookings/              # Create booking
-POST /api/bookings/{id}/cancel/  # Cancel booking
-POST /api/auth/register/         # Register
-POST /api/auth/login/            # Login
+GET  /api/services/                      # List services (filtered by postcode)
+GET  /api/services/{id}/                 # Service details
+GET  /api/services/by-postcode/          # Get services available in postcode area
+GET  /api/staff/                         # List staff (filtered by postcode/area)
+GET  /api/staff/by-postcode/             # Get staff available in postcode area
+GET  /api/available-slots/               # Get available time slots (for postcode area)
+POST /api/bookings/                      # Create booking
+POST /api/bookings/{id}/cancel/          # Cancel booking
+POST /api/address/autocomplete/         # Google Places API autocomplete
+POST /api/auth/register/                 # Register
+POST /api/auth/login/                    # Login
 ```
 
 #### Customer Endpoints
@@ -934,6 +1027,14 @@ POST /api/customer/appointments/{id}/reschedule/ # Reschedule
 GET  /api/customer/invoices/         # My invoices
 GET  /api/customer/profile/          # My profile
 PUT  /api/customer/profile/          # Update profile
+
+# Calendar Sync
+POST /api/customer/calendar/connect/        # Connect calendar (Google/Outlook/Apple)
+GET  /api/customer/calendar/status/         # Get calendar sync status
+POST /api/customer/calendar/sync/           # Sync appointments to calendar
+POST /api/customer/calendar/disconnect/     # Disconnect calendar
+GET  /api/customer/calendar/events/         # Get synced events
+POST /api/customer/calendar/add-event/      # Add custom event to calendar
 ```
 
 #### Staff Endpoints
@@ -944,6 +1045,14 @@ POST /api/staff/jobs/{id}/checkin/   # Check in
 POST /api/staff/jobs/{id}/complete/  # Complete job
 GET  /api/staff/availability/        # My availability
 PUT  /api/staff/availability/        # Update availability
+
+# Calendar Sync
+POST /api/staff/calendar/connect/        # Connect calendar (Google/Outlook/Apple)
+GET  /api/staff/calendar/status/         # Get calendar sync status
+POST /api/staff/calendar/sync/           # Sync schedule to calendar
+POST /api/staff/calendar/disconnect/     # Disconnect calendar
+GET  /api/staff/calendar/events/         # Get synced events
+POST /api/staff/calendar/add-event/      # Add custom event to calendar
 ```
 
 #### Manager Endpoints
@@ -966,6 +1075,14 @@ PUT    /api/manager/customers/{id}/
 # Reports (within scope)
 GET    /api/manager/reports/revenue/
 GET    /api/manager/reports/appointments/
+
+# Calendar Sync
+POST   /api/manager/calendar/connect/        # Connect calendar (Google/Outlook/Apple)
+GET    /api/manager/calendar/status/         # Get calendar sync status
+POST   /api/manager/calendar/sync/           # Sync appointments to calendar
+POST   /api/manager/calendar/disconnect/     # Disconnect calendar
+GET    /api/manager/calendar/events/         # Get synced events
+POST   /api/manager/calendar/add-event/      # Add custom event to calendar
 ```
 
 #### Admin Endpoints
@@ -1004,6 +1121,15 @@ DELETE /api/admin/services/{id}/
 GET    /api/admin/reports/revenue/
 GET    /api/admin/reports/appointments/
 GET    /api/admin/reports/staff-performance/
+
+# Calendar Sync
+POST   /api/admin/calendar/connect/        # Connect calendar (Google/Outlook/Apple)
+GET    /api/admin/calendar/status/         # Get calendar sync status
+POST   /api/admin/calendar/sync/           # Sync all appointments to calendar
+POST   /api/admin/calendar/disconnect/     # Disconnect calendar
+GET    /api/admin/calendar/events/         # Get synced events
+POST   /api/admin/calendar/add-event/      # Add custom event to calendar
+POST   /api/admin/calendar/bulk-sync/      # Bulk sync operations
 ```
 
 ### 7.3 Frontend Component Structure
@@ -1194,7 +1320,7 @@ This solution combines the best features from HouseCallPro and Bookly, tailored 
 **Key Differentiators:**
 1. ⚡ **Fast Booking** - 2.5 minutes vs. 5-10 minutes
 2. 📱 **Mobile-First** - Works perfectly on all devices
-3. 🎯 **UK-Specific** - Royal Mail address integration
+3. 🎯 **Location-Based** - Postcode-first booking with area-based service filtering
 4. 🚀 **Modern Stack** - Next.js + Django = Best performance
 5. 💼 **Enterprise Features** - Route optimization, analytics, reporting
 6. 🔒 **Secure** - Bank-level security

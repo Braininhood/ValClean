@@ -48,8 +48,11 @@ A comprehensive appointment booking system built with Django, inspired by profes
 ### 🚧 In Progress / Planned (Phase 3+)
 - Payment processing (Stripe, PayPal, and more)
 - Email and SMS notifications
-- Calendar integration (Google, Outlook, Apple)
-- Royal Mail AddressNow integration
+- Calendar integration (Google, Outlook, Apple) - All roles can sync
+- Custom event creation to external calendars (all roles)
+- Google Places API integration (address autocomplete)
+- Postcode-first booking flow
+- Staff area/postcode assignment with radius
 - Coupon/discount system
 - Custom fields support
 - Recurring appointments
