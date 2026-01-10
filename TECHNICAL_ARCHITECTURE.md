@@ -247,25 +247,25 @@ drf-spectacular==0.26.0
 
 ```
 1. Customer selects service
-   Frontend → API: GET /api/services/{id}/
+   Frontend → API: GET /api/svc/{id}/ (Security: shortened prefix)
    Backend → Database: Query Service
    Backend → Frontend: Service details
 
 2. Customer selects date/time
-   Frontend → API: GET /api/available-slots/?service_id=X&date=Y
+   Frontend → API: GET /api/slots/?service_id=X&date=Y (Security: shortened prefix)
    Backend → Database: Query appointments, staff schedules
    Backend → Logic: Calculate available slots
    Backend → Cache: Store available slots (Redis)
    Backend → Frontend: Available time slots
 
 3. Customer enters details
-   Frontend → API: POST /api/address-lookup/ (AddressNow)
+   Frontend → API: POST /api/addr/autocomplete/ (Security: shortened prefix, Google Places)
    External API → Frontend: Address suggestions
    Frontend → Backend: Customer details
    Backend → Database: Create/Update Customer
 
 4. Customer makes payment
-   Frontend → API: POST /api/payments/create-intent/
+   Frontend → API: POST /api/pay/create-intent/ (Security: shortened prefix)
    Backend → Stripe: Create PaymentIntent
    Stripe → Backend: PaymentIntent ID
    Backend → Frontend: Client secret
@@ -592,36 +592,40 @@ CREATE INDEX idx_customers_postcode ON customers(postcode);
 
 ```
 /api/v1/
-├── auth/
+# Public Endpoints (Security: Shortened prefixes to prevent enumeration)
+├── aut/                    # Authentication (Security: /api/aut/)
 │   ├── POST   /register/
 │   ├── POST   /login/
 │   ├── POST   /logout/
 │   ├── POST   /refresh/
 │   └── POST   /password-reset/
 │
-├── services/
+├── svc/                    # Services (Security: /api/svc/)
 │   ├── GET    /                           # List all services
 │   ├── GET    /by-postcode/               # Get services by postcode area
 │   ├── GET    /{id}/
 │   └── GET    /{id}/staff/                # Get staff for service in area
 │
-├── staff/
+├── stf/                    # Staff (public listing) (Security: /api/stf/)
 │   ├── GET    /                           # List all staff
 │   ├── GET    /by-postcode/               # Get staff by postcode area
 │   └── GET    /{id}/
 │
-├── bookings/
-│   ├── GET    /available-slots/           # Get slots (filtered by postcode)
+├── bkg/                    # Bookings (Security: /api/bkg/)
+│   ├── GET    /slots/                     # Get available slots (filtered by postcode)
 │   ├── POST   /
 │   ├── GET    /{id}/
 │   ├── POST   /{id}/cancel/
 │   └── POST   /{id}/reschedule/
 │
-├── address/
+├── addr/                   # Address (Security: /api/addr/)
 │   ├── POST   /autocomplete/              # Google Places autocomplete
 │   └── POST   /validate/                  # Address validation
 │
-# Role-Based Endpoints (Security: Shortened prefixes to prevent enumeration)
+├── slots/                  # Available Slots (Security: /api/slots/)
+│   └── GET    /                           # Get available time slots
+│
+# Protected Role-Based Endpoints (Security: Shortened prefixes to prevent enumeration)
 ├── cus/                    # Customer endpoints (Security: /api/cus/)
 │   ├── GET    /profile/
 │   ├── PUT    /profile/
@@ -649,7 +653,7 @@ CREATE INDEX idx_customers_postcode ON customers(postcode);
 │   ├── services/
 │   └── reports/
 │
-├── payments/
+├── pay/                    # Payments (Security: /api/pay/)
 │   ├── POST   /create-intent/
 │   ├── POST   /confirm/
 │   └── POST   /webhook/
@@ -692,14 +696,14 @@ CREATE INDEX idx_customers_postcode ON customers(postcode);
 **JWT Token Flow:**
 ```
 1. User logs in
-   POST /api/auth/login/
+   POST /api/aut/login/ (Security: shortened prefix)
    → Returns: access_token, refresh_token
 
 2. Authenticated requests
    Header: Authorization: Bearer {access_token}
 
 3. Token refresh
-   POST /api/auth/refresh/
+   POST /api/aut/refresh/ (Security: shortened prefix)
    → Returns: new access_token
 
 4. Token expiration
@@ -760,6 +764,41 @@ CREATE INDEX idx_customers_postcode ON customers(postcode);
 - Data retention policies
 - Regular backups
 - Secure data deletion
+
+### 6.3 Endpoint Security (Shortened Prefixes)
+
+**Security Rationale:** ALL endpoints (both public and protected) use shortened prefixes to prevent enumeration attacks and make endpoints less predictable.
+
+**Public Endpoint Prefixes:**
+| Original Endpoint | Security Prefix | Purpose |
+|------------------|-----------------|---------|
+| `/api/services/` | `/api/svc/` | Service listings and details |
+| `/api/staff/` | `/api/stf/` | Public staff listings (postcode-based) |
+| `/api/bookings/` | `/api/bkg/` | Booking creation and management |
+| `/api/address/` | `/api/addr/` | Google Places autocomplete |
+| `/api/auth/` | `/api/aut/` | Authentication endpoints |
+| `/api/available-slots/` | `/api/slots/` | Available time slots |
+| `/api/payments/` | `/api/pay/` | Payment processing |
+
+**Protected Endpoint Prefixes (Role-Based):**
+| Original Endpoint | Security Prefix | Access Level |
+|------------------|-----------------|--------------|
+| `/api/customer/` | `/api/cus/` | Customer role required |
+| `/api/staff/` | `/api/st/` | Staff role required (different from public `/api/stf/`) |
+| `/api/manager/` | `/api/man/` | Manager role required |
+| `/api/admin/` | `/api/ad/` | Admin role required |
+
+**Security Benefits:**
+1. **Endpoint Enumeration Prevention:** Attackers cannot easily guess endpoint names
+2. **Reduced Attack Surface:** Shortened prefixes hide the structure of the API
+3. **Security Through Obscurity:** Adds an additional layer (should be combined with proper authentication)
+4. **Consistent Pattern:** All endpoints follow the same security pattern
+
+**Implementation Notes:**
+- All endpoints require proper authentication/authorization checks
+- Shortened prefixes are documented only in internal documentation
+- Rate limiting applies to all endpoints regardless of prefix
+- API versioning still supported: `/api/v1/svc/`, `/api/v1/cus/`, etc.
 
 ---
 

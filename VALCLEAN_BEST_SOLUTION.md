@@ -1120,9 +1120,19 @@ Invoice
 
 ### 7.2 API Endpoints Structure
 
-**Security Note:** All role-based endpoints use shortened prefixes for security:
+**Security Note:** ALL endpoints (both public and protected) use shortened prefixes for security to prevent enumeration attacks.
+
+**Public Endpoints (Security Prefixes):**
+- Services: `/api/svc/` (instead of `/api/services/`)
+- Staff (public listing): `/api/stf/` (instead of `/api/staff/`)
+- Bookings: `/api/bkg/` (instead of `/api/bookings/`)
+- Address: `/api/addr/` (instead of `/api/address/`)
+- Auth: `/api/aut/` (instead of `/api/auth/`)
+- Slots: `/api/slots/` (instead of `/api/available-slots/`)
+
+**Protected Endpoints (Role-Based Security Prefixes):**
 - Customer: `/api/cus/` (instead of `/api/customer/`)
-- Staff: `/api/st/` (instead of `/api/staff/`)
+- Staff (protected): `/api/st/` (instead of `/api/staff/`)
 - Manager: `/api/man/` (instead of `/api/manager/`)
 - Admin: `/api/ad/` (instead of `/api/admin/`)
 
@@ -1130,17 +1140,17 @@ This makes endpoints less predictable and harder to enumerate, improving securit
 
 #### Public Endpoints
 ```
-GET  /api/services/                      # List services (filtered by postcode)
-GET  /api/services/{id}/                 # Service details
-GET  /api/services/by-postcode/          # Get services available in postcode area
-GET  /api/staff/                         # List staff (filtered by postcode/area)
-GET  /api/staff/by-postcode/             # Get staff available in postcode area
-GET  /api/available-slots/               # Get available time slots (for postcode area)
-POST /api/bookings/                      # Create booking
-POST /api/bookings/{id}/cancel/          # Cancel booking
-POST /api/address/autocomplete/         # Google Places API autocomplete
-POST /api/auth/register/                 # Register
-POST /api/auth/login/                    # Login
+GET  /api/svc/                      # List services (filtered by postcode)
+GET  /api/svc/{id}/                 # Service details
+GET  /api/svc/by-postcode/          # Get services available in postcode area
+GET  /api/stf/                      # List staff (filtered by postcode/area)
+GET  /api/stf/by-postcode/          # Get staff available in postcode area
+GET  /api/slots/                    # Get available time slots (for postcode area)
+POST /api/bkg/                      # Create booking
+POST /api/bkg/{id}/cancel/          # Cancel booking
+POST /api/addr/autocomplete/        # Google Places API autocomplete
+POST /api/aut/register/             # Register
+POST /api/aut/login/                # Login
 ```
 
 #### Customer Endpoints (Security: /api/cus/)
