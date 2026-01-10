@@ -1120,6 +1120,14 @@ Invoice
 
 ### 7.2 API Endpoints Structure
 
+**Security Note:** All role-based endpoints use shortened prefixes for security:
+- Customer: `/api/cus/` (instead of `/api/customer/`)
+- Staff: `/api/st/` (instead of `/api/staff/`)
+- Manager: `/api/man/` (instead of `/api/manager/`)
+- Admin: `/api/ad/` (instead of `/api/admin/`)
+
+This makes endpoints less predictable and harder to enumerate, improving security posture.
+
 #### Public Endpoints
 ```
 GET  /api/services/                      # List services (filtered by postcode)
@@ -1135,154 +1143,152 @@ POST /api/auth/register/                 # Register
 POST /api/auth/login/                    # Login
 ```
 
-#### Customer Endpoints
+#### Customer Endpoints (Security: /api/cus/)
 ```
-GET  /api/customer/appointments/     # My appointments
-GET  /api/customer/appointments/{id}/ # Appointment details
-POST /api/customer/appointments/{id}/cancel/ # Cancel (if allowed)
-POST /api/customer/appointments/{id}/reschedule/ # Reschedule (if allowed)
-GET  /api/customer/invoices/         # My invoices
-GET  /api/customer/profile/          # My profile
-PUT  /api/customer/profile/          # Update profile
+GET  /api/cus/appointments/     # My appointments
+GET  /api/cus/appointments/{id}/ # Appointment details
+POST /api/cus/appointments/{id}/cancel/ # Cancel (if allowed)
+POST /api/cus/appointments/{id}/reschedule/ # Reschedule (if allowed)
+GET  /api/cus/invoices/         # My invoices
+GET  /api/cus/profile/          # My profile
+PUT  /api/cus/profile/          # Update profile
 
 # Subscriptions
-GET  /api/customer/subscriptions/                    # My subscriptions
-POST /api/customer/subscriptions/                    # Create subscription
-GET  /api/customer/subscriptions/{id}/               # Subscription details
-PUT  /api/customer/subscriptions/{id}/               # Update subscription
-POST /api/customer/subscriptions/{id}/pause/         # Pause subscription
-POST /api/customer/subscriptions/{id}/cancel/        # Cancel subscription
-POST /api/customer/subscriptions/{id}/appointments/{appt_id}/cancel/ # Cancel subscription appointment
+GET  /api/cus/subscriptions/                    # My subscriptions
+POST /api/cus/subscriptions/                    # Create subscription
+GET  /api/cus/subscriptions/{id}/               # Subscription details
+PUT  /api/cus/subscriptions/{id}/               # Update subscription
+POST /api/cus/subscriptions/{id}/pause/         # Pause subscription
+POST /api/cus/subscriptions/{id}/cancel/        # Cancel subscription
+POST /api/cus/subscriptions/{id}/appointments/{appt_id}/cancel/ # Cancel subscription appointment
 
 # Orders
-GET  /api/customer/orders/                          # My orders
-POST /api/customer/orders/                         # Create order (multi-service)
-GET  /api/customer/orders/{id}/                      # Order details
-POST /api/customer/orders/{id}/request-change/       # Request date/time change
-POST /api/customer/orders/{id}/cancel/               # Cancel order (if allowed)
-GET  /api/customer/orders/{id}/status/               # Order status
+GET  /api/cus/orders/                          # My orders
+POST /api/cus/orders/                         # Create order (multi-service)
+GET  /api/cus/orders/{id}/                      # Order details
+POST /api/cus/orders/{id}/request-change/       # Request date/time change
+POST /api/cus/orders/{id}/cancel/               # Cancel order (if allowed)
+GET  /api/cus/orders/{id}/status/               # Order status
 
 # Calendar Sync
-POST /api/customer/calendar/connect/        # Connect calendar (Google/Outlook/Apple)
-GET  /api/customer/calendar/status/         # Get calendar sync status
-POST /api/customer/calendar/sync/           # Sync appointments to calendar
-POST /api/customer/calendar/disconnect/     # Disconnect calendar
-GET  /api/customer/calendar/events/         # Get synced events
-POST /api/customer/calendar/add-event/      # Add custom event to calendar
+POST /api/cus/calendar/connect/        # Connect calendar (Google/Outlook/Apple)
+GET  /api/cus/calendar/status/         # Get calendar sync status
+POST /api/cus/calendar/sync/           # Sync appointments to calendar
+POST /api/cus/calendar/disconnect/     # Disconnect calendar
+GET  /api/cus/calendar/events/         # Get synced events
+POST /api/cus/calendar/add-event/      # Add custom event to calendar
 ```
 
-#### Staff Endpoints
+#### Staff Endpoints (Security: /api/st/)
 ```
-GET  /api/staff/schedule/            # My schedule
-GET  /api/staff/jobs/                # My jobs
-POST /api/staff/jobs/{id}/checkin/   # Check in
-POST /api/staff/jobs/{id}/complete/  # Complete job
-GET  /api/staff/availability/        # My availability
-PUT  /api/staff/availability/        # Update availability
+GET  /api/st/schedule/            # My schedule
+GET  /api/st/jobs/                # My jobs
+POST /api/st/jobs/{id}/checkin/   # Check in
+POST /api/st/jobs/{id}/complete/  # Complete job
+GET  /api/st/availability/        # My availability
+PUT  /api/st/availability/        # Update availability
 
 # Calendar Sync
-POST /api/staff/calendar/connect/        # Connect calendar (Google/Outlook/Apple)
-GET  /api/staff/calendar/status/         # Get calendar sync status
-POST /api/staff/calendar/sync/           # Sync schedule to calendar
-POST /api/staff/calendar/disconnect/     # Disconnect calendar
-GET  /api/staff/calendar/events/         # Get synced events
-POST /api/staff/calendar/add-event/      # Add custom event to calendar
+POST /api/st/calendar/connect/        # Connect calendar (Google/Outlook/Apple)
+GET  /api/st/calendar/status/         # Get calendar sync status
+POST /api/st/calendar/sync/           # Sync schedule to calendar
+POST /api/st/calendar/disconnect/     # Disconnect calendar
+GET  /api/st/calendar/events/         # Get synced events
+POST /api/st/calendar/add-event/      # Add custom event to calendar
 ```
 
-#### Manager Endpoints
+#### Manager Endpoints (Security: /api/man/)
 ```
 # Appointments (within scope)
-GET    /api/manager/appointments/
-POST   /api/manager/appointments/
-PUT    /api/manager/appointments/{id}/
-DELETE /api/manager/appointments/{id}/
+GET    /api/man/appointments/
+POST   /api/man/appointments/
+PUT    /api/man/appointments/{id}/
+DELETE /api/man/appointments/{id}/
 
 # Staff (if permission granted)
-GET    /api/manager/staff/
-PUT    /api/manager/staff/{id}/
+GET    /api/man/staff/
+PUT    /api/man/staff/{id}/
 
 # Customers (if permission granted)
-GET    /api/manager/customers/
-GET    /api/manager/customers/{id}/
-PUT    /api/manager/customers/{id}/
+GET    /api/man/customers/
+GET    /api/man/customers/{id}/
+PUT    /api/man/customers/{id}/
 
 # Reports (within scope)
-GET    /api/manager/reports/revenue/
-GET    /api/manager/reports/appointments/
+GET    /api/man/reports/revenue/
+GET    /api/man/reports/appointments/
 
 # Calendar Sync
-POST   /api/manager/calendar/connect/        # Connect calendar (Google/Outlook/Apple)
-GET    /api/manager/calendar/status/         # Get calendar sync status
-POST   /api/manager/calendar/sync/           # Sync appointments to calendar
-POST   /api/manager/calendar/disconnect/     # Disconnect calendar
-GET    /api/manager/calendar/events/         # Get synced events
-POST   /api/manager/calendar/add-event/      # Add custom event to calendar
+POST   /api/man/calendar/connect/        # Connect calendar (Google/Outlook/Apple)
+GET    /api/man/calendar/status/         # Get calendar sync status
+POST   /api/man/calendar/sync/           # Sync appointments to calendar
+POST   /api/man/calendar/disconnect/     # Disconnect calendar
+GET    /api/man/calendar/events/         # Get synced events
+POST   /api/man/calendar/add-event/      # Add custom event to calendar
 ```
 
-#### Admin Endpoints
+#### Admin Endpoints (Security: /api/ad/)
 ```
 # Appointments
-GET    /api/admin/appointments/
-POST   /api/admin/appointments/
-PUT    /api/admin/appointments/{id}/
-DELETE /api/admin/appointments/{id}/
+GET    /api/ad/appointments/
+POST   /api/ad/appointments/
+PUT    /api/ad/appointments/{id}/
+DELETE /api/ad/appointments/{id}/
 
 # Staff
-GET    /api/admin/staff/
-POST   /api/admin/staff/
-PUT    /api/admin/staff/{id}/
-DELETE /api/admin/staff/{id}/
+GET    /api/ad/staff/
+POST   /api/ad/staff/
+PUT    /api/ad/staff/{id}/
+DELETE /api/ad/staff/{id}/
 
 # Customers
-GET    /api/admin/customers/
-GET    /api/admin/customers/{id}/
-PUT    /api/admin/customers/{id}/
+GET    /api/ad/customers/
+GET    /api/ad/customers/{id}/
+PUT    /api/ad/customers/{id}/
 
 # Managers
-GET    /api/admin/managers/
-POST   /api/admin/managers/
-PUT    /api/admin/managers/{id}/
-DELETE /api/admin/managers/{id}/
-PUT    /api/admin/managers/{id}/permissions/  # Set manager permissions
+GET    /api/ad/managers/
+POST   /api/ad/managers/
+PUT    /api/ad/managers/{id}/
+DELETE /api/ad/managers/{id}/
+PUT    /api/ad/managers/{id}/permissions/  # Set manager permissions
 
 # Services
-GET    /api/admin/services/
-POST   /api/admin/services/
-PUT    /api/admin/services/{id}/
-DELETE /api/admin/services/{id}/
+GET    /api/ad/services/
+POST   /api/ad/services/
+PUT    /api/ad/services/{id}/
+DELETE /api/ad/services/{id}/
 
 # Subscriptions
-GET    /api/admin/subscriptions/
-GET    /api/admin/subscriptions/{id}/
-PUT    /api/admin/subscriptions/{id}/
-POST   /api/admin/subscriptions/{id}/cancel/
-GET    /api/admin/subscriptions/{id}/appointments/
+GET    /api/ad/subscriptions/
+GET    /api/ad/subscriptions/{id}/
+PUT    /api/ad/subscriptions/{id}/
+POST   /api/ad/subscriptions/{id}/cancel/
+GET    /api/ad/subscriptions/{id}/appointments/
 
 # Orders
-GET    /api/admin/orders/
-GET    /api/admin/orders/{id}/
-PUT    /api/admin/orders/{id}/
-POST   /api/admin/orders/{id}/approve-change/  # Approve date/time change request
-POST   /api/admin/orders/{id}/cancel/
-GET    /api/admin/orders/{id}/items/
+GET    /api/ad/orders/
+GET    /api/ad/orders/{id}/
+PUT    /api/ad/orders/{id}/
+POST   /api/ad/orders/{id}/approve-change/  # Approve date/time change request
+POST   /api/ad/orders/{id}/cancel/
+GET    /api/ad/orders/{id}/items/
 
 # Reports
-GET    /api/admin/reports/revenue/
-GET    /api/admin/reports/appointments/
-GET    /api/admin/reports/staff-performance/
-GET    /api/admin/reports/subscriptions/      # Subscription analytics
-GET    /api/admin/reports/orders/             # Order analytics
-GET    /api/admin/reports/subscriptions/
-GET    /api/admin/reports/orders/
+GET    /api/ad/reports/revenue/
+GET    /api/ad/reports/appointments/
+GET    /api/ad/reports/staff-performance/
+GET    /api/ad/reports/subscriptions/      # Subscription analytics
+GET    /api/ad/reports/orders/             # Order analytics
 
 # Calendar Sync
-POST   /api/admin/calendar/connect/        # Connect calendar (Google/Outlook/Apple)
-GET    /api/admin/calendar/status/         # Get calendar sync status
-POST   /api/admin/calendar/sync/           # Sync all appointments to calendar
-POST   /api/admin/calendar/disconnect/     # Disconnect calendar
-GET    /api/admin/calendar/events/         # Get synced events
-POST   /api/admin/calendar/add-event/      # Add custom event to calendar
-POST   /api/admin/calendar/bulk-sync/      # Bulk sync operations
+POST   /api/ad/calendar/connect/        # Connect calendar (Google/Outlook/Apple)
+GET    /api/ad/calendar/status/         # Get calendar sync status
+POST   /api/ad/calendar/sync/           # Sync all appointments to calendar
+POST   /api/ad/calendar/disconnect/     # Disconnect calendar
+GET    /api/ad/calendar/events/         # Get synced events
+POST   /api/ad/calendar/add-event/      # Add custom event to calendar
+POST   /api/ad/calendar/bulk-sync/      # Bulk sync operations
 ```
 
 ### 7.3 Frontend Component Structure
@@ -1293,22 +1299,24 @@ src/
 │   ├── (auth)/            # Auth routes
 │   │   ├── login/
 │   │   └── register/
-│   ├── (customer)/        # Customer routes
+│   ├── cus/                # Customer routes (Security: /cus/)
 │   │   ├── dashboard/
 │   │   ├── bookings/
+│   │   ├── subscriptions/
+│   │   ├── orders/
 │   │   └── profile/
-│   ├── (staff)/           # Staff routes
+│   ├── st/                 # Staff routes (Security: /st/)
 │   │   ├── dashboard/
 │   │   ├── schedule/
 │   │   └── jobs/
-│   ├── (manager)/         # Manager routes
+│   ├── man/                # Manager routes (Security: /man/)
 │   │   ├── dashboard/
 │   │   ├── calendar/
 │   │   ├── appointments/
 │   │   ├── staff/         # If permission granted
 │   │   ├── customers/     # If permission granted
 │   │   └── reports/
-│   ├── (admin)/           # Admin routes
+│   ├── ad/                 # Admin routes (Security: /ad/)
 │   │   ├── dashboard/
 │   │   ├── calendar/
 │   │   ├── appointments/

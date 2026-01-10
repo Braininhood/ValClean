@@ -188,10 +188,10 @@ The Next.js frontend will be available at `http://localhost:3000`
 - **Home**: http://localhost:3000/
 - **Book Appointment**: http://localhost:3000/booking/
 - **Login**: http://localhost:3000/login/
-- **Customer Dashboard**: http://localhost:3000/customer/dashboard/
-- **Staff Dashboard**: http://localhost:3000/staff/dashboard/
-- **Manager Dashboard**: http://localhost:3000/manager/dashboard/
-- **Admin Dashboard**: http://localhost:3000/admin/dashboard/
+- **Customer Dashboard**: http://localhost:3000/cus/dashboard/ (Security: /cus/)
+- **Staff Dashboard**: http://localhost:3000/st/dashboard/ (Security: /st/)
+- **Manager Dashboard**: http://localhost:3000/man/dashboard/ (Security: /man/)
+- **Admin Dashboard**: http://localhost:3000/ad/dashboard/ (Security: /ad/)
 
 **Backend (Django):**
 - **API**: http://localhost:8000/api/

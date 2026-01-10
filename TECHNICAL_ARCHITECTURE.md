@@ -621,23 +621,38 @@ CREATE INDEX idx_customers_postcode ON customers(postcode);
 │   ├── POST   /autocomplete/              # Google Places autocomplete
 │   └── POST   /validate/                  # Address validation
 │
-├── customers/
+# Role-Based Endpoints (Security: Shortened prefixes to prevent enumeration)
+├── cus/                    # Customer endpoints (Security: /api/cus/)
 │   ├── GET    /profile/
 │   ├── PUT    /profile/
 │   ├── GET    /appointments/
+│   ├── GET    /subscriptions/
+│   ├── GET    /orders/
 │   └── GET    /invoices/
+│
+├── st/                     # Staff endpoints (Security: /api/st/)
+│   ├── GET    /schedule/
+│   ├── GET    /jobs/
+│   └── PUT    /availability/
+│
+├── man/                    # Manager endpoints (Security: /api/man/)
+│   ├── GET    /appointments/
+│   ├── GET    /staff/
+│   ├── GET    /customers/
+│   └── GET    /reports/
+│
+├── ad/                     # Admin endpoints (Security: /api/ad/)
+│   ├── appointments/
+│   ├── staff/
+│   ├── customers/
+│   ├── managers/
+│   ├── services/
+│   └── reports/
 │
 ├── payments/
 │   ├── POST   /create-intent/
 │   ├── POST   /confirm/
 │   └── POST   /webhook/
-│
-└── admin/
-    ├── appointments/
-    ├── staff/
-    ├── customers/
-    ├── services/
-    └── reports/
 ```
 
 ### 5.2 API Response Format
