@@ -181,22 +181,25 @@ This document provides a **step-by-step implementation guide** for building the 
 - Time slot selection
 - Available slots API
 
-#### Day 5: Booking Step 4 - Details & Payment
+#### Day 5: Booking Step 4 - Guest Details & Payment (NO LOGIN REQUIRED)
 **Tasks:**
-- [ ] Create customer details form
+- [ ] Create guest customer details form (name, email, phone, address)
+- [ ] **Guest checkout support** - No login/registration required
 - [ ] Google Places API integration for address autocomplete
 - [ ] Address auto-fill from postcode
 - [ ] Form validation
-- [ ] Create payment page (basic)
-- [ ] Booking confirmation page
+- [ ] Create payment page (basic) - Works for guests
+- [ ] Booking confirmation page - Guest order confirmation
+- [ ] Generate order number and tracking token for guest orders
 - [ ] Session management for booking
-- [ ] Complete booking flow
+- [ ] Complete guest checkout flow
 
 **Deliverables:**
-- Complete booking flow (postcode-first)
+- Complete guest checkout flow (postcode-first, no login required)
 - Google Places address autocomplete
 - Form validation
-- Booking confirmation
+- Guest booking confirmation
+- Order number and tracking token generation
 
 **Acceptance Criteria:**
 - Postcode-first booking flow works end-to-end
@@ -204,8 +207,38 @@ This document provides a **step-by-step implementation guide** for building the 
 - Staff filtered by postcode area
 - Google Places autocomplete works
 - Data persists between steps
-- Booking creates appointment in database
-- User receives confirmation
+- **Guest checkout works without login/registration**
+- **Guest order creates appointment in database (customer FK nullable)**
+- **Guest receives confirmation with order number and tracking link**
+- **Perfect for elderly customers who don't want to register**
+
+#### Day 6: Post-Order Account Linking (OPTIONAL)
+**Tasks:**
+- [ ] Implement email checking API endpoint (`/api/bkg/guest/check-email/`)
+- [ ] Create account linking prompt UI (after order completion)
+- [ ] Login modal for existing account linking
+- [ ] Registration modal for new account creation (pre-filled details)
+- [ ] "Skip" option for customers who don't want to register
+- [ ] Account linking API endpoints:
+  - `/api/bkg/guest/order/{order_number}/link-login/`
+  - `/api/bkg/guest/order/{order_number}/link-register/`
+- [ ] Guest order linking logic (update customer FK when linked)
+
+**Deliverables:**
+- Post-order account linking flow
+- Login modal for account linking
+- Registration modal with pre-filled details
+- "Skip" option (elderly-friendly)
+- Account linking API endpoints
+
+**Acceptance Criteria:**
+- System checks if customer email exists after order completion
+- If email exists: Show login prompt to link order to account
+- If email doesn't exist: Show registration prompt (optional)
+- Customer can skip account linking - guest order continues to work
+- Guest order can be linked to account later (via login or registration)
+- **Guest orders work perfectly even if customer doesn't register**
+- **Perfect for elderly customers who prefer not to register**
 
 ---
 
@@ -494,19 +527,28 @@ This document provides a **step-by-step implementation guide** for building the 
 
 ## Phase 4: Advanced Features (Weeks 9-11)
 
-### Week 9: Subscriptions & Orders
+### Week 9: Subscriptions & Orders (Guest Checkout Support)
 
-#### Day 1-2: Subscription System
+**Note: All subscription and order features support guest checkout - no login/registration required.**
+
+#### Day 1-2: Subscription System (Guest Checkout Support)
 **Tasks:**
 - [ ] Subscription model (frequency, duration, etc.)
+  - [ ] `customer` FK (nullable for guest subscriptions)
+  - [ ] `guest_email`, `guest_name`, `guest_phone` (for guest subscriptions)
+  - [ ] `subscription_number` (unique identifier)
+  - [ ] `tracking_token` (for guest access via email link)
+  - [ ] `is_guest_subscription` flag
+  - [ ] `account_linked_at` timestamp
 - [ ] SubscriptionAppointment model
-- [ ] Subscription creation logic
+- [ ] Subscription creation logic (supports guest checkout)
 - [ ] Automatic appointment generation from subscriptions
 - [ ] Subscription schedule calculation
 - [ ] UI for subscription selection (weekly/biweekly/monthly, 1-12 months)
 - [ ] Subscription preview
 - [ ] Staff schedule showing subscription appointments
 - [ ] 24h cancellation policy for subscription appointments
+- [ ] Guest subscription access endpoints (no auth required)
 
 **Deliverables:**
 - Subscription system
@@ -514,18 +556,27 @@ This document provides a **step-by-step implementation guide** for building the 
 - Subscription management
 - Staff schedule integration
 
-#### Day 3-4: Order System (Multi-Service)
+#### Day 3-4: Order System (Multi-Service, Guest Checkout Support)
 **Tasks:**
 - [ ] Order model
+  - [ ] `customer` FK (nullable for guest orders)
+  - [ ] `guest_email`, `guest_name`, `guest_phone` (for guest orders)
+  - [ ] `order_number` (unique identifier)
+  - [ ] `tracking_token` (for guest access via email link)
+  - [ ] `is_guest_order` flag
+  - [ ] `account_linked_at` timestamp
+  - [ ] Guest address fields (address_line1, city, postcode, etc.)
 - [ ] OrderItem model
-- [ ] Multi-service order creation
+- [ ] Multi-service order creation (supports guest checkout - NO AUTH REQUIRED)
 - [ ] Order status management
 - [ ] Order scheduling logic
-- [ ] UI for adding multiple services to order
+- [ ] UI for adding multiple services to order (guest-friendly)
 - [ ] Order summary and pricing
 - [ ] Staff assignment for order items
 - [ ] 24h cancellation policy for orders
 - [ ] Order change request system
+- [ ] Guest order access endpoints (no auth required)
+- [ ] Guest order tracking by order number + email
 
 **Deliverables:**
 - Order system
@@ -547,17 +598,21 @@ This document provides a **step-by-step implementation guide** for building the 
 - Discount application
 - Usage tracking
 
-#### Day 5: Order Management & Cancellation Policies
+#### Day 5: Order Management & Cancellation Policies (Guest Support)
 **Tasks:**
-- [ ] Order change request UI (customer)
+- [ ] Order change request UI (customer and guest)
+- [ ] Guest order change request (via email link or order number lookup)
 - [ ] Order change approval workflow (admin)
 - [ ] Cancellation policy enforcement (24h before)
 - [ ] Subscription appointment cancellation (24h before)
 - [ ] Order cancellation (24h before scheduled date)
+  - [ ] Guest order cancellation (via email link or order number)
 - [ ] Cancellation deadline calculation
 - [ ] Can_cancel/can_reschedule flags
-- [ ] Customer order management interface
-- [ ] Order status tracking
+- [ ] Customer order management interface (if account linked)
+- [ ] Guest order management interface (via email link/tracking token)
+- [ ] Order status tracking (works for both guest and account-linked orders)
+- [ ] Guest order tracking page (no login required)
 
 **Deliverables:**
 - Order management system
@@ -569,9 +624,13 @@ This document provides a **step-by-step implementation guide** for building the 
 - Subscriptions create appointments automatically
 - Subscription appointments show in staff schedule
 - Orders can contain multiple services
-- Order change requests work correctly
+- **Guest checkout works for subscriptions and orders (NO LOGIN REQUIRED)**
+- **Guest orders work perfectly even if customer doesn't register**
+- **Perfect for elderly customers who don't want to create accounts**
+- Order change requests work correctly (for both guest and account-linked orders)
 - 24h cancellation policy enforced
-- Customers can manage subscriptions and orders
+- Customers can manage subscriptions and orders (if account linked)
+- Guest customers can manage orders via email link/order number (no account needed)
 
 ---
 

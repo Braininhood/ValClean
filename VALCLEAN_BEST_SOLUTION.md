@@ -12,6 +12,7 @@ This document outlines the **best-in-class booking and management system** for V
 
 **Goal**: Create a world-class booking system that is:
 - ✅ **Easy for customers** - Simple, intuitive booking process
+- ✅ **Guest Checkout** - No login/registration required - Perfect for elderly customers
 - ✅ **Powerful for staff** - Comprehensive job management tools
 - ✅ **Flexible for managers** - Customizable permissions and access
 - ✅ **Efficient for admins** - Complete control and analytics
@@ -83,13 +84,15 @@ Based on VALClean's cleaning services business:
 
 **Must-Have Features:**
 - 🎯 **Easy Booking** - Simple, fast booking for cleaning services
+- 🎯 **Guest Checkout** - No login/registration required - Perfect for elderly customers
+- 🎯 **Post-Order Account Linking** - Optional account creation/linking after order completion
 - 🎯 **Address Management** - Google Places API for address autocomplete
 - 🎯 **Postcode-First Booking** - Start with postcode, show area-specific services
 - 🎯 **Staff Area Assignment** - Staff assigned to postcodes/areas with radius
 - 🎯 **Service Packages** - Different cleaning service types
 - 🎯 **Staff Assignment** - Assign cleaners to jobs
 - 🎯 **Route Optimization** - Efficient scheduling for field staff
-- 🎯 **Customer Portal** - View bookings, history, invoices
+- 🎯 **Customer Portal** - View bookings, history, invoices (optional - guest orders work without)
 - 🎯 **Mobile-Friendly** - Works perfectly on phones
 - 🎯 **Payment Integration** - Secure online payments
 - 🎯 **Notifications** - SMS and email confirmations
@@ -259,7 +262,9 @@ Based on VALClean's cleaning services business:
 
 ### 4.1 Customer Experience (Easy for Everyone)
 
-#### 4.1.1 Booking Flow - Simplified 4-Step Process
+#### 4.1.1 Booking Flow - Guest Checkout (No Login Required)
+
+**IMPORTANT: Booking starts WITHOUT login/registration. Perfect for elderly customers who don't want to create accounts.**
 
 **Step 1: Enter Postcode** (10 seconds)
 - Postcode input field
@@ -267,6 +272,7 @@ Based on VALClean's cleaning services business:
 - Show available services in area
 - Display service coverage map (optional)
 - Mobile-optimized input
+- **No login required** - booking accessible to everyone
 
 **Step 2: Service Selection** (30 seconds)
 - Show only services available in postcode area
@@ -278,6 +284,7 @@ Based on VALClean's cleaning services business:
 - Service comparison view
 - Shows available staff for selected service in area
 - Mobile-optimized layout
+- **No account needed** - continue as guest
 
 **Step 3: Date & Time** (20 seconds)
 - Visual calendar picker
@@ -286,6 +293,7 @@ Based on VALClean's cleaning services business:
 - Time zone detection
 - Quick selection buttons
 - Shows staff availability in postcode area
+- **Guest-friendly** - no registration required
 
 **Step 4: Booking Type Selection** (20 seconds)
 - **Single Appointment** - One-time booking
@@ -297,21 +305,43 @@ Based on VALClean's cleaning services business:
   - Add multiple services
   - Set preferred date/time for order
   - View order summary
+- **Works for guests** - no account creation required
 
-**Step 5: Your Details & Payment** (60 seconds)
+**Step 5: Guest Details & Payment** (60 seconds)
 - Simple form (name, email, phone, address)
 - Address autocomplete (Google Places API)
 - Auto-fill address from postcode
-- Auto-save progress
-- Guest checkout option
-- Social login (Google, Facebook)
+- **Guest checkout** - no login/registration required
 - Clear pricing breakdown
 - Multiple payment options
 - Secure payment processing
 - Instant confirmation
 - Calendar file download (.ics)
+- **Perfect for elderly customers** - simple and straightforward
+
+**Step 6: Post-Order Account Linking (Optional)** (After order completion)
+- **If customer email matches existing account:**
+  - Show option: "Login to link this order to your account?"
+  - Login modal with email pre-filled
+  - After login: Order automatically linked to account
+  - Customer can manage order from dashboard
+  
+- **If customer email doesn't match any account:**
+  - Show option: "Create an account to manage your orders? (Optional)"
+  - Registration option (one-click with pre-filled details from order)
+  - Benefits shown: "Track orders, view history, faster rebooking"
+  - **"Skip" button** - customer can continue without account
+  
+- **If customer doesn't want to register:**
+  - Order works perfectly as **guest order**
+  - Order number provided for tracking
+  - Email/SMS updates still work
+  - Can track order by order number and email
+  - All order features work: verification, updates, cancellation, rescheduling
+  - **Perfect for customers who prefer not to register**
 
 **Total Time: ~3 minutes** (vs. 5-10 minutes on competitors)
+**No registration required** - accessible to all customers, especially elderly users
 
 #### 4.1.2 Customer Portal Features
 
@@ -803,33 +833,76 @@ Based on VALClean's cleaning services business:
    └─> Selects time slot (only staff in area shown)
    └─> Confirms selection
 
-5. Details Entry
+5. Guest Details Entry (NO LOGIN/REGISTRATION REQUIRED)
    └─> Enters name and email
    └─> Enters phone number
    └─> Enters address (Google Places autocomplete)
    └─> Address auto-filled from postcode
    └─> Adds special instructions (optional)
+   └─> **Guest checkout** - no account creation needed
+   └─> Perfect for elderly customers who don't want to register
 
 6. Payment
    └─> Reviews booking summary
    └─> Selects payment method
    └─> Enters payment details
    └─> Confirms payment
+   └─> **No login required** - payment works for guests
 
-7. Confirmation
+7. Order Confirmation (Guest Order Created)
    └─> Receives confirmation email
    └─> Receives SMS reminder (optional)
    └─> Downloads calendar file
-   └─> Views booking in customer portal
-   └─> If subscription: Views subscription schedule
-   └─> If order: Views order status
+   └─> Receives order number for tracking
+   └─> **Guest order fully functional** - all features work
 
-8. Order/Subscription Management
+8. Post-Order Account Linking (OPTIONAL - Customer Choice)
+   
+   **Scenario A: Customer has existing account (email match)**
+   └─> System detects email exists in database
+   └─> Shows prompt: "Login to link this order to your account?"
+   └─> Customer clicks "Login"
+   └─> Login modal opens with email pre-filled
+   └─> Customer enters password
+   └─> Order automatically linked to account
+   └─> Customer can now manage order from dashboard
+   └─> **OR** Customer clicks "Skip" - order remains as guest order
+   
+   **Scenario B: Customer doesn't have account (new email)**
+   └─> System detects email not in database
+   └─> Shows prompt: "Create an account to manage your orders? (Optional)"
+   └─> Benefits shown: "Track orders, view history, faster rebooking"
+   └─> Customer can click "Create Account" (pre-filled details)
+   └─> One-click registration (name, email, phone already filled)
+   └─> Order automatically linked to new account
+   └─> **OR** Customer clicks "Skip" - order remains as guest order
+   
+   **Scenario C: Customer doesn't want to register (elderly-friendly)**
+   └─> Customer clicks "Skip" or closes the prompt
+   └─> **Guest order continues to work perfectly**
+   └─> Order tracking by order number and email
+   └─> All features work: verification, updates, cancellation, rescheduling
+   └─> Email/SMS notifications work
+   └─> Customer can access order via email link or order number lookup
+   └─> **Perfect for customers who prefer not to register**
+
+9. Guest Order Management (Works Without Account)
+   └─> Customer receives order number
+   └─> Can track order via email link (no login required)
+   └─> Can request date/time changes (via email link)
+   └─> Can cancel (before 24h deadline, via email link)
+   └─> Receives all notifications via email/SMS
+   └─> All order features work as guest order
+   └─> **Elderly-friendly** - simple email-based access
+
+10. Account-Based Order Management (If Linked to Account)
+   └─> If order was linked to account: Can manage from dashboard
    └─> Can request date/time changes (orders)
    └─> Can cancel (before 24h deadline)
-   └─> Can pause subscription
+   └─> Can pause subscription (if applicable)
    └─> Can cancel individual subscription appointments (before 24h)
    └─> Views upcoming appointments from subscriptions
+   └─> Full dashboard access
 
 9. Service Day
    └─> Receives reminder (24h before)
@@ -1040,10 +1113,17 @@ CustomerAppointment
 - cancellation_deadline (datetime) - 24h before appointment
 ```
 
-#### Subscriptions
+#### Subscriptions (Guest Checkout Support)
 ```python
 Subscription
-- customer (FK)
+- customer (FK, nullable) - NULL for guest subscriptions, linked after login/registration
+- guest_email (string, nullable) - Email for guest subscriptions (required if customer is NULL)
+- guest_name (string, nullable) - Name for guest subscriptions
+- guest_phone (string, nullable) - Phone for guest subscriptions
+- subscription_number (string, unique) - Similar to order_number
+- tracking_token (string, unique) - For guest subscription access via email link
+- is_guest_subscription (boolean, default: False) - Flag for guest subscriptions
+- account_linked_at (datetime, nullable) - When guest subscription was linked to account
 - service (FK)
 - staff (FK, nullable) - preferred staff
 - frequency (enum: weekly, biweekly, monthly)
@@ -1058,7 +1138,14 @@ Subscription
 - total_price (decimal)
 - payment_status (enum)
 - cancellation_policy_hours (integer, default: 24)
+- address_line1, address_line2, city, postcode, country - Guest address
 - created_at, updated_at
+
+# Guest Subscription Access
+- Subscriptions can be accessed via:
+  1. Subscription number + email (for guests)
+  2. Tracking token (unique link sent via email)
+  3. Customer account (if linked)
 
 SubscriptionAppointment
 - subscription (FK)
@@ -1070,11 +1157,17 @@ SubscriptionAppointment
 - cancellation_deadline (datetime)
 ```
 
-#### Orders
+#### Orders (Guest Checkout Support)
 ```python
 Order
-- customer (FK)
+- customer (FK, nullable) - NULL for guest orders, linked after login/registration
+- guest_email (string, nullable) - Email for guest orders (required if customer is NULL)
+- guest_name (string, nullable) - Name for guest orders
+- guest_phone (string, nullable) - Phone for guest orders
 - order_number (string, unique)
+- tracking_token (string, unique) - For guest order access via email link
+- is_guest_order (boolean, default: False) - Flag for guest orders
+- account_linked_at (datetime, nullable) - When guest order was linked to account
 - status (pending, confirmed, in_progress, completed, cancelled)
 - total_price (decimal)
 - deposit_paid (decimal)
@@ -1085,7 +1178,22 @@ Order
 - can_cancel (boolean) - based on 24h policy
 - can_reschedule (boolean) - based on 24h policy
 - cancellation_deadline (datetime)
+- address_line1, address_line2, city, postcode, country - Guest address
 - created_at, updated_at
+
+# Guest Order Access
+- Orders can be accessed via:
+  1. Order number + email (for guests)
+  2. Tracking token (unique link sent via email)
+  3. Customer account (if linked)
+```
+
+**Note:** When customer links guest order to account:
+- `customer` FK is set
+- `is_guest_order` remains True (historical record)
+- `account_linked_at` is set
+- Order becomes accessible from customer dashboard
+- Guest email/name/phone preserved for records
 
 OrderItem
 - order (FK)
@@ -1138,7 +1246,7 @@ Invoice
 
 This makes endpoints less predictable and harder to enumerate, improving security posture.
 
-#### Public Endpoints
+#### Public Endpoints (Guest Checkout Supported)
 ```
 GET  /api/svc/                      # List services (filtered by postcode)
 GET  /api/svc/{id}/                 # Service details
@@ -1146,11 +1254,39 @@ GET  /api/svc/by-postcode/          # Get services available in postcode area
 GET  /api/stf/                      # List staff (filtered by postcode/area)
 GET  /api/stf/by-postcode/          # Get staff available in postcode area
 GET  /api/slots/                    # Get available time slots (for postcode area)
-POST /api/bkg/                      # Create booking
-POST /api/bkg/{id}/cancel/          # Cancel booking
+
+# Booking/Order/Subscription Creation (Guest Checkout - NO AUTH REQUIRED)
+POST /api/bkg/                      # Create single appointment (guest checkout supported)
+POST /api/bkg/subscription/         # Create subscription (guest checkout supported)
+POST /api/bkg/order/                # Create multi-service order (guest checkout supported)
+
+# Guest Order Access (NO AUTH REQUIRED)
+GET  /api/bkg/guest/order/{order_number}/        # Get guest order by order number
+POST /api/bkg/guest/order/{order_number}/verify/ # Verify guest order access (email + order number)
+GET  /api/bkg/guest/order/track/{tracking_token}/ # Track guest order by tracking token
+POST /api/bkg/guest/order/{order_number}/cancel/  # Cancel guest order (24h policy)
+POST /api/bkg/guest/order/{order_number}/request-change/ # Request date/time change (guest)
+
+# Guest Subscription Access (NO AUTH REQUIRED)
+GET  /api/bkg/guest/subscription/{subscription_number}/     # Get guest subscription by number
+POST /api/bkg/guest/subscription/{subscription_number}/verify/ # Verify guest subscription access
+GET  /api/bkg/guest/subscription/track/{tracking_token}/     # Track guest subscription by token
+POST /api/bkg/guest/subscription/{subscription_number}/pause/  # Pause guest subscription
+POST /api/bkg/guest/subscription/{subscription_number}/cancel/ # Cancel guest subscription
+POST /api/bkg/guest/subscription/{subscription_number}/appointments/{appt_id}/cancel/ # Cancel subscription appointment
+
+# Account Linking (After Order/Subscription Completion - OPTIONAL)
+POST /api/bkg/guest/check-email/                  # Check if email matches existing account (for prompt)
+POST /api/bkg/guest/order/{order_number}/link-login/     # Link guest order to account (login required)
+POST /api/bkg/guest/order/{order_number}/link-register/  # Link guest order to account (registration)
+POST /api/bkg/guest/subscription/{subscription_number}/link-login/     # Link guest subscription to account
+POST /api/bkg/guest/subscription/{subscription_number}/link-register/  # Link guest subscription to account
+
+# Address & Authentication
 POST /api/addr/autocomplete/        # Google Places API autocomplete
-POST /api/aut/register/             # Register
-POST /api/aut/login/                # Login
+POST /api/aut/register/             # Register (optional, for account creation)
+POST /api/aut/login/                # Login (optional, for account linking)
+POST /api/aut/check-email/          # Check if email exists (for account linking prompt)
 ```
 
 #### Customer Endpoints (Security: /api/cus/)
@@ -1490,12 +1626,14 @@ This solution combines the best features from HouseCallPro and Bookly, tailored 
 
 **Key Differentiators:**
 1. ⚡ **Fast Booking** - 2.5 minutes vs. 5-10 minutes
-2. 📱 **Mobile-First** - Works perfectly on all devices
-3. 🎯 **Location-Based** - Postcode-first booking with area-based service filtering
-4. 🚀 **Modern Stack** - Next.js + Django = Best performance
-5. 💼 **Enterprise Features** - Route optimization, analytics, reporting
-6. 🔒 **Secure** - Bank-level security
-7. 📊 **Data-Driven** - Comprehensive analytics
+2. 🛒 **Guest Checkout** - No login/registration required - Perfect for elderly customers
+3. 🔗 **Optional Account Linking** - Link orders to account after completion (customer choice)
+4. 📱 **Mobile-First** - Works perfectly on all devices
+5. 🎯 **Location-Based** - Postcode-first booking with area-based service filtering
+6. 🚀 **Modern Stack** - Next.js + Django = Best performance
+7. 💼 **Enterprise Features** - Route optimization, analytics, reporting
+8. 🔒 **Secure** - Bank-level security
+9. 📊 **Data-Driven** - Comprehensive analytics
 
 **Estimated Timeline:** 15 weeks to production-ready MVP
 **Team Size:** 2-3 developers (1 full-stack, 1 frontend, 1 backend)
