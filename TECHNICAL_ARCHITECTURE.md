@@ -440,6 +440,9 @@ appointments
 ├── start_time (timestamp)
 ├── end_time (timestamp)
 ├── status (enum)
+├── appointment_type (enum: single, subscription, order_item)
+├── subscription_id (FK → subscriptions, nullable)
+├── order_id (FK → orders, nullable)
 ├── calendar_event_id (JSONB) - stores event IDs for each provider
 ├── calendar_synced_to (JSONB) - tracks which calendars event is synced to
 ├── location_id (FK → locations, nullable)
@@ -457,7 +460,70 @@ customer_appointments
 ├── deposit_paid
 ├── payment_status (enum)
 ├── cancellation_token (uuid)
+├── can_cancel (boolean)
+├── can_reschedule (boolean)
+├── cancellation_deadline (timestamp)
 └── created_at
+
+-- Subscriptions
+subscriptions
+├── id (PK)
+├── customer_id (FK → customers)
+├── service_id (FK → services)
+├── staff_id (FK → staff, nullable)
+├── frequency (enum: weekly, biweekly, monthly)
+├── duration_months (integer)
+├── start_date (date)
+├── end_date (date)
+├── next_appointment_date (date)
+├── status (enum)
+├── total_appointments (integer)
+├── completed_appointments (integer)
+├── price_per_appointment (decimal)
+├── total_price (decimal)
+├── payment_status (enum)
+├── cancellation_policy_hours (integer, default: 24)
+├── created_at
+└── updated_at
+
+subscription_appointments
+├── id (PK)
+├── subscription_id (FK → subscriptions)
+├── appointment_id (FK → appointments)
+├── sequence_number (integer)
+├── scheduled_date (date)
+├── status (enum)
+├── can_cancel (boolean)
+└── cancellation_deadline (timestamp)
+
+-- Orders
+orders
+├── id (PK)
+├── customer_id (FK → customers)
+├── order_number (string, unique)
+├── status (enum)
+├── total_price (decimal)
+├── deposit_paid (decimal)
+├── payment_status (enum)
+├── scheduled_date (date)
+├── scheduled_time (time, nullable)
+├── cancellation_policy_hours (integer, default: 24)
+├── can_cancel (boolean)
+├── can_reschedule (boolean)
+├── cancellation_deadline (timestamp)
+├── created_at
+└── updated_at
+
+order_items
+├── id (PK)
+├── order_id (FK → orders)
+├── service_id (FK → services)
+├── staff_id (FK → staff, nullable)
+├── appointment_id (FK → appointments, nullable)
+├── quantity (integer)
+├── price (decimal)
+├── status (enum)
+└── notes (text, nullable)
 
 -- Payments
 payments

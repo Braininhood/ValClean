@@ -273,6 +273,8 @@ Based on VALClean's cleaning services business:
 - Visual service cards with images
 - Clear pricing and duration
 - One-click selection
+- **Subscription option** (e.g., "Subscribe: Weekly cleaning for 3 months")
+- **Add to order** option (select multiple services)
 - Service comparison view
 - Shows available staff for selected service in area
 - Mobile-optimized layout
@@ -285,7 +287,18 @@ Based on VALClean's cleaning services business:
 - Quick selection buttons
 - Shows staff availability in postcode area
 
-**Step 4: Your Details & Payment** (60 seconds)
+**Step 4: Booking Type Selection** (20 seconds)
+- **Single Appointment** - One-time booking
+- **Subscription** - Recurring service (weekly/biweekly/monthly)
+  - Select frequency
+  - Select duration (1, 2, 3, 6, 12 months)
+  - Preview subscription schedule
+- **Order** - Multiple services in one booking
+  - Add multiple services
+  - Set preferred date/time for order
+  - View order summary
+
+**Step 5: Your Details & Payment** (60 seconds)
 - Simple form (name, email, phone, address)
 - Address autocomplete (Google Places API)
 - Auto-fill address from postcode
@@ -298,7 +311,7 @@ Based on VALClean's cleaning services business:
 - Instant confirmation
 - Calendar file download (.ics)
 
-**Total Time: ~2.5 minutes** (vs. 5-10 minutes on competitors)
+**Total Time: ~3 minutes** (vs. 5-10 minutes on competitors)
 
 #### 4.1.2 Customer Portal Features
 
@@ -311,10 +324,27 @@ Based on VALClean's cleaning services business:
 
 **Booking Management:**
 - View all appointments
-- Cancel (with policy)
+- View subscriptions (recurring services)
+- View orders (multi-service bookings)
+- Cancel (with 24h policy)
 - Reschedule (self-service)
+- Request date/time changes
 - Add notes/instructions
 - Upload photos (before/after)
+
+**Subscriptions:**
+- Subscribe to recurring services (e.g., weekly cleaning for 3 months)
+- View subscription schedule
+- Manage subscription (pause, cancel, modify)
+- Cancel individual subscription appointments (before 24h)
+- View upcoming subscription appointments
+
+**Orders:**
+- Create orders with multiple services (e.g., window cleaning + grass cutting)
+- View order status
+- Request date/time changes for orders
+- Cancel orders (fully before 24h)
+- Track order progress
 
 **Payment:**
 - View invoices
@@ -344,8 +374,10 @@ Based on VALClean's cleaning services business:
 
 **Today's Schedule:**
 - List view of today's jobs
+- Shows regular appointments, subscription appointments, and order items
 - Map view with route optimization
 - Job details and customer info
+- Job type indicator (appointment/subscription/order)
 - Navigation integration
 - Check-in/Check-out
 - Photo upload
@@ -686,7 +718,11 @@ Based on VALClean's cleaning services business:
 **Goal**: Enterprise-level features
 
 **Features:**
-- ✅ Recurring appointments
+- ✅ Subscription system (recurring services)
+- ✅ Order system (multi-service bookings)
+- ✅ Order management (change requests, cancellation)
+- ✅ Subscription management (pause, cancel, individual appointments)
+- ✅ 24h cancellation policy enforcement
 - ✅ Coupons and discounts
 - ✅ Custom fields
 - ✅ SMS notifications
@@ -694,7 +730,10 @@ Based on VALClean's cleaning services business:
 - ✅ Customer reviews/ratings
 
 **Deliverables:**
-- Advanced booking options
+- Subscription system with automatic appointment generation
+- Multi-service order system
+- Order and subscription management
+- Cancellation policy system
 - Marketing tools
 - Analytics dashboard
 - Customer engagement features
@@ -782,17 +821,28 @@ Based on VALClean's cleaning services business:
    └─> Receives SMS reminder (optional)
    └─> Downloads calendar file
    └─> Views booking in customer portal
+   └─> If subscription: Views subscription schedule
+   └─> If order: Views order status
 
-7. Service Day
+8. Order/Subscription Management
+   └─> Can request date/time changes (orders)
+   └─> Can cancel (before 24h deadline)
+   └─> Can pause subscription
+   └─> Can cancel individual subscription appointments (before 24h)
+   └─> Views upcoming appointments from subscriptions
+
+9. Service Day
    └─> Receives reminder (24h before)
    └─> Staff arrives
    └─> Service completed
    └─> Receives completion notification
+   └─> If subscription: Next appointment scheduled automatically
 
-8. Post-Service
+10. Post-Service
    └─> Receives invoice
    └─> Can leave review
    └─> Can rebook easily
+   └─> If subscription: Views progress and remaining appointments
 ```
 
 ### 6.2 Staff Workflow Journey
@@ -801,17 +851,20 @@ Based on VALClean's cleaning services business:
 1. Start of Day
    └─> Opens staff app/portal
    └─> Views today's schedule
+   └─> Sees regular appointments, subscription appointments, and order items
+   └─> Job type indicators (appointment/subscription/order)
    └─> Reviews route optimization
    └─> Prepares for first job
 
 2. Job Execution
    └─> Navigates to customer location
    └─> Checks in (GPS location)
-   └─> Reviews job details
+   └─> Reviews job details (shows if subscription or order item)
    └─> Performs service
    └─> Takes photos (before/after)
    └─> Gets customer signature
    └─> Marks job complete
+   └─> If subscription appointment: Next one automatically scheduled
    └─> Checks out
 
 3. Between Jobs
@@ -964,6 +1017,9 @@ Appointment
 - service (FK)
 - start_time, end_time
 - status (pending, confirmed, completed, cancelled)
+- appointment_type (enum: single, subscription, order_item)
+- subscription (FK, nullable) - if part of subscription
+- order (FK, nullable) - if part of order
 - calendar_event_id (JSON) - stores event IDs for each provider
 - calendar_synced_to (JSON) - tracks which calendars event is synced to
 - location (FK, if multi-location)
@@ -979,6 +1035,67 @@ CustomerAppointment
 - deposit_paid
 - payment_status
 - cancellation_token
+- can_cancel (boolean) - based on 24h policy
+- can_reschedule (boolean) - based on 24h policy
+- cancellation_deadline (datetime) - 24h before appointment
+```
+
+#### Subscriptions
+```python
+Subscription
+- customer (FK)
+- service (FK)
+- staff (FK, nullable) - preferred staff
+- frequency (enum: weekly, biweekly, monthly)
+- duration_months (integer) - subscription duration (1, 2, 3, 6, 12)
+- start_date (date)
+- end_date (date, calculated)
+- next_appointment_date (date)
+- status (active, paused, cancelled, completed)
+- total_appointments (integer) - calculated
+- completed_appointments (integer)
+- price_per_appointment (decimal)
+- total_price (decimal)
+- payment_status (enum)
+- cancellation_policy_hours (integer, default: 24)
+- created_at, updated_at
+
+SubscriptionAppointment
+- subscription (FK)
+- appointment (FK)
+- sequence_number (integer)
+- scheduled_date (date)
+- status (scheduled, completed, cancelled, skipped)
+- can_cancel (boolean) - based on 24h policy
+- cancellation_deadline (datetime)
+```
+
+#### Orders
+```python
+Order
+- customer (FK)
+- order_number (string, unique)
+- status (pending, confirmed, in_progress, completed, cancelled)
+- total_price (decimal)
+- deposit_paid (decimal)
+- payment_status (enum)
+- scheduled_date (date) - preferred date
+- scheduled_time (time, nullable) - preferred time
+- cancellation_policy_hours (integer, default: 24)
+- can_cancel (boolean) - based on 24h policy
+- can_reschedule (boolean) - based on 24h policy
+- cancellation_deadline (datetime)
+- created_at, updated_at
+
+OrderItem
+- order (FK)
+- service (FK)
+- staff (FK, nullable) - assigned staff
+- appointment (FK, nullable) - created appointment
+- quantity (integer, default: 1)
+- price (decimal)
+- status (pending, scheduled, completed, cancelled)
+- notes (text, nullable)
 ```
 
 #### Payments
@@ -1022,11 +1139,28 @@ POST /api/auth/login/                    # Login
 ```
 GET  /api/customer/appointments/     # My appointments
 GET  /api/customer/appointments/{id}/ # Appointment details
-POST /api/customer/appointments/{id}/cancel/ # Cancel
-POST /api/customer/appointments/{id}/reschedule/ # Reschedule
+POST /api/customer/appointments/{id}/cancel/ # Cancel (if allowed)
+POST /api/customer/appointments/{id}/reschedule/ # Reschedule (if allowed)
 GET  /api/customer/invoices/         # My invoices
 GET  /api/customer/profile/          # My profile
 PUT  /api/customer/profile/          # Update profile
+
+# Subscriptions
+GET  /api/customer/subscriptions/                    # My subscriptions
+POST /api/customer/subscriptions/                    # Create subscription
+GET  /api/customer/subscriptions/{id}/               # Subscription details
+PUT  /api/customer/subscriptions/{id}/               # Update subscription
+POST /api/customer/subscriptions/{id}/pause/         # Pause subscription
+POST /api/customer/subscriptions/{id}/cancel/        # Cancel subscription
+POST /api/customer/subscriptions/{id}/appointments/{appt_id}/cancel/ # Cancel subscription appointment
+
+# Orders
+GET  /api/customer/orders/                          # My orders
+POST /api/customer/orders/                         # Create order (multi-service)
+GET  /api/customer/orders/{id}/                      # Order details
+POST /api/customer/orders/{id}/request-change/       # Request date/time change
+POST /api/customer/orders/{id}/cancel/               # Cancel order (if allowed)
+GET  /api/customer/orders/{id}/status/               # Order status
 
 # Calendar Sync
 POST /api/customer/calendar/connect/        # Connect calendar (Google/Outlook/Apple)
@@ -1117,10 +1251,29 @@ POST   /api/admin/services/
 PUT    /api/admin/services/{id}/
 DELETE /api/admin/services/{id}/
 
+# Subscriptions
+GET    /api/admin/subscriptions/
+GET    /api/admin/subscriptions/{id}/
+PUT    /api/admin/subscriptions/{id}/
+POST   /api/admin/subscriptions/{id}/cancel/
+GET    /api/admin/subscriptions/{id}/appointments/
+
+# Orders
+GET    /api/admin/orders/
+GET    /api/admin/orders/{id}/
+PUT    /api/admin/orders/{id}/
+POST   /api/admin/orders/{id}/approve-change/  # Approve date/time change request
+POST   /api/admin/orders/{id}/cancel/
+GET    /api/admin/orders/{id}/items/
+
 # Reports
 GET    /api/admin/reports/revenue/
 GET    /api/admin/reports/appointments/
 GET    /api/admin/reports/staff-performance/
+GET    /api/admin/reports/subscriptions/      # Subscription analytics
+GET    /api/admin/reports/orders/             # Order analytics
+GET    /api/admin/reports/subscriptions/
+GET    /api/admin/reports/orders/
 
 # Calendar Sync
 POST   /api/admin/calendar/connect/        # Connect calendar (Google/Outlook/Apple)

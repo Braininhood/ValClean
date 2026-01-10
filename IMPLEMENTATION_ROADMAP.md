@@ -494,21 +494,44 @@ This document provides a **step-by-step implementation guide** for building the 
 
 ## Phase 4: Advanced Features (Weeks 9-11)
 
-### Week 9: Recurring Appointments & Coupons
+### Week 9: Subscriptions & Orders
 
-#### Day 1-2: Recurring Appointments
+#### Day 1-2: Subscription System
 **Tasks:**
-- [ ] Recurring appointment model
-- [ ] Repeat pattern logic
-- [ ] UI for recurring selection
-- [ ] Series management
-- [ ] Individual appointment editing
-- [ ] Cancellation handling
+- [ ] Subscription model (frequency, duration, etc.)
+- [ ] SubscriptionAppointment model
+- [ ] Subscription creation logic
+- [ ] Automatic appointment generation from subscriptions
+- [ ] Subscription schedule calculation
+- [ ] UI for subscription selection (weekly/biweekly/monthly, 1-12 months)
+- [ ] Subscription preview
+- [ ] Staff schedule showing subscription appointments
+- [ ] 24h cancellation policy for subscription appointments
 
 **Deliverables:**
-- Recurring appointments
-- Series management
-- Flexible scheduling
+- Subscription system
+- Automatic appointment generation
+- Subscription management
+- Staff schedule integration
+
+#### Day 3-4: Order System (Multi-Service)
+**Tasks:**
+- [ ] Order model
+- [ ] OrderItem model
+- [ ] Multi-service order creation
+- [ ] Order status management
+- [ ] Order scheduling logic
+- [ ] UI for adding multiple services to order
+- [ ] Order summary and pricing
+- [ ] Staff assignment for order items
+- [ ] 24h cancellation policy for orders
+- [ ] Order change request system
+
+**Deliverables:**
+- Order system
+- Multi-service booking
+- Order management
+- Change request workflow
 
 #### Day 3-4: Coupon System
 **Tasks:**
@@ -524,24 +547,31 @@ This document provides a **step-by-step implementation guide** for building the 
 - Discount application
 - Usage tracking
 
-#### Day 5: Custom Fields
+#### Day 5: Order Management & Cancellation Policies
 **Tasks:**
-- [ ] Custom field model
-- [ ] Dynamic form generation
-- [ ] Field types (text, select, file, etc.)
-- [ ] Per-service fields
-- [ ] Field validation
-- [ ] Data storage
+- [ ] Order change request UI (customer)
+- [ ] Order change approval workflow (admin)
+- [ ] Cancellation policy enforcement (24h before)
+- [ ] Subscription appointment cancellation (24h before)
+- [ ] Order cancellation (24h before scheduled date)
+- [ ] Cancellation deadline calculation
+- [ ] Can_cancel/can_reschedule flags
+- [ ] Customer order management interface
+- [ ] Order status tracking
 
 **Deliverables:**
-- Custom fields system
-- Dynamic forms
-- Flexible data collection
+- Order management system
+- Cancellation policy enforcement
+- Change request workflow
+- Customer order interface
 
 **Acceptance Criteria:**
-- Recurring appointments work correctly
-- Coupons apply discounts properly
-- Custom fields capture data
+- Subscriptions create appointments automatically
+- Subscription appointments show in staff schedule
+- Orders can contain multiple services
+- Order change requests work correctly
+- 24h cancellation policy enforced
+- Customers can manage subscriptions and orders
 
 ---
 

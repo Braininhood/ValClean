@@ -50,6 +50,10 @@ A comprehensive appointment booking system built with Django, inspired by profes
 - Email and SMS notifications
 - Calendar integration (Google, Outlook, Apple) - All roles can sync
 - Custom event creation to external calendars (all roles)
+- Subscription system (recurring services: weekly/biweekly/monthly for 1-12 months)
+- Multi-service orders (request multiple services in one order)
+- Order management (request date/time changes, cancel with 24h policy)
+- Subscription management (pause, cancel, manage individual appointments)
 - Google Places API integration (address autocomplete)
 - Postcode-first booking flow
 - Staff area/postcode assignment with radius

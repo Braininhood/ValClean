@@ -61,15 +61,19 @@ Welcome! This document provides a quick overview of the complete professional so
 ## 🚀 Solution Highlights
 
 ### For Customers (Easy Booking)
-✅ **4-Step Booking Process** (2.5 minutes total)
-1. Select Service (30 sec)
-2. Choose Date & Time (20 sec)
-3. Enter Details (60 sec)
-4. Confirm & Pay (30 sec)
+✅ **5-Step Booking Process** (3 minutes total)
+1. Enter Postcode (10 sec)
+2. Select Service (30 sec) - with subscription/order options
+3. Choose Date & Time (20 sec)
+4. Select Booking Type (20 sec) - Single/Subscription/Order
+5. Enter Details & Pay (60 sec)
 
 ✅ **Customer Portal**
 - View all appointments
-- Self-service cancellation/rescheduling
+- **Manage Subscriptions** - View, pause, cancel subscriptions
+- **Manage Orders** - View, request changes, cancel orders
+- Self-service cancellation/rescheduling (24h policy)
+- Request date/time changes for orders
 - Payment history
 - Service history
 - Profile management
