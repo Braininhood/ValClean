@@ -141,9 +141,17 @@ REDIS_URL=redis://localhost:6379/0
 python manage.py makemigrations
 python manage.py migrate
 
-# Create superuser
+# Create superuser (already created with default credentials)
 python manage.py createsuperuser
 ```
+
+**Default Admin Credentials (Development):**
+- **Username:** `admin`
+- **Email:** `admin@valclean.uk`
+- **Password:** `admin123`
+- **Admin Panel:** http://localhost:8000/admin/
+
+**⚠️ Important:** Change the admin password in production!
 
 ### 5. Create Sample Data (Optional)
 
@@ -161,8 +169,24 @@ This will create:
 
 ### 6. Run Development Server
 
+**IMPORTANT:** Always use the virtual environment Python for Django commands.
+
 ```bash
+# On Windows (PowerShell):
+.\venv\Scripts\python.exe manage.py runserver
+
+# Or activate the virtual environment first:
+.\venv\Scripts\Activate.ps1
 python manage.py runserver
+
+# On Linux/Mac:
+source venv/bin/activate
+python manage.py runserver
+```
+
+**Alternative:** Use the provided convenience script:
+```powershell
+.\runserver.ps1  # Windows PowerShell
 ```
 
 The Django backend will be available at `http://localhost:8000`
