@@ -1,10 +1,19 @@
 # Google Maps API Setup - Complete ✅
 
-## API Key Added
+## API Key Configuration
 
-**API Key:** `AIzaSyCHEjIDd9JI0xMOXyp7WILxeFvwUsB---0` (masked for security)
+**⚠️ SECURITY:** API keys should NEVER be committed to git. Always use environment variables.
 
 **Location:** `backend/.env` (gitignored - not committed to repository)
+
+**Setup:**
+1. Add your Google Maps API key to `backend/.env`:
+   ```env
+   GOOGLE_MAPS_API_KEY=your_api_key_here
+   GOOGLE_PLACES_API_KEY=your_api_key_here
+   ```
+2. The same API key works for both Geocoding API and Places API
+3. Never commit the `.env` file to version control
 
 ---
 
