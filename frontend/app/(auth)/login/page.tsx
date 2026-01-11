@@ -1,26 +1,68 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { login, isLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+
+  // Read URL params once on mount (safely handle searchParams)
+  useEffect(() => {
+    try {
+      if (searchParams) {
+        const emailParam = searchParams.get('email')
+        const messageParam = searchParams.get('message')
+        
+        if (emailParam) {
+          setEmail(emailParam)
+        }
+        if (messageParam) {
+          setMessage(messageParam)
+        }
+      }
+    } catch (err) {
+      // Silently handle any errors reading search params
+      console.debug('Error reading search params:', err)
+    }
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
+    if (!email || !password) {
+      setError('Please enter both email and password')
+      return
+    }
+
     try {
-      await login({ email, password })
-      // Redirect handled by useAuth hook
+      const response = await login({ email, password })
+      // Check if user is customer (this page is only for customers)
+      if (response.user.role !== 'customer') {
+        setError('This login is only for customers. Please use the correct login page for your role.')
+        return
+      }
+      // Redirect handled by useAuth hook (will go to /cus/dashboard)
     } catch (err: any) {
-      setError(err?.error?.message || 'Login failed. Please check your credentials.')
+      // SECURITY: Backend always returns "Invalid email or password" for both cases
+      // (email not found OR wrong password) to prevent user enumeration
+      // Frontend shows the generic error message without revealing which case it is
+      const errorCode = err?.error?.code || err?.code
+      const errorMessage = err?.error?.message || err?.message || 'Invalid email or password'
+      
+      // Show generic error message (prevents user enumeration)
+      // Always shows "Invalid email or password" regardless of actual issue
+      setError(errorMessage)
     }
   }
 
@@ -35,6 +77,11 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {message && (
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-800 dark:text-blue-200">{message}</p>
+            </div>
+          )}
           {error && (
             <div className="p-4 bg-destructive/10 text-destructive rounded-lg">
               {error}
@@ -67,6 +114,15 @@ export default function LoginPage() {
               required
               className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring"
             />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-primary hover:underline"
+            >
+              Forgot password?
+            </Link>
           </div>
 
           <button

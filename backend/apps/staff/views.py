@@ -46,11 +46,22 @@ class StaffPublicViewSet(viewsets.ReadOnlyModelViewSet):
             }
         }, status=status.HTTP_200_OK)
     
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve staff member detail (public)."""
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {}
+        }, status=status.HTTP_200_OK)
+    
     @action(detail=False, methods=['get'], url_path='by-postcode')
     def by_postcode(self, request):
         """
         Get staff available in a postcode area (public).
         GET /api/stf/by-postcode/?postcode=SW1A1AA
+        IMPORTANT: Only accepts UK postcodes - VALClean operates only in the UK.
         """
         postcode = request.query_params.get('postcode')
         if not postcode:
@@ -62,6 +73,23 @@ class StaffPublicViewSet(viewsets.ReadOnlyModelViewSet):
                 }
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Validate UK postcode (format + country check)
+        from apps.core.address import validate_postcode_with_google
+        validation_result = validate_postcode_with_google(postcode)
+        
+        if not validation_result.get('valid') or not validation_result.get('is_uk'):
+            error_msg = validation_result.get('error', 'Invalid UK postcode. VALClean currently operates only in the UK.')
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'INVALID_POSTCODE',
+                    'message': error_msg,
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Use validated/formatted postcode
+        validated_postcode = validation_result.get('formatted', postcode)
+        
         # TODO: Implement postcode-based staff filtering using StaffArea model
         # For now, return all active staff
         queryset = self.get_queryset()
@@ -71,7 +99,7 @@ class StaffPublicViewSet(viewsets.ReadOnlyModelViewSet):
             'success': True,
             'data': serializer.data,
             'meta': {
-                'postcode': postcode,
+                'postcode': validated_postcode,
                 'count': queryset.count(),
             }
         }, status=status.HTTP_200_OK)

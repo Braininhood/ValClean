@@ -20,16 +20,21 @@ export default function PostcodePage() {
   const [inputValue, setInputValue] = useState(postcode || '')
   const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
     const formatted = formatPostcode(inputValue)
     
+    // First, validate UK postcode format
     if (!validateUKPostcode(formatted)) {
-      setError('Please enter a valid UK postcode (e.g., SW1A 1AA)')
+      setError('Please enter a valid UK postcode (e.g., SW1A 1AA). VALClean currently operates only in the UK.')
       return
     }
+
+    // TODO: Add API call to validate postcode is actually in UK
+    // For now, format validation is enough (UK postcode format = UK location)
+    // When API endpoints are created, we'll verify with Google Maps API
 
     setPostcode(formatted)
     router.push('/booking/services')
@@ -40,9 +45,14 @@ export default function PostcodePage() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-4">Book Your Service</h1>
-          <p className="text-muted-foreground">
-            Enter your postcode to see available services in your area
+          <p className="text-muted-foreground mb-2">
+            Enter your UK postcode to see available services in your area
           </p>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <span className="text-sm text-blue-800 dark:text-blue-200">
+              🇬🇧 VALClean currently operates only in the UK
+            </span>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -67,7 +77,7 @@ export default function PostcodePage() {
               autoFocus
             />
             <p className="mt-2 text-sm text-muted-foreground">
-              We'll show you services available in your area
+              We'll show you services available in your UK area
             </p>
           </div>
 

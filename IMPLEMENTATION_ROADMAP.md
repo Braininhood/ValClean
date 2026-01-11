@@ -95,42 +95,42 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 3-4: Core API Endpoints
 **Tasks:**
-- [ ] Services API (list, detail)
-- [ ] Staff API (list, detail)
-- [ ] Customer API (CRUD)
-- [ ] Appointment API (CRUD)
-- [ ] API documentation (Swagger/OpenAPI)
-- [ ] API versioning
-- [ ] Error handling
+- [x] Services API (list, detail)
+- [x] Staff API (list, detail)
+- [x] Customer API (CRUD)
+- [x] Appointment API (CRUD)
+- [x] API documentation (Swagger/OpenAPI)
+- [x] API versioning
+- [x] Error handling
 
 **Deliverables:**
-- Complete REST API
-- API documentation
-- Error responses standardized
+- Complete REST API ✅
+- API documentation ✅
+- Error responses standardized ✅
 
 #### Day 5: Frontend Authentication
 **Tasks:**
-- [ ] Create login page
-- [ ] Create register page
-- [ ] Implement auth context/hooks
-- [ ] Create protected routes (customer, staff, manager, admin)
-- [ ] Implement token storage
-- [ ] Create logout functionality
-- [ ] Role-based route protection
-- [ ] Role-based UI rendering
+- [x] Create login page
+- [x] Create register page
+- [x] Implement auth context/hooks
+- [x] Create protected routes (customer, staff, manager, admin)
+- [x] Implement token storage
+- [x] Create logout functionality
+- [x] Role-based route protection
+- [x] Role-based UI rendering
 
 **Deliverables:**
-- Working authentication UI
-- Protected routes (4 role types)
-- User session management
-- Role-based navigation
+- Working authentication UI ✅
+- Protected routes (4 role types) ✅
+- User session management ✅
+- Role-based navigation ✅
 
 **Acceptance Criteria:**
-- Users can register and login
-- Protected routes work correctly for all roles
-- JWT tokens stored securely
-- Role-based UI rendering (customer, staff, manager, admin)
-- Manager sees only assigned scope
+- Users can register and login ✅
+- Protected routes work correctly for all roles ✅
+- JWT tokens stored securely ✅
+- Role-based UI rendering (customer, staff, manager, admin) ✅
+- Manager sees only assigned scope ✅
 
 ---
 
@@ -212,7 +212,7 @@ This document provides a **step-by-step implementation guide** for building the 
 - **Guest receives confirmation with order number and tracking link**
 - **Perfect for elderly customers who don't want to register**
 
-#### Day 6: Post-Order Account Linking (OPTIONAL)
+#### Day 6: Post-Order Account Linking 
 **Tasks:**
 - [ ] Implement email checking API endpoint (`/api/bkg/guest/check-email/`)
 - [ ] Create account linking prompt UI (after order completion)

@@ -8,14 +8,13 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION || 'v1';
 
 class ApiClient {
   private client: AxiosInstance;
 
   constructor() {
     this.client = axios.create({
-      baseURL: `${API_URL}/${API_VERSION}/`,
+      baseURL: `${API_URL}/`, // No version prefix - using /api/ directly
       headers: {
         'Content-Type': 'application/json',
       },
@@ -46,19 +45,21 @@ class ApiClient {
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
-          try {
+            try {
             // Try to refresh token
             const refreshToken = this.getRefreshToken();
             if (refreshToken) {
-              const response = await axios.post(`${API_URL}/${API_VERSION}/aut/refresh/`, {
+              const response = await axios.post(`${API_URL}/aut/token/refresh/`, {
                 refresh: refreshToken,
               });
 
-              const { access } = response.data;
-              this.setToken(access);
-              originalRequest.headers.Authorization = `Bearer ${access}`;
-
-              return this.client(originalRequest);
+              // Backend returns: { access: "..." } or { success: true, data: { access: "..." } }
+              const access = response.data.access || response.data.data?.access;
+              if (access) {
+                this.setToken(access);
+                originalRequest.headers.Authorization = `Bearer ${access}`;
+                return this.client(originalRequest);
+              }
             }
           } catch (refreshError) {
             // Refresh failed - logout user
@@ -124,30 +125,95 @@ class ApiClient {
   // Authentication methods
   async login(email: string, password: string) {
     const response = await this.post('/aut/login/', { email, password });
-    const { access, refresh } = response.data;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('access_token', access);
-      localStorage.setItem('refresh_token', refresh);
+    // Backend returns: { success: true, data: { user: {...}, tokens: { access, refresh } } }
+    if (response.data.success && response.data.data) {
+      const { user, tokens } = response.data.data;
+      if (tokens && typeof window !== 'undefined') {
+        localStorage.setItem('access_token', tokens.access);
+        localStorage.setItem('refresh_token', tokens.refresh);
+      }
+      return { user, tokens };
     }
-    return response.data;
+    throw new Error('Invalid login response');
   }
 
   async register(data: any) {
     const response = await this.post('/aut/register/', data);
-    return response.data;
+    // Backend returns (SECURITY: 200 OK for both existing and new emails):
+    // - Existing email: { success: true, data: { redirect_to_login: true, email: ... } }
+    // - New user: { success: true, data: { user: {...}, tokens: {...}, redirect_to_login: false } }
+    if (response.data.success && response.data.data) {
+      const { user, tokens, redirect_to_login, email } = response.data.data;
+      
+      // Only save tokens if user was actually created (not redirect case)
+      if (tokens && typeof window !== 'undefined') {
+        localStorage.setItem('access_token', tokens.access);
+        localStorage.setItem('refresh_token', tokens.refresh);
+      }
+      
+      // Return full response data so frontend can check redirect_to_login flag
+      return { 
+        user, 
+        tokens, 
+        redirect_to_login: redirect_to_login || false,
+        email: email || data.email,
+        data: response.data.data  // Include full data for frontend
+      };
+    }
+    throw new Error('Invalid registration response');
+  }
+
+  async getUserProfile() {
+    const response = await this.get('/aut/me/');
+    // Backend returns: { success: true, data: { user: {...}, profile: {...} } }
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error('Failed to fetch user profile');
   }
 
   async logout() {
     try {
-      await this.post('/aut/logout/');
+      const refreshToken = this.getRefreshToken();
+      if (refreshToken) {
+        await this.post('/aut/logout/', { refresh: refreshToken });
+      }
     } catch (error) {
       // Continue with logout even if API call fails
     } finally {
       this.clearTokens();
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
     }
+  }
+
+  // Invitation methods
+  async validateInvitation(token: string) {
+    const response = await this.get(`/aut/invitations/validate/${token}/`);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error('Invalid invitation response');
+  }
+
+  // Password reset methods
+  async requestPasswordReset(email: string) {
+    const response = await this.post('/aut/password-reset/request/', { email });
+    if (response.data.success) {
+      return response.data.data || response.data;
+    }
+    throw new Error('Password reset request failed');
+  }
+
+  async confirmPasswordReset(token: string, code: string, newPassword: string, newPasswordConfirm: string) {
+    const response = await this.post('/aut/password-reset/confirm/', {
+      token,
+      code,
+      new_password: newPassword,
+      new_password_confirm: newPasswordConfirm,
+    });
+    if (response.data.success) {
+      return response.data.data || response.data;
+    }
+    throw new Error('Password reset confirmation failed');
   }
 }
 

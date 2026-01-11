@@ -23,35 +23,78 @@ __all__ = [
 def api_root(request):
     """
     API root endpoint showing available API versions and endpoints.
+    GET /api/
     """
+    from django.utils import timezone
+    
     return Response({
         'success': True,
         'data': {
             'name': 'VALClean Booking System API',
             'version': '1.0.0',
-            'endpoints': {
-                'documentation': '/api/docs/',
+            'api_version': 'v1',
+            'documentation': {
+                'swagger': '/api/docs/',
+                'redoc': '/api/redoc/',
                 'schema': '/api/schema/',
+            },
+            'endpoints': {
                 'public': {
-                    'services': '/api/svc/',
-                    'staff_list': '/api/stf/',
-                    'bookings_appointments': '/api/bkg/appointments/',
-                    'bookings_subscriptions': '/api/bkg/subscriptions/',
-                    'bookings_orders': '/api/bkg/orders/',
-                    'address': '/api/addr/',
-                    'auth': '/api/aut/',
+                    'services': {
+                        'list': '/api/svc/',
+                        'detail': '/api/svc/{id}/',
+                        'by_postcode': '/api/svc/by-postcode/?postcode=SW1A1AA',
+                    },
+                    'staff': {
+                        'list': '/api/stf/',
+                        'detail': '/api/stf/{id}/',
+                        'by_postcode': '/api/stf/by-postcode/?postcode=SW1A1AA',
+                    },
+                    'bookings': {
+                        'appointments': '/api/bkg/appointments/',
+                        'subscriptions': '/api/bkg/subscriptions/',
+                        'orders': '/api/bkg/orders/',
+                    },
                     'slots': '/api/slots/',
-                    'payments': '/api/pay/',
+                    'auth': {
+                        'register': '/api/aut/register/',
+                        'login': '/api/aut/login/',
+                        'logout': '/api/aut/logout/',
+                        'token_refresh': '/api/aut/token/refresh/',
+                        'password_reset': '/api/aut/password-reset/request/',
+                        'email_verification': '/api/aut/verify-email/request/',
+                    },
                 },
                 'protected': {
-                    'customer': '/api/cus/',
-                    'staff': '/api/st/',
-                    'manager': '/api/man/',
-                    'admin': '/api/ad/',
+                    'customer': {
+                        'profile': '/api/cus/profile/',
+                        'appointments': '/api/cus/appointments/',
+                        'subscriptions': '/api/cus/subscriptions/',
+                        'orders': '/api/cus/orders/',
+                        'addresses': '/api/cus/addresses/',
+                    },
+                    'staff': {
+                        'dashboard': '/api/st/dashboard/',
+                        'jobs': '/api/st/jobs/',
+                        'schedule': '/api/st/schedule/',
+                    },
+                    'manager': {
+                        'dashboard': '/api/man/dashboard/',
+                        'appointments': '/api/man/appointments/',
+                        'staff': '/api/man/staff/',
+                        'customers': '/api/man/customers/',
+                    },
+                    'admin': {
+                        'dashboard': '/api/ad/dashboard/',
+                        'appointments': '/api/ad/appointments/',
+                        'staff': '/api/ad/staff/',
+                        'customers': '/api/ad/customers/',
+                        'managers': '/api/ad/managers/',
+                    },
                 }
             }
         },
         'meta': {
-            'timestamp': None,
+            'timestamp': timezone.now().isoformat(),
         }
     })

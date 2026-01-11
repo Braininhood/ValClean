@@ -6,13 +6,36 @@ export type UserRole = 'admin' | 'manager' | 'staff' | 'customer';
 
 export interface User {
   id: number;
+  username: string;
   email: string;
   role: UserRole;
-  name?: string;
+  first_name?: string;
+  last_name?: string;
+  name?: string; // Computed from first_name + last_name
   phone?: string;
   avatar?: string;
-  created_at: string;
-  updated_at: string;
+  is_active: boolean;
+  is_verified: boolean;
+  date_joined: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  password_confirm?: string;
+  name?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  role?: UserRole;
+  invitation_token?: string; // Required for staff/manager/admin registration
 }
 
 export interface Profile {

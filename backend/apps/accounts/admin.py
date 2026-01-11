@@ -3,7 +3,7 @@ Accounts admin configuration.
 """
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Profile, Manager
+from .models import User, Profile, Manager, Invitation
 
 
 @admin.register(User)
@@ -100,3 +100,33 @@ class ManagerAdmin(admin.ModelAdmin):
             'fields': ('created_at', 'updated_at')
         }),
     )
+
+
+@admin.register(Invitation)
+class InvitationAdmin(admin.ModelAdmin):
+    """
+    Invitation Admin for managing staff/manager/admin invitations.
+    """
+    list_display = ('email', 'role', 'token', 'invited_by', 'is_active', 'used_at', 'expires_at', 'created_at')
+    list_filter = ('role', 'is_active', 'used_at', 'expires_at', 'created_at')
+    search_fields = ('email', 'token', 'invited_by__email')
+    readonly_fields = ('token', 'created_at', 'updated_at')
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Invitation Details', {
+            'fields': ('email', 'role', 'token', 'invited_by')
+        }),
+        ('Status', {
+            'fields': ('is_active', 'used_at', 'expires_at')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+    
+    def save_model(self, request, obj, form, change):
+        """Set invited_by to current user if creating new invitation."""
+        if not change:
+            obj.invited_by = request.user
+        super().save_model(request, obj, form, change)

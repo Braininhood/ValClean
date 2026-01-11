@@ -347,6 +347,7 @@ def available_slots_view(request):
     """
     Get available time slots by postcode/service/staff (public).
     GET /api/slots/?postcode=SW1A1AA&service_id=1&date=2024-01-15&staff_id=1
+    IMPORTANT: Only accepts UK postcodes - VALClean operates only in the UK.
     """
     postcode = request.query_params.get('postcode')
     service_id = request.query_params.get('service_id')
@@ -361,6 +362,23 @@ def available_slots_view(request):
                 'message': 'postcode, service_id, and date parameters are required',
             }
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Validate UK postcode (format + country check)
+    from apps.core.address import validate_postcode_with_google
+    validation_result = validate_postcode_with_google(postcode)
+    
+    if not validation_result.get('valid') or not validation_result.get('is_uk'):
+        error_msg = validation_result.get('error', 'Invalid UK postcode. VALClean currently operates only in the UK.')
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'INVALID_POSTCODE',
+                'message': error_msg,
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Use validated/formatted postcode
+    validated_postcode = validation_result.get('formatted', postcode)
     
     # TODO: Implement available slots calculation based on:
     # 1. Staff schedules for the selected date
@@ -382,7 +400,7 @@ def available_slots_view(request):
     return Response({
         'success': True,
         'data': {
-            'postcode': postcode,
+            'postcode': validated_postcode,
             'service_id': service_id,
             'date': date,
             'staff_id': staff_id,

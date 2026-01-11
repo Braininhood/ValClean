@@ -8,8 +8,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { apiClient } from '@/lib/api/client'
-import { PUBLIC_ENDPOINTS } from '@/lib/api/endpoints'
-import type { LoginRequest, RegisterRequest, User } from '@/types/auth'
+import type { LoginRequest, RegisterRequest, User, UserRole } from '@/types/auth'
 
 export function useAuth() {
   const router = useRouter()
@@ -31,48 +30,107 @@ export function useAuth() {
         return
       }
 
-      // Verify token by making a request to user profile
-      // This will be implemented in Week 2 when auth endpoints are ready
-      setIsAuthenticated(true)
-      setIsLoading(false)
+      // Verify token by fetching user profile
+      try {
+        const profileData = await apiClient.getUserProfile()
+        if (profileData.user) {
+          setUser(profileData.user)
+          setIsAuthenticated(true)
+        } else {
+          throw new Error('No user data in profile')
+        }
+      } catch (error) {
+        // Token invalid or expired
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        setIsAuthenticated(false)
+        setUser(null)
+      }
     } catch (error) {
       setIsAuthenticated(false)
-      setIsLoading(false)
+      setUser(null)
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const login = async (credentials: LoginRequest) => {
+  const login = async (credentials: LoginRequest, expectedRole?: UserRole) => {
     try {
       const response = await apiClient.login(credentials.email, credentials.password)
       setUser(response.user)
       setIsAuthenticated(true)
-      router.push(`/${getRolePrefix(response.user.role)}/dashboard`)
+      
+      // If expected role is specified, verify it matches
+      if (expectedRole && response.user.role !== expectedRole) {
+        throw { error: { code: 'WRONG_ROLE', message: `This login is only for ${expectedRole} users.` } }
+      }
+      
+      const rolePrefix = getRolePrefix(response.user.role)
+      router.push(`/${rolePrefix}/dashboard`)
       return response
     } catch (error: any) {
-      throw error.response?.data || error
+      // Handle error response format from backend
+      if (error.response?.data) {
+        throw error.response.data
+      }
+      throw error
     }
   }
 
   const register = async (data: RegisterRequest) => {
     try {
-      const response = await apiClient.post(PUBLIC_ENDPOINTS.AUTH.REGISTER, data)
-      // After registration, automatically login
-      if (response.data.access) {
-        await login({ email: data.email, password: data.password })
+      const role = data.role || 'customer'
+      const registerData: any = {
+        email: data.email,
+        password: data.password,
+        name: data.name || '', // Send name directly - backend will split it
+        phone: data.phone || '',
+        role: role,
       }
-      return response.data
+      
+      // Include invitation_token if provided (required for staff/manager/admin)
+      if (data.invitation_token) {
+        registerData.invitation_token = data.invitation_token
+      }
+      
+      const response = await apiClient.register(registerData)
+      
+      // SECURITY: Check redirect_to_login flag (email already exists)
+      // Backend returns 200 OK for both cases to prevent user enumeration
+      if (response.redirect_to_login) {
+        // Return response with flag - let the component handle redirect
+        return response
+      }
+      
+      // After registration, user is automatically logged in
+      if (response.user) {
+        setUser(response.user)
+        setIsAuthenticated(true)
+        const rolePrefix = getRolePrefix(response.user.role)
+        router.push(`/${rolePrefix}/dashboard`)
+      }
+      return response
     } catch (error: any) {
-      throw error.response?.data || error
+      // Handle error response format from backend
+      if (error.response?.data) {
+        throw error.response.data
+      }
+      throw error
     }
   }
 
   const logout = async () => {
-    await apiClient.logout()
-    setUser(null)
-    setIsAuthenticated(false)
-    router.push('/login')
+    try {
+      await apiClient.logout()
+    } catch (error) {
+      // Continue with logout even if API call fails
+    } finally {
+      setUser(null)
+      setIsAuthenticated(false)
+      router.push('/login')
+    }
   }
 
   const getRolePrefix = (role: UserRole): string => {
@@ -82,7 +140,7 @@ export function useAuth() {
       manager: 'man',
       admin: 'ad',
     }
-    return roleMap[role]
+    return roleMap[role] || 'cus'
   }
 
   return {
@@ -93,5 +151,6 @@ export function useAuth() {
     register,
     logout,
     checkAuth,
+    getRolePrefix,
   }
 }

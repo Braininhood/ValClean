@@ -69,8 +69,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.core.middleware.AuthenticationMiddleware',  # Custom authentication middleware
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Note: RoleBasedAccessMiddleware is optional and can be enabled if needed
+    # 'apps.core.middleware.RoleBasedAccessMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -201,12 +204,49 @@ CORS_ALLOW_ALL_ORIGINS = False  # Set to True only in development
 # API Documentation (Swagger/OpenAPI)
 SPECTACULAR_SETTINGS = {
     'TITLE': 'VALClean Booking System API',
-    'DESCRIPTION': 'API documentation for VALClean booking system',
+    'DESCRIPTION': '''
+    VALClean Booking System REST API
+    
+    This API provides endpoints for:
+    - Service and staff management
+    - Appointment booking (with guest checkout support)
+    - Customer management
+    - Authentication and authorization
+    - Subscriptions and orders
+    
+    **API Version:** 1.0.0
+    
+    **Security:**
+    - Public endpoints: /api/svc/, /api/stf/, /api/bkg/, /api/aut/, /api/slots/
+    - Protected endpoints: /api/cus/, /api/st/, /api/man/, /api/ad/
+    - Authentication: JWT Bearer tokens
+    
+    **Documentation:**
+    - Swagger UI: /api/docs/
+    - ReDoc: /api/redoc/
+    - OpenAPI Schema: /api/schema/
+    ''',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'SCHEMA_PATH_PREFIX': '/api/',
     'COMPONENT_SPLIT_REQUEST': True,
+    'TAGS': [
+        {'name': 'Authentication', 'description': 'User authentication and authorization'},
+        {'name': 'Services', 'description': 'Service and category management'},
+        {'name': 'Staff', 'description': 'Staff member management'},
+        {'name': 'Customers', 'description': 'Customer management'},
+        {'name': 'Appointments', 'description': 'Appointment booking and management'},
+        {'name': 'Bookings', 'description': 'Public booking endpoints (guest checkout supported)'},
+        {'name': 'Subscriptions', 'description': 'Subscription management'},
+        {'name': 'Orders', 'description': 'Order management'},
+    ],
+    'SERVERS': [
+        {'url': 'http://localhost:8000', 'description': 'Development server'},
+    ],
 }
+
+# Frontend URL (for email links)
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
 
 # Email Configuration
 EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
@@ -232,7 +272,17 @@ PAYPAL_CLIENT_SECRET = env('PAYPAL_CLIENT_SECRET', default='')
 PAYPAL_MODE = env('PAYPAL_MODE', default='sandbox')  # or 'live'
 
 # Google Services
+# Note: GOOGLE_MAPS_API_KEY and GOOGLE_PLACES_API_KEY can use the same API key
+# The same API key works for both Geocoding API and Places API
+GOOGLE_MAPS_API_KEY = env('GOOGLE_MAPS_API_KEY', default='')
 GOOGLE_PLACES_API_KEY = env('GOOGLE_PLACES_API_KEY', default='')
+# If GOOGLE_MAPS_API_KEY is set but GOOGLE_PLACES_API_KEY is not, use GOOGLE_MAPS_API_KEY
+if not GOOGLE_PLACES_API_KEY and GOOGLE_MAPS_API_KEY:
+    GOOGLE_PLACES_API_KEY = GOOGLE_MAPS_API_KEY
+# If GOOGLE_PLACES_API_KEY is set but GOOGLE_MAPS_API_KEY is not, use GOOGLE_PLACES_API_KEY
+if not GOOGLE_MAPS_API_KEY and GOOGLE_PLACES_API_KEY:
+    GOOGLE_MAPS_API_KEY = GOOGLE_PLACES_API_KEY
+
 GOOGLE_CALENDAR_CLIENT_ID = env('GOOGLE_CALENDAR_CLIENT_ID', default='')
 GOOGLE_CALENDAR_CLIENT_SECRET = env('GOOGLE_CALENDAR_CLIENT_SECRET', default='')
 

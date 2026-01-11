@@ -13,8 +13,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('auth', '0012_alter_user_first_name_max_length'),
-        ('customers', '__first__'),
-        ('staff', '__first__'),
     ]
 
     operations = [
@@ -60,8 +58,7 @@ class Migration(migrations.Migration):
                 ('can_view_reports', models.BooleanField(default=True, help_text='Can view reports (within assigned scope)')),
                 ('managed_locations', models.JSONField(blank=True, default=list, help_text='List of location IDs this manager can manage (JSON array)')),
                 ('is_active', models.BooleanField(default=True, help_text='Manager account is active')),
-                ('managed_customers', models.ManyToManyField(blank=True, help_text='Customers this manager can manage', related_name='managing_managers', to='customers.customer')),
-                ('managed_staff', models.ManyToManyField(blank=True, help_text='Staff members this manager can manage', related_name='managing_managers', to='staff.staff')),
+                # ManyToMany fields will be added in a later migration after customers and staff are created
                 ('user', models.OneToOneField(help_text='Manager user (must have role=manager)', limit_choices_to={'role': 'manager'}, on_delete=django.db.models.deletion.CASCADE, related_name='manager_profile', to=settings.AUTH_USER_MODEL)),
             ],
             options={
