@@ -362,7 +362,7 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-**Next.js (optional, if not static)** – create the unit file:
+**Next.js** – create the unit file. The project uses `output: 'standalone'`, so run `node server.js` from the standalone folder (not `npm run start`):
 
 ```bash
 sudo nano /etc/systemd/system/valclean-frontend.service
@@ -372,32 +372,46 @@ Paste the following, then save:
 
 ```ini
 [Unit]
-Description=VALClean Next.js
+Description=VALClean Next.js (standalone)
 After=network.target
 
 [Service]
 User=ubuntu
 Group=ubuntu
-WorkingDirectory=/var/www/VALClean/frontend
-Environment="NODE_ENV=production"
-EnvironmentFile=/var/www/VALClean/frontend/.env.production
-ExecStart=/usr/bin/npm run start
+WorkingDirectory=/var/www/VALClean/frontend/.next/standalone
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=0.0.0.0
+ExecStart=/usr/bin/node server.js
 Restart=always
-# If npm is elsewhere, use: which npm
 
 [Install]
 WantedBy=multi-user.target
+```
+
+**Note:** After each `npm run build:webpack` (or `build:webpack:heavy`), copy static assets into standalone so the app serves them:
+```bash
+cd /var/www/VALClean/frontend
+cp -r public .next/standalone/ 2>/dev/null || true
+cp -r .next/static .next/standalone/.next/ 2>/dev/null || true
+sudo systemctl restart valclean-frontend
 ```
 
 Then:
 
 ```bash
 sudo systemctl daemon-reload
+# Enable and start both services (Django API + Next.js frontend)
 sudo systemctl enable valclean-backend
 sudo systemctl start valclean-backend
-# If using Next.js server:
 sudo systemctl enable valclean-frontend
 sudo systemctl start valclean-frontend
+```
+
+Check that both are running:
+```bash
+sudo systemctl status valclean-backend
+sudo systemctl status valclean-frontend
 ```
 
 ### 7.6 Nginx (reverse proxy) – HTTPS only, always redirect HTTP → HTTPS
@@ -415,21 +429,27 @@ Choose one of the two options below depending on whether you are **testing (EC2 
 
 For test deployments you use the **EC2 public IP** or the **EC2 default DNS** (e.g. `ec2-1-2-3-4.compute-1.amazonaws.com`). Certbot/Let’s Encrypt cannot issue certificates for IPs or for that hostname in practice, so use a **self-signed certificate with OpenSSL**. Browsers will show a security warning (accept for testing); traffic is still HTTPS and HTTP is still redirected to HTTPS.
 
-**1. Generate self-signed certificate (OpenSSL) on EC2** (Ubuntu 22.04 has OpenSSL 3.x; `-addext` is supported):
+**1. Generate self-signed certificate (OpenSSL) on EC2** – use your EC2 public IP and DNS in `subjectAltName` so the cert matches the URLs you use:
 
 ```bash
 sudo mkdir -p /etc/nginx/ssl
 sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout /etc/nginx/ssl/valclean-selfsigned.key \
   -out /etc/nginx/ssl/valclean-selfsigned.crt \
-  -subj "/CN=localhost" \
-  -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
+  -subj "/CN=13.135.109.229" \
+  -addext "subjectAltName=IP:127.0.0.1,IP:13.135.109.229,DNS:localhost,DNS:ec2-13-135-109-229.eu-west-2.compute.amazonaws.com"
 ```
 
-**2. Create Nginx site config** for EC2 IP / EC2 DNS: – replace `EC2_PUBLIC_IP` or your EC2 hostname (e.g. `ec2-1-2-3-4.compute-1.amazonaws.com`) in `server_name`:
+**2. Create Nginx site config** – run this command to create the file, then paste the Nginx block below into it (uses VALClean EC2 IP and hostname):
+
+```bash
+sudo nano /etc/nginx/sites-available/valclean
+```
+
+In the editor: paste the config block below (from `# Upstreams` through the closing `}`), save (Ctrl+O, Enter), exit (Ctrl+X). Then run the enable/test/reload commands in step 3.
 
 ```nginx
-# Upstreams
+# Upstreams: Django (Gunicorn) + Next.js (standalone)
 upstream django {
     server 127.0.0.1:8000;
 }
@@ -437,17 +457,17 @@ upstream nextjs {
     server 127.0.0.1:3000;
 }
 
-# Always redirect HTTP to HTTPS (no exceptions)
+# Redirect all HTTP to HTTPS
 server {
     listen 80 default_server;
-    server_name _;
+    server_name 13.135.109.229 ec2-13-135-109-229.eu-west-2.compute.amazonaws.com;
     return 301 https://$host$request_uri;
 }
 
-# Frontend + Backend on same host (test: one hostname/IP for all)
+# HTTPS: frontend + API + admin
 server {
     listen 443 ssl http2 default_server;
-    server_name _;
+    server_name 13.135.109.229 ec2-13-135-109-229.eu-west-2.compute.amazonaws.com;
     ssl_certificate     /etc/nginx/ssl/valclean-selfsigned.crt;
     ssl_certificate_key /etc/nginx/ssl/valclean-selfsigned.key;
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -479,14 +499,17 @@ server {
 }
 ```
 
-Create the file and paste the config (replace nothing if using `server_name _` for any host):
+**3. Enable the site, test config, and reload Nginx:**  
+Remove the default Nginx site so it doesn’t conflict with VALClean (duplicate `default_server` on port 80), then enable VALClean and reload:
 
 ```bash
-sudo nano /etc/nginx/sites-available/valclean
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -sf /etc/nginx/sites-available/valclean /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
 ```
-Paste the config above, save (Ctrl+O, Enter, Ctrl+X). Then enable and test (see end of 7.6).
 
-Access via `https://EC2_PUBLIC_IP` or `https://ec2-x-x-x-x.compute-1.amazonaws.com`. Set Django `ALLOWED_HOSTS` and frontend API URL to this IP or hostname. Browsers will warn about the self-signed cert—proceed for tests only.
+**Access:** `https://13.135.109.229` or `https://ec2-13-135-109-229.eu-west-2.compute.amazonaws.com`. Ensure Django `ALLOWED_HOSTS` and frontend `NEXT_PUBLIC_API_URL` use this base URL (e.g. `https://13.135.109.229`). Browsers will warn about the self-signed cert—accept for testing only.
 
 ---
 

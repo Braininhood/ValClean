@@ -128,7 +128,7 @@ export const CUSTOMER_ENDPOINTS = {
   
   PROFILE: {
     GET: '/cus/profile/',
-    UPDATE: '/cus/profile/',
+    UPDATE: (id: string | number) => `/cus/profile/${id}/`,
   },
   
   INVOICES: {

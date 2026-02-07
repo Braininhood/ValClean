@@ -90,6 +90,34 @@ sudo systemctl start valclean-frontend
 
 Standalone server reads **runtime** env vars. Set `NEXT_PUBLIC_*` at **build time** in GitHub Actions (e.g. repo **Variables** in Settings → Secrets and variables → Actions). For the same values at runtime you can also put a `.env` in the standalone folder or pass them in the systemd unit with `Environment=NEXT_PUBLIC_API_URL=...`.
 
+## Give the build more resources (when building on EC2)
+
+If you build on EC2 and it’s slow or runs out of memory:
+
+1. **More Node memory (if the instance has enough RAM)**  
+   Use the heavy-memory script so Node can use up to 4GB:
+   ```bash
+   cd /var/www/VALClean/frontend
+   npm run build:webpack:heavy
+   ```
+   Only use this if the instance has at least ~4.5GB RAM (e.g. t3.medium). On t3.micro/t3.small, skip or use 2048:
+   ```bash
+   NODE_OPTIONS=--max-old-space-size=2048 npm run build:webpack
+   ```
+
+2. **Larger instance for the build**  
+   Temporarily change the instance type to **t3.medium** (2 vCPU, 4 GB RAM), run the build, then change back to t3.micro/t3.small if you want. In EC2 console: Instance → Actions → Instance settings → Change instance type.
+
+3. **Swap (last resort on small instances)**  
+   Add swap so the build doesn’t get killed when RAM is full (slower, but can complete):
+   ```bash
+   sudo fallocate -l 2G /swapfile
+   sudo chmod 600 /swapfile
+   sudo mkswap /swapfile
+   sudo swapon /swapfile
+   npm run build:webpack
+   ```
+
 ## Summary
 
 | Method              | Build where     | EC2 does              | Build time on EC2 |

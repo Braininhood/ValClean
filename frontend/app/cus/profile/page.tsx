@@ -82,12 +82,17 @@ export default function CustomerProfile() {
       return
     }
 
+    if (!customer?.id) {
+      setError('Profile not loaded')
+      return
+    }
+
     try {
       setSaving(true)
       
       const updateData: CustomerUpdateRequest = formData
       const response = await apiClient.patch(
-        CUSTOMER_ENDPOINTS.PROFILE.UPDATE,
+        CUSTOMER_ENDPOINTS.PROFILE.UPDATE(customer.id),
         updateData
       )
       
