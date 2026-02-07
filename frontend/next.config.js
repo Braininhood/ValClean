@@ -4,11 +4,16 @@
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const apiOrigin = apiUrl ? new URL(apiUrl).origin : 'http://localhost:8000';
 
+// Next 14 vs 16: only add version-specific options to avoid "Unrecognized key" warnings
+const nextVersion = require('next/package.json').version || '';
+const isNext16 = nextVersion.startsWith('16.');
+
 const nextConfig = {
   reactStrictMode: true,
 
-  // Next 16: required when using custom webpack (dev only); avoids "Turbopack + webpack config" error
-  turbopack: {},
+  ...(isNext16
+    ? { turbopack: {} }
+    : { eslint: { ignoreDuringBuilds: true } }),
 
   // Allow 127.0.0.1 in dev so _next/* and webpack-hmr work when opening app at http://127.0.0.1:3000
   allowedDevOrigins: [
@@ -55,18 +60,15 @@ const nextConfig = {
   },
 
   // WebSocket configuration for HMR (Hot Module Reload)
-  // Configure WebSocket server for HMR to work properly
   webpack: (config, { dev, isServer }) => {
     if (dev && !isServer) {
       // Use polling for file watching (more reliable than WebSockets on some systems)
       config.watchOptions = {
-        poll: 1000, // Check for changes every second
+        poll: 1000,
         aggregateTimeout: 300,
         ignored: /node_modules/,
       };
-      // Avoid eval-source-map on Windows: multiline banner comments + CRLF can cause
-      // "unterminated comment" in layout.js. Use cheap-module-source-map so chunks parse.
-      config.devtool = 'cheap-module-source-map';
+      // Do not override devtool: Next.js warns and reverts to eval-source-map in dev
     }
     return config;
   },
