@@ -1,0 +1,12 @@
+---
+description: Git commit rules – no Co-authored-by or Cursor trailers
+alwaysApply: true
+---
+
+# Git commits
+
+When creating or amending git commits in this project:
+
+- **Never** add the trailer `Co-authored-by: Cursor <cursoragent@cursor.com>` or any `Co-authored-by` line to commit messages.
+- Use only the commit subject (and optional body); do not append Cursor or agent attribution.
+- If a commit message already contains such a trailer, remove it before committing or when amending.
