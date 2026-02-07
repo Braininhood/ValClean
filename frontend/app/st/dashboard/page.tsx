@@ -129,14 +129,14 @@ export default function StaffDashboard() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Staff Dashboard</h1>
             <p className="text-muted-foreground">
-              Welcome back! Here's your schedule and job overview.
+              Welcome back! Here&apos;s your schedule and job overview.
             </p>
           </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-card border rounded-lg p-4">
-              <div className="text-sm text-muted-foreground">Today's Jobs</div>
+              <div className="text-sm text-muted-foreground">Today&apos;s Jobs</div>
               <div className="text-2xl font-bold">{stats.todayCount}</div>
             </div>
             <div className="bg-card border rounded-lg p-4">
@@ -169,7 +169,7 @@ export default function StaffDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-semibold">Today's Schedule</h2>
+                <h2 className="text-2xl font-semibold">Today&apos;s Schedule</h2>
                 <Link href="/st/schedule" className="text-primary hover:underline text-sm">
                   View Full Schedule →
                 </Link>
@@ -185,7 +185,7 @@ export default function StaffDashboard() {
           {/* Today's Jobs */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-semibold">Today's Jobs</h2>
+              <h2 className="text-2xl font-semibold">Today&apos;s Jobs</h2>
               <Link href="/st/jobs" className="text-primary hover:underline text-sm">
                 View All Jobs →
               </Link>

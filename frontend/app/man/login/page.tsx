@@ -103,7 +103,7 @@ export default function ManagerLoginPage() {
 
         <div className="text-center text-sm text-muted-foreground">
           <p>
-            Don't have a manager account?{' '}
+            Don&apos;t have a manager account?{' '}
             <Link href="/man/register" className="text-primary hover:underline">
               Register
             </Link>
