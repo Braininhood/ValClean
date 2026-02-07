@@ -389,7 +389,7 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-**Note:** After each `npm run build:webpack` (or `build:webpack:heavy`), copy static assets into standalone so the app serves them:
+**Note:** After each `npm run build` (or `npm run build:heavy` if you need more memory), copy static assets into standalone so the app serves them:
 ```bash
 cd /var/www/VALClean/frontend
 cp -r public .next/standalone/ 2>/dev/null || true

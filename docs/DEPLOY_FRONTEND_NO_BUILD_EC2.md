@@ -4,7 +4,7 @@ Building Next.js on a small EC2 instance can take **15+ minutes**. This doc desc
 
 ## How it works
 
-1. **GitHub Actions** (on every push to `main` that touches `frontend/`) runs `npm ci` and `npm run build:webpack` on a fast runner and produces a **standalone** bundle.
+1. **GitHub Actions** (on every push to `main` that touches `frontend/`) runs `npm ci` and `npm run build` on a fast runner and produces a **standalone** bundle.
 2. The workflow uploads the **frontend-standalone** artifact (contains `server.js`, `.next/static`, `public`, and traced dependencies).
 3. On **EC2** you download the artifact, extract it, and run `node server.js`. No Node/npm build step on the server.
 
@@ -46,7 +46,7 @@ If you prefer to keep building on the server:
 cd /var/www/VALClean/frontend
 git pull
 npm ci
-npm run build:webpack
+npm run build
 # Run standalone server (no npm start):
 cp -r public .next/standalone/ 2>/dev/null || true
 cp -r .next/static .next/standalone/.next/ 2>/dev/null || true
@@ -98,11 +98,11 @@ If you build on EC2 and it’s slow or runs out of memory:
    Use the heavy-memory script so Node can use up to 4GB:
    ```bash
    cd /var/www/VALClean/frontend
-   npm run build:webpack:heavy
+   npm run build:heavy
    ```
    Only use this if the instance has at least ~4.5GB RAM (e.g. t3.medium). On t3.micro/t3.small, skip or use 2048:
    ```bash
-   NODE_OPTIONS=--max-old-space-size=2048 npm run build:webpack
+   NODE_OPTIONS=--max-old-space-size=2048 npm run build
    ```
 
 2. **Larger instance for the build**  
@@ -115,7 +115,7 @@ If you build on EC2 and it’s slow or runs out of memory:
    sudo chmod 600 /swapfile
    sudo mkswap /swapfile
    sudo swapon /swapfile
-   npm run build:webpack
+   npm run build
    ```
 
 ## Summary

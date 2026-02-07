@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
-    "build:webpack": "next build --webpack",
-    "build:webpack:heavy": "node --max-old-space-size=4096 ./node_modules/.bin/next build --webpack",
+    "build:heavy": "node --max-old-space-size=4096 ./node_modules/.bin/next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
