@@ -63,6 +63,10 @@ export default function GuestDetailsPage() {
   const [autocompleteQuery, setAutocompleteQuery] = useState('')
   const autocompleteRef = useRef<HTMLDivElement>(null)
   const autocompleteTimeoutRef = useRef<NodeJS.Timeout>()
+  /** When user changes postcode: true if selected service is not available for that postcode */
+  const [postcodeServiceUnavailable, setPostcodeServiceUnavailable] = useState(false)
+  const [postcodeCheckLoading, setPostcodeCheckLoading] = useState(false)
+  const postcodeCheckTimeoutRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     // Redirect if required booking data is missing
@@ -159,6 +163,43 @@ export default function GuestDetailsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.postcode])
+
+  // Re-check if selected service is available when user enters a different postcode
+  useEffect(() => {
+    const pc = formData.postcode.trim().toUpperCase().replace(/\s+/g, ' ')
+    const bookingPostcode = (postcode || '').trim().toUpperCase().replace(/\s+/g, ' ')
+    if (!pc || pc.length < 5 || !validateUKPostcode(pc) || !selectedService) {
+      setPostcodeServiceUnavailable(false)
+      return
+    }
+    if (pc === bookingPostcode) {
+      setPostcodeServiceUnavailable(false)
+      return
+    }
+    if (postcodeCheckTimeoutRef.current) clearTimeout(postcodeCheckTimeoutRef.current)
+    postcodeCheckTimeoutRef.current = setTimeout(async () => {
+      setPostcodeCheckLoading(true)
+      setPostcodeServiceUnavailable(false)
+      try {
+        const response = await apiClient.get(PUBLIC_ENDPOINTS.SERVICES.BY_POSTCODE, {
+          params: { postcode: pc },
+        })
+        if (response.data?.success && Array.isArray(response.data.data)) {
+          const serviceIds = response.data.data.map((s: { id: number }) => s.id)
+          setPostcodeServiceUnavailable(!serviceIds.includes(selectedService))
+        } else {
+          setPostcodeServiceUnavailable(true)
+        }
+      } catch {
+        setPostcodeServiceUnavailable(true)
+      } finally {
+        setPostcodeCheckLoading(false)
+      }
+    }, 600)
+    return () => {
+      if (postcodeCheckTimeoutRef.current) clearTimeout(postcodeCheckTimeoutRef.current)
+    }
+  }, [formData.postcode, selectedService, postcode])
 
   // Close autocomplete when clicking outside
   useEffect(() => {
@@ -317,6 +358,11 @@ export default function GuestDetailsPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (postcodeServiceUnavailable) {
+      setErrors({ submit: 'Please change your postcode or choose a different service before continuing.' })
+      return
+    }
+
     // Validate all required fields before proceeding
     if (!validateForm()) {
       // Scroll to first error
@@ -364,6 +410,27 @@ export default function GuestDetailsPage() {
         Complete your booking - <span className="font-medium">No account required!</span>
       </p>
         </div>
+
+        {postcodeServiceUnavailable && (
+          <div className="mb-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100">
+            <p className="font-medium">Service not available for this postcode</p>
+            <p className="text-sm mt-1">
+              The selected service is not available for <strong>{formData.postcode.trim()}</strong>. Please change your address/postcode to an area we cover, or{' '}
+              <button
+                type="button"
+                onClick={() => router.push('/booking/services')}
+                className="underline font-medium hover:no-underline"
+              >
+                go back to choose a different service
+              </button>
+              .
+            </p>
+          </div>
+        )}
+
+        {postcodeCheckLoading && (
+          <p className="text-sm text-muted-foreground mb-4">Checking availability for your postcode…</p>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Personal Information */}
