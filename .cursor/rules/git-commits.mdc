@@ -5,8 +5,9 @@ alwaysApply: true
 
 # Git commits
 
-When creating or amending git commits in this project:
+When creating or amending git commits, or when pushing to git, in this project:
 
+- **Never** use `--trailer "Co-authored-by: Cursor <cursoragent@cursor.com>"` or any similar trailer.
 - **Never** add the trailer `Co-authored-by: Cursor <cursoragent@cursor.com>` or any `Co-authored-by` line to commit messages.
 - Use only the commit subject (and optional body); do not append Cursor or agent attribution.
-- If a commit message already contains such a trailer, remove it before committing or when amending.
+- If a commit message already contains such a trailer, remove it before committing, amending, or pushing.

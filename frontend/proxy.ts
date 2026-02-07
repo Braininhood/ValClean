@@ -1,11 +1,11 @@
 /**
- * Next.js Middleware
+ * Next.js Proxy (formerly middleware)
  * Handles favicon requests to prevent 404 errors
  */
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // Handle favicon requests
   if (request.nextUrl.pathname === '/favicon.ico') {
     return new NextResponse(null, {
