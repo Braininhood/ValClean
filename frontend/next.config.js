@@ -6,10 +6,9 @@ const apiOrigin = apiUrl ? new URL(apiUrl).origin : 'http://localhost:8000';
 
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
 
-  // Allow build to complete while ESLint warnings are cleaned up (remove when ready)
-  eslint: { ignoreDuringBuilds: true },
+  // Next 16: Turbopack is default; we have webpack customizations (dev only). Declare turbopack so build proceeds.
+  turbopack: {},
 
   // Allow 127.0.0.1 in dev so _next/* and webpack-hmr work when opening app at http://127.0.0.1:3000
   allowedDevOrigins: [
@@ -77,11 +76,6 @@ const nextConfig = {
     buildActivity: false,
   },
   
-  // Experimental features for better HMR support
-  experimental: {
-    webpackBuildWorker: false,
-  },
-  
   // API proxy for development (optional - frontend and backend run separately)
   // Note: Frontend makes direct API calls, so rewrites are not needed
   // async rewrites() {
@@ -94,18 +88,16 @@ const nextConfig = {
   //   ];
   // },
   
-  // Image domains (for external images if needed)
+  // Image remotePatterns (Next 16: domains deprecated; use only remotePatterns)
   images: {
-    domains: ['localhost', 'valclean.uk', '13.135.109.229', 'ec2-13-135-109-229.eu-west-2.compute.amazonaws.com'],
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**.googleusercontent.com',
-      },
-      {
-        protocol: 'https',
-        hostname: '**.googleapis.com',
-      },
+      { protocol: 'http', hostname: 'localhost' },
+      { protocol: 'https', hostname: 'localhost' },
+      { protocol: 'https', hostname: 'valclean.uk' },
+      { protocol: 'https', hostname: '13.135.109.229' },
+      { protocol: 'https', hostname: 'ec2-13-135-109-229.eu-west-2.compute.amazonaws.com' },
+      { protocol: 'https', hostname: '**.googleusercontent.com' },
+      { protocol: 'https', hostname: '**.googleapis.com' },
     ],
   },
   

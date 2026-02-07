@@ -99,6 +99,23 @@ VALClean uses Supabase Storage for uploads (e.g. job completion photos, general 
 
 No AWS S3 or IAM is required; all file storage is in Supabase.
 
+### 3.4 Supabase Auth – URL configuration (for login/OAuth redirects)
+
+So that Supabase Auth can redirect users back to your app after login, Google OAuth, or password reset, set your app URLs in the dashboard.
+
+1. In **Supabase Dashboard** go to **Authentication** → **URL Configuration** (or **Settings** → **Authentication** → **URL Configuration**).
+2. **Site URL** – the default redirect when none is specified. Set to your app’s main URL, e.g.:
+   - EC2 test: `https://13.135.109.229`  
+   - Or: `https://ec2-13-135-109-229.eu-west-2.compute.amazonaws.com`  
+   - Production: `https://yourdomain.com`
+3. **Redirect URLs** – add every URL that auth may redirect to (one per line). Wildcards are allowed. For EC2 test, add for example:
+   - `https://13.135.109.229/**`
+   - `https://13.135.109.229/auth/callback`
+   - `https://ec2-13-135-109-229.eu-west-2.compute.amazonaws.com/**`
+   - `https://ec2-13-135-109-229.eu-west-2.compute.amazonaws.com/auth/callback`  
+   For production, add `https://yourdomain.com/**` and `https://yourdomain.com/auth/callback` (and `https://api.yourdomain.com/...` if you use an API callback URL).
+4. Save. Without these, post-login or OAuth redirects can be blocked or go to the wrong place.
+
 ---
 
 ## 4. AWS account and region
@@ -263,8 +280,9 @@ python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
-pip install gunicorn dj-database-url
+pip install gunicorn
 ```
+(`requirements.txt` includes `psycopg2-binary` and `dj-database-url` for PostgreSQL/Supabase.)
 
 Create `.env` with your Supabase database URL and Supabase keys (see [Section 10](#10-environment-variables-checklist)):
 
@@ -285,7 +303,7 @@ python manage.py createsuperuser  # if first deploy
 Test Gunicorn (same directory, venv active):
 
 ```bash
-gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2
+gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120
 ```
 
 Then Ctrl+C. You will run it via systemd next.
@@ -337,7 +355,7 @@ Group=ubuntu
 WorkingDirectory=/var/www/VALClean/backend
 Environment="PATH=/var/www/VALClean/backend/venv/bin"
 EnvironmentFile=/var/www/VALClean/backend/.env
-ExecStart=/var/www/VALClean/backend/venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 2
+ExecStart=/var/www/VALClean/backend/venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 2 --timeout 120
 Restart=always
 
 [Install]
@@ -654,6 +672,8 @@ DEFAULT_FROM_EMAIL=noreply@valclean.uk
 
 **Replace before first run:** `SECRET_KEY`, `DATABASE_URL` (Supabase connection string), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`. Storage is handled by Supabase buckets (e.g. `job-photos`, `images`); no AWS S3 keys needed.
 
+**Important for EC2:** Use the **Session pooler** (or Transaction pooler) connection string for `DATABASE_URL`, **not** the direct connection. The direct host (`db.xxxxx.supabase.co:5432`) often uses IPv6; many EC2 instances are IPv4-only and will get "Network is unreachable". In Supabase: **Settings → Database → Connection string** → choose **"Session pooler"** (or "Transaction pooler") and copy the URI (port **6543**, host like `aws-0-eu-west-2.pooler.supabase.com`).
+
 **Frontend (`.env.production`)** – copy-paste for EC2 test (same host for frontend + API):
 
 ```bash
@@ -738,3 +758,76 @@ If you use Celery for background tasks:
 For the first run, use HTTP on the ALB (port 80) and a single domain to verify Django and Next.js; then add ACM and HTTPS and the second domain.
 
 This setup uses **EC2 for the app** and **Supabase for database and buckets**. Scale EC2 (instance size or multi-instance + Auto Scaling) as traffic grows; Supabase handles DB and storage scaling.
+
+---
+
+## Troubleshooting
+
+### "Network is unreachable" or connection to `db.xxxxx.supabase.co` fails
+
+**Error you might see:** `connection to server at "db.xxxxx.supabase.co" (2a05:...), port 5432 failed: Network is unreachable`
+
+EC2 is often IPv4-only. Supabase’s **direct** connection (`db.xxxxx.supabase.co:5432`) can resolve to IPv6, so the connection fails.
+
+**Fix:** Use the **Session pooler** (or Transaction pooler) URL for `DATABASE_URL`, not the direct connection.
+
+1. In **Supabase Dashboard** → **Settings** → **Database**.
+2. Under **Connection string**, select **"Session pooler"** (or **"Transaction pooler"**).
+3. Copy the URI. It should look like:
+   `postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres`
+   (port **6543**, host `...pooler.supabase.com`).
+4. On EC2, set `DATABASE_URL` in `backend/.env` to this pooler URI and restart:
+   ```bash
+   nano /var/www/VALClean/backend/.env
+   # Update DATABASE_URL to the pooler URI, save, then:
+   sudo systemctl restart valclean-backend
+   ```
+5. Run migrations again: `cd /var/www/VALClean/backend && source venv/bin/activate && export DJANGO_SETTINGS_MODULE=config.settings.production && python manage.py migrate`
+
+### "FATAL: Tenant or user not found" (pooler)
+
+The pooler requires the **exact** connection string from Supabase; the username must be **`postgres.PROJECT_REF`** (e.g. `postgres.lonmjafmvdvzevaggwem`), not just `postgres`.
+
+**Fix:**
+
+1. In **Supabase Dashboard** → **Settings** → **Database**.
+2. Under **Connection string**, select **"Session pooler"** (or **"Transaction pooler"**).
+3. Click **"URI"** (or the copy icon) and copy the **full string** – do not build it by hand.
+4. The username in the URI must look like `postgres.xxxxxxxxxxxxx` (postgres + dot + your project ref). The host must match your project’s region (e.g. `aws-0-eu-west-2` for EU London).
+5. On EC2, set `DATABASE_URL` in `backend/.env` to this **exact** value (paste the whole URI). If your password contains `@`, `#`, or `%`, URL-encode it (e.g. `@` → `%40`) in the URI.
+6. Run migrate again.
+
+**If your database password contains `@`, `#`, or `%`:** URL-encode in the URI: `@` → `%40`, `#` → `%23`, `%` → `%25`. The URI must end with `/postgres`.
+
+**Still "Tenant or user not found"?** The pooler **region** or **project ref** is wrong. Do this:
+
+1. Open **Supabase Dashboard** → select your project (e.g. https://supabase.com/dashboard/project/**lonmjafmvdvzevaggwem**).
+2. Go to **Settings** (gear) → **Database**.
+3. Scroll to **Connection string**. Select **"Session pooler"** (or **"Transaction pooler"**).
+4. Check the **host** in the string shown:
+   - If it says `aws-0-eu-west-1.pooler.supabase.com`, your project is in **Ireland** – use that host (not `eu-west-2`).
+   - If it says `aws-0-eu-west-2.pooler.supabase.com`, use that.
+   - Other regions: `aws-0-us-east-1`, `aws-0-ap-southeast-1`, etc. Use the **exact** host from the dashboard.
+5. Click **Copy** (or the URI icon) to copy the **full connection string**. Paste it into `DATABASE_URL` in `.env` on EC2. If the copied URI already contains the password, use it as-is. If you had to replace the password and it contains `@` or `#`, encode as above (`%40`, `%23`).
+6. Save `.env` and run `python manage.py migrate` again.
+
+### "WORKER TIMEOUT" / "Error handling request (no URI read)"
+
+**Error you might see:** `[CRITICAL] WORKER TIMEOUT (pid:...)` and `Error handling request (no URI read)` in Gunicorn logs.
+
+A client (browser, load balancer, or scanner) opened a TCP connection but did not send an HTTP request within Gunicorn’s default **30 second** timeout. The worker was waiting for the request line and got killed.
+
+**Fix:**
+
+1. **Increase Gunicorn timeout** so workers don’t die while waiting for slow clients. Use `--timeout 120` (or at least `60`).
+2. **If running manually:**  
+   `gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120`
+3. **If using systemd:** Edit the backend service and add `--timeout 120` to the `ExecStart` line:
+   ```bash
+   sudo nano /etc/systemd/system/valclean-backend.service
+   # Change ExecStart to:
+   # ExecStart=.../gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 2 --timeout 120
+   sudo systemctl daemon-reload
+   sudo systemctl restart valclean-backend
+   ```
+4. If you use a reverse proxy (e.g. Nginx) or ALB, ensure health checks send a full HTTP request and complete within the new timeout.
