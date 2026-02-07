@@ -94,8 +94,11 @@ if env('REDIS_URL', default=None):
     CELERY_RESULT_SERIALIZER = 'json'
     CELERY_TIMEZONE = TIME_ZONE
 
-# Logging - Production level
-LOGGING['handlers']['file']['filename'] = '/var/log/valclean/django.log'
+# Logging - Production level (use project logs dir so no /var/log/valclean needed)
+import os
+_log_dir = BASE_DIR / 'logs'
+os.makedirs(_log_dir, exist_ok=True)
+LOGGING['handlers']['file']['filename'] = str(_log_dir / 'django.log')
 LOGGING['loggers']['apps']['level'] = 'INFO'
 LOGGING['loggers']['django']['level'] = 'WARNING'
 

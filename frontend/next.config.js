@@ -12,7 +12,12 @@ const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
 
   // Allow 127.0.0.1 in dev so _next/* and webpack-hmr work when opening app at http://127.0.0.1:3000
-  allowedDevOrigins: ['127.0.0.1', 'localhost', 'http://127.0.0.1:3000', 'http://localhost:3000'],
+  allowedDevOrigins: [
+    '127.0.0.1', 'localhost',
+    'http://127.0.0.1:3000', 'http://localhost:3000',
+    '13.135.109.229', 'ec2-13-135-109-229.eu-west-2.compute.amazonaws.com',
+    'https://13.135.109.229', 'https://ec2-13-135-109-229.eu-west-2.compute.amazonaws.com',
+  ],
 
   // Content-Security-Policy and other security headers
   async headers() {
@@ -91,7 +96,7 @@ const nextConfig = {
   
   // Image domains (for external images if needed)
   images: {
-    domains: ['localhost', 'valclean.uk'],
+    domains: ['localhost', 'valclean.uk', '13.135.109.229', 'ec2-13-135-109-229.eu-west-2.compute.amazonaws.com'],
     remotePatterns: [
       {
         protocol: 'https',

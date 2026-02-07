@@ -108,7 +108,31 @@ No AWS S3 or IAM is required; all file storage is in Supabase.
 3. Create an **IAM user** for deployments (optional but recommended):
    - IAM → Users → Create user (e.g. `valclean-deploy`).
    - Attach policies: `AmazonEC2FullAccess`, `ElasticLoadBalancingFullAccess`, `AmazonRoute53FullAccess`, `AWSCertificateManagerFullAccess` (no RDS or S3 needed for this setup).
-   - Create access key for CLI if you will use `aws cli`.
+   - Create access keys (see below) if you will use AWS CLI or automation.
+
+### 4.1 Create access keys
+
+1. In **AWS Console** go to **IAM** → **Users** → select your user (e.g. `valclean-deploy`).
+2. Open the **Security credentials** tab.
+3. In **Access keys**, click **Create access key**.
+4. Choose a use case (e.g. **Command Line Interface (CLI)** or **Application running outside AWS**), confirm, then **Next** → **Create access key**.
+5. AWS shows the **Access Key ID** and **Secret Access Key** once. You cannot view the secret again later.
+
+### 4.2 Save Access Key ID and Secret Access Key securely
+
+- **Do not** put them in code, in Git, or in screenshots.
+- **Do not** commit them to `.env` in the repo; use `.env` only locally and keep that file in `.gitignore`.
+
+**Ways to store them securely:**
+
+| Method | Use for |
+|--------|--------|
+| **Password manager** | Best option. Create a secure note (e.g. “AWS VALClean – IAM access key”) and paste **Access Key ID** and **Secret Access Key**. Use 1Password, Bitwarden, LastPass, or similar. |
+| **Local AWS CLI config (this machine only)** | Running `aws` from your PC. Run `aws configure`, enter the Access Key ID and Secret when prompted. Values are stored in `~/.aws/credentials` (Windows: `%USERPROFILE%\.aws\credentials`). Restrict file permissions and do not share this file. |
+| **Environment variables** | Scripts or CI. Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in the environment (e.g. in a local script or in your CI/CD secrets), never in a file you commit. |
+| **CI/CD secrets** | GitHub Actions, etc. Add them as repository/organization secrets (e.g. `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) and reference in workflows; never log or commit them. |
+
+**After saving:** Copy the Secret Access Key into your chosen place, then leave the AWS page. Rotate keys periodically or if you suspect exposure (IAM → User → Security credentials → Create new access key, then disable the old one).
 
 ---
 
@@ -138,6 +162,25 @@ Use the default VPC for simplicity, or create a dedicated VPC. Database and stor
      - Inbound: SSH 22 from your IP only (for admin).
      - Outbound: All (EC2 must reach Supabase over the internet for DB and Storage).
 
+### 5.1 Add an inbound rule (Security Group)
+
+Inbound rules are set on the **Security Group** attached to your EC2 instance, not on the instance itself.
+
+1. **AWS Console** → **EC2** → **Security groups** (left menu under **Network & Security**).
+2. Select the security group used by your instance (e.g. `valclean-ec2-sg` or the one shown on the instance’s **Security** tab).
+3. Open the **Inbound rules** tab → **Edit inbound rules**.
+4. **Add rule**:
+   - **Type**: choose a template (e.g. SSH, HTTP, HTTPS, Custom TCP) or **Custom**.
+   - **Port range**: e.g. `22` (SSH), `80` (HTTP), `443` (HTTPS), or a custom port.
+   - **Source**:  
+     - **My IP** – only your current IP (good for SSH).  
+     - **Anywhere-IPv4** (`0.0.0.0/0`) – any IPv4 address (use only for public HTTP/HTTPS, not for SSH).  
+     - **Custom** – another security group ID (e.g. ALB SG) or a CIDR like `10.0.0.0/16`.
+5. **Save rules**.
+
+**Example:** To allow HTTPS to your EC2 from the internet: Type **HTTPS**, port **443**, Source **0.0.0.0/0**.  
+**Security:** For SSH (port 22), use **My IP** or a specific CIDR, not `0.0.0.0/0`.
+
 ---
 
 ## 6. EC2 instance for application
@@ -160,11 +203,28 @@ Use the default VPC for simplicity, or create a dedicated VPC. Database and stor
    ssh -i your-key.pem ubuntu@<EC2-public-IP>
    ```
 
+### 6.1 Terminate (delete) EC2 instance
+
+When you no longer need the instance (e.g. after testing):
+
+1. **AWS Console** → **EC2** → **Instances**.
+2. Select the instance (checkbox).
+3. **Instance state** → **Terminate instance** (or **Actions** → **Instance state** → **Terminate instance**).
+4. Confirm. The instance goes to **terminating**, then is removed. This is **permanent**; you cannot start it again.
+
+**Before terminating:**
+
+- **Elastic IP:** If one was attached, **release** it after termination (EC2 → Elastic IPs → select → **Actions** → **Release**). Otherwise you may be charged for an unassociated Elastic IP.
+- **EBS volume:** The root volume is deleted by default when the instance is terminated. Any extra volumes you added: choose **Delete on termination: Yes** when attaching, or delete them manually after (EC2 → Volumes).
+- **ALB / target group:** If the instance was in a target group, remove it or delete the target group/ALB if you no longer need them.
+
+**Stop vs Terminate:** **Stop** leaves the instance and disk; you can **Start** again later (you may get a new public IP unless you use an Elastic IP). **Terminate** deletes the instance and (by default) its root volume permanently.
+
 ---
 
 ## 7. Application setup on EC2
 
-Run these on the EC2 instance (Ubuntu).
+All commands in this section are for **Ubuntu 22.04 LTS** (bash). Run them on the EC2 instance after SSH in (as user `ubuntu`; use `sudo` where shown).
 
 ### 7.1 System packages
 
@@ -173,11 +233,12 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y python3-pip python3-venv nodejs npm nginx git
 ```
 
-Use Node 18+ (recommended for Next.js 14):
+Use Node 20 (recommended for Next.js 14; Ubuntu 22.04 default Node is older):
 
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
+node -v   # should show v20.x
 ```
 
 ### 7.2 Clone repository
@@ -186,7 +247,7 @@ sudo apt install -y nodejs
 sudo mkdir -p /var/www
 sudo chown ubuntu:ubuntu /var/www
 cd /var/www
-git clone https://github.com/YOUR_ORG/VALClean.git
+git clone https://github.com/Braininhood/VALClean.git
 cd VALClean
 ```
 
@@ -205,11 +266,11 @@ pip install -r requirements.txt
 pip install gunicorn dj-database-url
 ```
 
-Create `.env` with your Supabase database URL and Supabase keys:
+Create `.env` with your Supabase database URL and Supabase keys (see [Section 10](#10-environment-variables-checklist)):
 
 ```bash
-nano .env
-# Paste production values: SECRET_KEY, DATABASE_URL, ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS, etc.
+nano /var/www/VALClean/backend/.env
+# Paste SECRET_KEY, DATABASE_URL, ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS, SUPABASE_* etc. Save: Ctrl+O, Enter, Ctrl+X
 ```
 
 Run migrations:
@@ -237,9 +298,13 @@ npm ci
 npm run build
 ```
 
-Create `.env.production` (or `.env.local`) with:
+Create `.env.production` with your API URL (for EC2 test use `https://13.135.109.229` or your EC2 hostname):
 
-- `NEXT_PUBLIC_API_URL=https://api.yourdomain.com` (or your backend URL).
+```bash
+nano /var/www/VALClean/frontend/.env.production
+# Add: NEXT_PUBLIC_API_URL=https://api.yourdomain.com  (or https://13.135.109.229/api for test)
+# Save: Ctrl+O, Enter, Ctrl+X
+```
 
 To run Next in production (Node server):
 
@@ -251,7 +316,15 @@ Or use a static export if your app supports it (`next export` / `output: 'export
 
 ### 7.5 Process managers (systemd)
 
-**Gunicorn (Django)** – create `/etc/systemd/system/valclean-backend.service`:
+Create the service files with `sudo nano` (or `sudo vi`), then enable and start.
+
+**Gunicorn (Django)** – create the unit file:
+
+```bash
+sudo nano /etc/systemd/system/valclean-backend.service
+```
+
+Paste the following, then save (Ctrl+O, Enter, Ctrl+X in nano):
 
 ```ini
 [Unit]
@@ -271,7 +344,13 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-**Next.js (optional, if not static)** – create `/etc/systemd/system/valclean-frontend.service`:
+**Next.js (optional, if not static)** – create the unit file:
+
+```bash
+sudo nano /etc/systemd/system/valclean-frontend.service
+```
+
+Paste the following, then save:
 
 ```ini
 [Unit]
@@ -286,6 +365,7 @@ Environment="NODE_ENV=production"
 EnvironmentFile=/var/www/VALClean/frontend/.env.production
 ExecStart=/usr/bin/npm run start
 Restart=always
+# If npm is elsewhere, use: which npm
 
 [Install]
 WantedBy=multi-user.target
@@ -317,7 +397,7 @@ Choose one of the two options below depending on whether you are **testing (EC2 
 
 For test deployments you use the **EC2 public IP** or the **EC2 default DNS** (e.g. `ec2-1-2-3-4.compute-1.amazonaws.com`). Certbot/Let’s Encrypt cannot issue certificates for IPs or for that hostname in practice, so use a **self-signed certificate with OpenSSL**. Browsers will show a security warning (accept for testing); traffic is still HTTPS and HTTP is still redirected to HTTPS.
 
-**1. Generate self-signed certificate (OpenSSL) on EC2:**
+**1. Generate self-signed certificate (OpenSSL) on EC2** (Ubuntu 22.04 has OpenSSL 3.x; `-addext` is supported):
 
 ```bash
 sudo mkdir -p /etc/nginx/ssl
@@ -328,7 +408,7 @@ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
 ```
 
-**2. Nginx config for EC2 IP / EC2 DNS** – replace `EC2_PUBLIC_IP` or your EC2 hostname (e.g. `ec2-1-2-3-4.compute-1.amazonaws.com`) in `server_name`:
+**2. Create Nginx site config** for EC2 IP / EC2 DNS: – replace `EC2_PUBLIC_IP` or your EC2 hostname (e.g. `ec2-1-2-3-4.compute-1.amazonaws.com`) in `server_name`:
 
 ```nginx
 # Upstreams
@@ -380,6 +460,13 @@ server {
     }
 }
 ```
+
+Create the file and paste the config (replace nothing if using `server_name _` for any host):
+
+```bash
+sudo nano /etc/nginx/sites-available/valclean
+```
+Paste the config above, save (Ctrl+O, Enter, Ctrl+X). Then enable and test (see end of 7.6).
 
 Access via `https://EC2_PUBLIC_IP` or `https://ec2-x-x-x-x.compute-1.amazonaws.com`. Set Django `ALLOWED_HOSTS` and frontend API URL to this IP or hostname. Browsers will warn about the self-signed cert—proceed for tests only.
 
@@ -453,16 +540,22 @@ server {
 }
 ```
 
+Save the config to `/etc/nginx/sites-available/valclean` (e.g. `sudo nano /etc/nginx/sites-available/valclean`), then enable and test (see end of 7.6).
+
 **Renewal:** `sudo certbot renew --nginx` (add to cron, e.g. `0 3 * * *`).
 
 ---
 
-**Enable and test (same for A or B):**
+**Enable and test (same for Option A or B):**
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/valclean /etc/nginx/sites-enabled/
+# Optional: disable default site so only valclean is served
+sudo rm -f /etc/nginx/sites-enabled/default
+
+sudo ln -sf /etc/nginx/sites-available/valclean /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
+If `nginx -t` fails, check the error and fix the config (e.g. missing `options-ssl-nginx.conf` for Option B – run Certbot first).
 
 ---
 
@@ -526,47 +619,50 @@ Use this value for `SECRET_KEY` in backend `.env`.
 
 ## 10. Environment variables checklist
 
-**Backend (`.env` on EC2)** – use your Supabase and app URLs. For **test (EC2 IP/DNS)** use `https://EC2_PUBLIC_IP` or `https://ec2-x-x-x-x.compute-1.amazonaws.com` in `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS`; for **production** use your domain (e.g. `https://yourdomain.com`).
+**Backend (`.env` on EC2)** – A ready-to-use template for the **EC2 test server** (13.135.109.229) is in **`backend/env.aws.example`**. Copy it to `backend/.env` on the server, then replace every `YOUR_...` / `REPLACE_...` with your real values.
+
+**Copy-paste .env for AWS (backend)** – Use this on EC2 at `/var/www/VALClean/backend/.env`. Replace placeholders (run `openssl rand -hex 32` for `SECRET_KEY`; get Supabase values from Dashboard → Settings → API / Database):
 
 ```bash
 # Django
-SECRET_KEY=<generate-with-openssl-rand-hex-32>
+SECRET_KEY=REPLACE_WITH_openssl_rand_hex_32_output
 DEBUG=False
-# Test: ALLOWED_HOSTS=ec2-x-x-x-x.compute-1.amazonaws.com,<EC2_PUBLIC_IP>
-# Production: yourdomain.com,api.yourdomain.com,<ALB-DNS-name>
-ALLOWED_HOSTS=yourdomain.com,api.yourdomain.com
+ALLOWED_HOSTS=localhost,127.0.0.1,13.135.109.229,ec2-13-135-109-229.eu-west-2.compute.amazonaws.com
 
-# Database – Supabase PostgreSQL (from Settings → Database → Connection string)
-DATABASE_URL=postgresql://postgres.[ref]:[YOUR-PASSWORD]@aws-0-[region].pooler.supabase.com:6543/postgres
-# Or direct: postgresql://postgres:[YOUR-PASSWORD]@db.[ref].supabase.co:5432/postgres
+# Database – Supabase (Settings → Database → Connection string; use pooler)
+DATABASE_URL=postgresql://postgres.YOUR_PROJECT_REF:YOUR_DB_PASSWORD@aws-0-eu-west-2.pooler.supabase.com:6543/postgres
 
-# CORS (Test: https://EC2_PUBLIC_IP or https://ec2-....amazonaws.com; Production: https://yourdomain.com)
-CORS_ALLOWED_ORIGINS=https://yourdomain.com
+# Supabase (Settings → API + JWT Settings)
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_JWT_SECRET=YOUR_SUPABASE_JWT_SECRET
 
-# Supabase (required for auth + storage buckets)
-SUPABASE_URL=https://[ref].supabase.co
-SUPABASE_ANON_KEY=eyJhbGc...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
-SUPABASE_JWT_SECRET=<from Supabase Dashboard → Settings → API → JWT Secret>
+# CORS + Frontend URL (EC2 test)
+CORS_ALLOWED_ORIGINS=https://13.135.109.229,https://ec2-13-135-109-229.eu-west-2.compute.amazonaws.com,http://13.135.109.229,http://ec2-13-135-109-229.eu-west-2.compute.amazonaws.com
+CORS_ALLOW_CREDENTIALS=True
+FRONTEND_URL=https://13.135.109.229
 
-# Email (e.g. SendGrid)
-EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-EMAIL_HOST=smtp.sendgrid.net
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_HOST_USER=apikey
-EMAIL_HOST_PASSWORD=<sendgrid-api-key>
-DEFAULT_FROM_EMAIL=noreply@yourdomain.com
+# JWT
+JWT_ACCESS_TOKEN_LIFETIME=15
+JWT_REFRESH_TOKEN_LIFETIME=10080
+
+# Email (optional for tests – console; for production use SendGrid)
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+DEFAULT_FROM_EMAIL=noreply@valclean.uk
 ```
 
-Storage is handled by Supabase buckets (e.g. `job-photos`, `images`); no AWS S3 keys needed.
+**Replace before first run:** `SECRET_KEY`, `DATABASE_URL` (Supabase connection string), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`. Storage is handled by Supabase buckets (e.g. `job-photos`, `images`); no AWS S3 keys needed.
 
-**Frontend (`.env.production`)**:
+**Frontend (`.env.production`)** – copy-paste for EC2 test (same host for frontend + API):
 
 ```bash
-NEXT_PUBLIC_API_URL=https://api.yourdomain.com
-# Any other NEXT_PUBLIC_* your app needs
+NEXT_PUBLIC_API_URL=https://13.135.109.229/api
+NEXT_PUBLIC_APP_URL=https://13.135.109.229
+NEXT_PUBLIC_API_VERSION=v1
+NEXT_PUBLIC_APP_NAME=VALClean Booking System
 ```
+Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` if your frontend uses Supabase client directly.
 
 Generate a secret key:
 
@@ -578,8 +674,11 @@ openssl rand -hex 32
 
 ## 11. Deployment and updates
 
-1. **SSH to EC2**.
-2. **Backend**:
+All commands below are for **Ubuntu** on the EC2 instance. Run in order (SSH in first).
+
+1. **SSH to EC2**: `ssh -i your-key.pem ubuntu@<EC2-IP>`
+
+2. **Backend** (run as one block; venv stays active for the whole block):
    ```bash
    cd /var/www/VALClean && git pull
    cd backend && source venv/bin/activate
@@ -589,13 +688,18 @@ openssl rand -hex 32
    python manage.py collectstatic --noinput
    sudo systemctl restart valclean-backend
    ```
+
 3. **Frontend**:
    ```bash
    cd /var/www/VALClean/frontend
    npm ci && npm run build
    sudo systemctl restart valclean-frontend
    ```
-4. **Nginx**: only if you changed site config: `sudo nginx -t && sudo systemctl reload nginx`.
+
+4. **Nginx** (only if you changed site config):
+   ```bash
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
 
 ---
 
