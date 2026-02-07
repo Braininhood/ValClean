@@ -31,10 +31,12 @@ export function useAuth() {
       }
 
       // Verify token by fetching user profile
+      // Backend /api/aut/me/ returns { success, data } where data IS the user object (not data.user)
       try {
         const profileData = await apiClient.getUserProfile()
-        if (profileData.user) {
-          setUser(profileData.user)
+        const userData = profileData?.user ?? profileData
+        if (userData && (userData.id != null || userData.email)) {
+          setUser(userData)
           setIsAuthenticated(true)
         } else {
           throw new Error('No user data in profile')

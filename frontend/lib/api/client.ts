@@ -21,12 +21,15 @@ class ApiClient {
       withCredentials: true, // For CORS with credentials
     });
 
-    // Request interceptor - Add JWT token if available
+    // Request interceptor - Add JWT token if available; allow FormData to set Content-Type (multipart)
     this.client.interceptors.request.use(
       (config) => {
         const token = this.getToken();
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
+        }
+        if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+          delete config.headers['Content-Type'];
         }
         return config;
       },
@@ -41,19 +44,20 @@ class ApiClient {
       async (error) => {
         const originalRequest = error.config;
 
-        // Handle 401 Unauthorized - Token expired
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Handle 401 Unauthorized - Token expired (skip if this was the refresh request itself)
+        const isRefreshRequest = originalRequest.url?.includes('/aut/token/refresh/');
+        if (error.response?.status === 401 && !originalRequest._retry && !isRefreshRequest) {
           originalRequest._retry = true;
 
-            try {
-            // Try to refresh token
+          try {
             const refreshToken = this.getRefreshToken();
             if (refreshToken) {
-              const response = await axios.post(`${API_URL}/aut/token/refresh/`, {
-                refresh: refreshToken,
-              });
+              const response = await axios.post(
+                `${API_URL}/aut/token/refresh/`,
+                { refresh: refreshToken },
+                { headers: { 'Content-Type': 'application/json' } }
+              );
 
-              // Backend returns: { access: "..." } or { success: true, data: { access: "..." } }
               const access = response.data.access || response.data.data?.access;
               if (access) {
                 this.setToken(access);
@@ -61,12 +65,14 @@ class ApiClient {
                 return this.client(originalRequest);
               }
             }
-          } catch (refreshError) {
-            // Refresh failed - logout user
-            this.clearTokens();
-            // Redirect to login
-            if (typeof window !== 'undefined') {
-              window.location.href = '/login';
+          } catch (refreshError: any) {
+            // Only clear and redirect when refresh actually returned 401/403 (token invalid)
+            const status = refreshError.response?.status;
+            if (status === 401 || status === 403) {
+              this.clearTokens();
+              if (typeof window !== 'undefined') {
+                window.location.href = '/login?message=' + encodeURIComponent('Session expired. Please sign in again.');
+              }
             }
             return Promise.reject(refreshError);
           }
@@ -110,6 +116,11 @@ class ApiClient {
     return this.client.post<T>(url, data, config);
   }
 
+  /** POST multipart/form-data (e.g. file upload). Content-Type is cleared in interceptor so browser sets boundary. */
+  async postFormData<T = any>(url: string, formData: FormData, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return this.client.post<T>(url, formData, config);
+  }
+
   async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return this.client.put<T>(url, data, config);
   }
@@ -135,6 +146,22 @@ class ApiClient {
       return { user, tokens };
     }
     throw new Error('Invalid login response');
+  }
+
+  async googleLogin(accessToken: string, email?: string, name?: string) {
+    const body: { access_token: string; email?: string; name?: string } = { access_token: accessToken };
+    if (email) body.email = email;
+    if (name) body.name = name;
+    const response = await this.post('/aut/google/', body);
+    if (response.data.success && response.data.data) {
+      const { user, tokens } = response.data.data;
+      if (tokens && typeof window !== 'undefined') {
+        localStorage.setItem('access_token', tokens.access);
+        localStorage.setItem('refresh_token', tokens.refresh);
+      }
+      return { user, tokens };
+    }
+    throw new Error(response.data?.error?.message || 'Google sign-in failed');
   }
 
   async register(data: any) {
@@ -165,7 +192,7 @@ class ApiClient {
 
   async getUserProfile() {
     const response = await this.get('/aut/me/');
-    // Backend returns: { success: true, data: { user: {...}, profile: {...} } }
+    // Backend returns: { success: true, data: <user object> } (data is UserSerializer.data)
     if (response.data.success && response.data.data) {
       return response.data.data;
     }

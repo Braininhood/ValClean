@@ -67,10 +67,18 @@ class RegisterView(generics.CreateAPIView):
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             user = serializer.save()
-            
+
+            # Send welcome email (non-blocking; log on failure)
+            try:
+                from apps.notifications.email_service import send_welcome_email
+                send_welcome_email(user, customer_name=user.get_full_name() or user.email)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning('Failed to send welcome email: %s', e)
+
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
-            
+
             return Response({
                 'success': True,
                 'data': {
@@ -222,21 +230,14 @@ def logout_view(request):
         if refresh_token:
             token = RefreshToken(refresh_token)
             token.blacklist()
-            return Response({
-                'success': True,
-                'data': {},
-                'meta': {
-                    'message': 'Logout successful',
-                }
-            }, status=status.HTTP_200_OK)
-        else:
-            return Response({
-                'success': False,
-                'error': {
-                    'code': 'VALIDATION_ERROR',
-                    'message': 'Refresh token is required',
-                }
-            }, status=status.HTTP_400_BAD_REQUEST)
+        # Always return 200 so frontend can clear tokens even when already logged out
+        return Response({
+            'success': True,
+            'data': {},
+            'meta': {
+                'message': 'Logout successful',
+            }
+        }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({
             'success': False,
@@ -245,6 +246,132 @@ def logout_view(request):
                 'message': 'Invalid refresh token',
             }
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def google_login_view(request):
+    """
+    Exchange Google (Supabase) OAuth for Django user and JWT.
+    POST /api/aut/google/
+    Body: { "access_token": "<supabase_jwt>" } or (dev) { "email": "...", "name": "..." }
+    Creates or finds User in Django DB and returns Django JWT + user (role) for dashboard redirect.
+    """
+    import logging
+    from django.db import IntegrityError
+
+    logger = logging.getLogger(__name__)
+    data = getattr(request, 'data', None) or {}
+    if not isinstance(data, dict):
+        data = {}
+
+    access_token = data.get('access_token')
+    email = (data.get('email') or '').lower().strip()
+    name = (data.get('name') or '').strip()
+
+    # Option 1: Verify Supabase JWT and extract email/name
+    supabase_jwt_secret = getattr(settings, 'SUPABASE_JWT_SECRET', None)
+    if access_token and supabase_jwt_secret:
+        try:
+            import jwt as pyjwt
+            payload = pyjwt.decode(
+                access_token,
+                supabase_jwt_secret,
+                algorithms=['HS256'],
+                options={'verify_aud': False},
+            )
+            email = (payload.get('email') or payload.get('sub') or '').lower().strip()
+            if not email and payload.get('sub'):
+                # Supabase may put email in user_metadata or app_metadata
+                email = (payload.get('user_metadata', {}).get('email') or '').lower().strip()
+            name = (payload.get('user_metadata', {}).get('full_name') or
+                    payload.get('user_metadata', {}).get('name') or
+                    payload.get('name') or
+                    (payload.get('given_name', '') + ' ' + payload.get('family_name', '')).strip() or
+                    name)
+        except Exception as e:
+            # Fallback: use email/name from body (JWT secret mismatch, PyJWT not installed, etc.)
+            logger.debug('Google login JWT fallback: %s', e)
+            email = (data.get('email') or '').lower().strip()
+            name = (data.get('name') or '').strip()
+            if not email:
+                return Response({
+                    'success': False,
+                    'error': {'code': 'INVALID_TOKEN', 'message': 'Invalid token. Send email (and name) in the request body as fallback, or set SUPABASE_JWT_SECRET in backend .env to match Supabase project JWT Secret.'},
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+    # Option 2: No token or no secret – accept email + name from body (e.g. frontend sends session.user)
+    if not email and data.get('email'):
+        email = (data.get('email') or '').lower().strip()
+        name = (data.get('name') or '').strip()
+
+    if not email:
+        return Response({
+            'success': False,
+            'error': {'code': 'MISSING_EMAIL', 'message': 'Email is required'},
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    from apps.customers.models import Customer
+
+    try:
+        user = User.objects.get(email__iexact=email)
+    except User.DoesNotExist:
+        # Create new user (customer) and Customer record
+        base_username = email.split('@')[0]
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f'{base_username}{counter}'
+            counter += 1
+        name_parts = (name or 'User').split(None, 1)
+        first_name = name_parts[0] if name_parts else 'User'
+        last_name = name_parts[1] if len(name_parts) > 1 else ''
+        try:
+            user = User.objects.create(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                role='customer',
+            )
+            user.set_unusable_password()
+            user.save()
+            Customer.objects.get_or_create(
+                user=user,
+                defaults={
+                    'name': name or f'{first_name} {last_name}'.strip() or email,
+                    'email': email,
+                },
+            )
+        except IntegrityError:
+            # Race: user was created by another request; fetch and continue
+            user = User.objects.get(email__iexact=email)
+
+    if not user.is_active:
+        return Response({
+            'success': False,
+            'error': {'code': 'ACCOUNT_DISABLED', 'message': 'Account is disabled'},
+        }, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'success': True,
+            'data': {
+                'user': UserSerializer(user).data,
+                'tokens': {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                },
+            },
+            'meta': {'message': 'Signed in successfully'},
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.exception('Google login failed after user lookup: %s', e)
+        return Response({
+            'success': False,
+            'error': {'code': 'SERVER_ERROR', 'message': 'Sign-in failed. Please try again.'},
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])

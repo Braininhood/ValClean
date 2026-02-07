@@ -203,7 +203,7 @@ class Order(TimeStampedModel):
         if not self.customer and self.guest_email:
             self.is_guest_order = True
         
-        # Calculate cancellation deadline
+        # Always recalculate cancellation deadline and flags (in case scheduled date/time changed)
         if self.scheduled_date and self.scheduled_time:
             from django.utils import timezone
             from datetime import datetime, timedelta
@@ -217,8 +217,79 @@ class Order(TimeStampedModel):
             self.can_cancel = can_cancel_val
             self.can_reschedule = can_reschedule_val
             self.cancellation_deadline = deadline
+        elif self.status in ['completed', 'cancelled']:
+            # If order is completed or cancelled, can't cancel/reschedule
+            self.can_cancel = False
+            self.can_reschedule = False
         
         super().save(*args, **kwargs)
+
+
+class ChangeRequest(TimeStampedModel):
+    """
+    Order change request model for tracking and approval workflow.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='change_requests',
+        help_text='Order for this change request'
+    )
+    requested_date = models.DateField(
+        help_text='Requested new date'
+    )
+    requested_time = models.TimeField(
+        null=True,
+        blank=True,
+        help_text='Requested new time (optional)'
+    )
+    reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text='Reason for change request'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        help_text='Change request status'
+    )
+    reviewed_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_change_requests',
+        help_text='User who reviewed this change request'
+    )
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When this change request was reviewed'
+    )
+    review_notes = models.TextField(
+        blank=True,
+        null=True,
+        help_text='Admin review notes'
+    )
+    
+    class Meta:
+        verbose_name = 'change request'
+        verbose_name_plural = 'change requests'
+        db_table = 'orders_changerequest'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['order', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"Change request for {self.order.order_number} - {self.status}"
 
 
 class OrderItem(TimeStampedModel):

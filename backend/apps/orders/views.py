@@ -1,22 +1,27 @@
 """
 Orders app views.
-Order and OrderItem viewsets with guest checkout support (multi-service orders).
+Order and OrderItem viewsets with guest checkout support.
 """
 from rest_framework import viewsets, status
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils import timezone
-from datetime import datetime, timedelta
-from apps.core.permissions import IsCustomer, IsAdminOrManager, IsOwnerOrAdmin
-from apps.core.utils import can_cancel_or_reschedule
-from .models import Order, OrderItem
-from .serializers import (
-    OrderSerializer, OrderListSerializer, OrderItemSerializer, OrderCreateSerializer
+from datetime import datetime, timedelta, time as time_obj
+from django.contrib.auth import get_user_model
+from apps.core.permissions import (
+    IsCustomer, IsAdminOrManager, IsStaff, IsStaffOrManager, IsOwnerOrAdmin
 )
-from apps.customers.models import Customer
+from apps.core.utils import can_cancel_or_reschedule
+from .models import Order, OrderItem, ChangeRequest
+from .serializers import (
+    OrderSerializer, OrderItemSerializer, OrderCreateSerializer, ChangeRequestSerializer
+)
 from apps.services.models import Service
 from apps.staff.models import Staff
+from apps.customers.models import Customer
+
+User = get_user_model()
 
 
 class OrderPublicViewSet(viewsets.ModelViewSet):
@@ -56,19 +61,75 @@ class OrderPublicViewSet(viewsets.ModelViewSet):
             except Customer.DoesNotExist:
                 pass
         elif serializer.validated_data.get('guest_email'):
-            # Create or get guest customer
+            # Create or get guest customer; update address when completing booking
             guest_email = serializer.validated_data['guest_email']
             guest_name = serializer.validated_data.get('guest_name', '')
             guest_phone = serializer.validated_data.get('guest_phone', '')
+            addr1 = serializer.validated_data.get('address_line1', '')
+            addr2 = serializer.validated_data.get('address_line2', '')
+            city = serializer.validated_data.get('city', '')
+            postcode = serializer.validated_data.get('postcode', '')
+            country = serializer.validated_data.get('country', 'United Kingdom')
             
             customer, created = Customer.objects.get_or_create(
                 email=guest_email,
                 defaults={
                     'name': guest_name,
                     'phone': guest_phone,
-                    'user': None,  # Guest customer, no user account
+                    'user': None,
+                    'address_line1': addr1,
+                    'address_line2': addr2 or None,
+                    'city': city,
+                    'postcode': postcode,
+                    'country': country,
                 }
             )
+            if not created and (addr1 or city or postcode):
+                customer.name = guest_name or customer.name
+                customer.phone = guest_phone or customer.phone
+                customer.address_line1 = addr1 or customer.address_line1
+                customer.address_line2 = addr2 or customer.address_line2
+                customer.city = city or customer.city
+                customer.postcode = postcode or customer.postcode
+                customer.country = country or customer.country
+                customer.save(update_fields=['name', 'phone', 'address_line1', 'address_line2', 'city', 'postcode', 'country'])
+        
+        # Validate and apply coupon if provided
+        coupon_code = serializer.validated_data.get('coupon_code', '').strip().upper()
+        coupon = None
+        discount_amount = 0
+        
+        if coupon_code:
+            try:
+                from apps.coupons.models import Coupon
+                coupon = Coupon.objects.get(code__iexact=coupon_code)
+                
+                # Get service IDs for validation
+                service_ids = [item['service_id'] for item in items_data]
+                
+                # Validate coupon (will calculate discount later after we know total)
+                is_valid, error_message = coupon.is_valid(
+                    customer=customer,
+                    order_amount=0,  # Will validate again after calculating total
+                    service_ids=service_ids
+                )
+                
+                if not is_valid:
+                    return Response({
+                        'success': False,
+                        'error': {
+                            'code': 'INVALID_COUPON',
+                            'message': error_message,
+                        }
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            except Coupon.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': {
+                        'code': 'COUPON_NOT_FOUND',
+                        'message': 'Coupon code not found',
+                    }
+                }, status=status.HTTP_404_NOT_FOUND)
         
         # Calculate total price
         total_price = 0
@@ -119,7 +180,38 @@ class OrderPublicViewSet(viewsets.ModelViewSet):
                 'total_price': item_total,
             })
         
-        # Create order
+        # Apply coupon discount if valid
+        if coupon:
+            # Re-validate with actual order amount
+            is_valid, error_message = coupon.is_valid(
+                customer=customer,
+                order_amount=total_price,
+                service_ids=[item['service'].id for item in order_items]
+            )
+            
+            if is_valid:
+                discount_amount = coupon.calculate_discount(total_price)
+                total_price = total_price - discount_amount
+            else:
+                return Response({
+                    'success': False,
+                    'error': {
+                        'code': 'INVALID_COUPON',
+                        'message': error_message,
+                    }
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Guest/display fields: always store from payload when provided (for invoices & display)
+        # When customer_id is sent (logged-in user), still save guest_* so order has full info
+        guest_email = serializer.validated_data.get('guest_email') or (customer.email if customer else None)
+        guest_name = serializer.validated_data.get('guest_name') or (customer.name if customer else None)
+        guest_phone = serializer.validated_data.get('guest_phone') or (getattr(customer, 'phone', None) if customer else None)
+        if guest_email and not guest_name and customer:
+            guest_name = customer.name
+        if guest_email and not guest_phone and customer:
+            guest_phone = getattr(customer, 'phone', None)
+
+        # Create order (pending first so we have pk for signal)
         order = Order.objects.create(
             customer=customer,
             status='pending',
@@ -129,10 +221,10 @@ class OrderPublicViewSet(viewsets.ModelViewSet):
             scheduled_date=scheduled_date,
             scheduled_time=scheduled_time,
             cancellation_policy_hours=24,
-            # Guest fields
-            guest_email=serializer.validated_data.get('guest_email') if not customer or not customer.user else None,
-            guest_name=serializer.validated_data.get('guest_name') if not customer or not customer.user else None,
-            guest_phone=serializer.validated_data.get('guest_phone') if not customer or not customer.user else None,
+            # Guest/display fields (always set so order has full info)
+            guest_email=guest_email,
+            guest_name=guest_name,
+            guest_phone=guest_phone,
             address_line1=serializer.validated_data['address_line1'],
             address_line2=serializer.validated_data.get('address_line2'),
             city=serializer.validated_data['city'],
@@ -167,6 +259,38 @@ class OrderPublicViewSet(viewsets.ModelViewSet):
             order.cancellation_deadline = deadline
             order.save()
         
+        # Confirm order so appointments are created and confirmation email is sent
+        order.status = 'confirmed'
+        order.save(update_fields=['status'])
+        
+        # Track coupon usage if coupon was applied
+        if coupon and discount_amount > 0:
+            from apps.coupons.models import CouponUsage
+            CouponUsage.objects.create(
+                coupon=coupon,
+                customer=customer,
+                guest_email=serializer.validated_data.get('guest_email') if not customer else None,
+                order=order,
+                discount_amount=discount_amount,
+                order_amount=total_price + discount_amount,  # Original amount before discount
+                final_amount=total_price,
+            )
+            # Update coupon used count
+            coupon.used_count += 1
+            coupon.save(update_fields=['used_count'])
+        
+        # Send confirmation email (if order is immediately confirmed)
+        # Note: If order is created as 'pending', email will be sent when status changes to 'confirmed' via signal
+        if order.status == 'confirmed':
+            try:
+                from apps.notifications.email_service import send_booking_confirmation
+                send_booking_confirmation(order)
+            except Exception as e:
+                # Log error but don't fail order creation
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error sending confirmation email for order {order.order_number}: {e}")
+        
         # Serialize response
         order_serializer = OrderSerializer(order)
         
@@ -180,6 +304,153 @@ class OrderPublicViewSet(viewsets.ModelViewSet):
                 'tracking_token': order.tracking_token,
             }
         }, status=status.HTTP_201_CREATED)
+
+
+class ChangeRequestViewSet(viewsets.ModelViewSet):
+    """
+    Change request ViewSet (admin/manager only).
+    For approving/rejecting order change requests.
+    """
+    queryset = ChangeRequest.objects.select_related('order', 'reviewed_by').all()
+    serializer_class = ChangeRequestSerializer
+    permission_classes = [IsAdminOrManager]
+    
+    def get_queryset(self):
+        """Filter by order if provided."""
+        queryset = super().get_queryset()
+        order_id = self.request.query_params.get('order_id')
+        status = self.request.query_params.get('status')
+        
+        if order_id:
+            queryset = queryset.filter(order_id=order_id)
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        return queryset.order_by('-created_at')
+    
+    @action(detail=True, methods=['post'], url_path='approve')
+    def approve(self, request, pk=None):
+        """Approve change request (admin/manager)."""
+        change_request = self.get_object()
+        
+        if change_request.status != 'pending':
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'INVALID_STATUS',
+                    'message': f'Change request is already {change_request.status}',
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        order = change_request.order
+        
+        # Check if order can still be rescheduled
+        if not order.can_reschedule:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'RESCHEDULE_NOT_ALLOWED',
+                    'message': f'Order cannot be rescheduled within {order.cancellation_policy_hours} hours of scheduled time.',
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Update order
+        order.scheduled_date = change_request.requested_date
+        if change_request.requested_time:
+            order.scheduled_time = change_request.requested_time
+        
+        # Recalculate cancellation deadline
+        if order.scheduled_date and order.scheduled_time:
+            scheduled_datetime = timezone.make_aware(
+                datetime.combine(order.scheduled_date, order.scheduled_time)
+            )
+            can_cancel_val, can_reschedule_val, deadline = can_cancel_or_reschedule(
+                scheduled_datetime,
+                order.cancellation_policy_hours
+            )
+            order.can_cancel = can_cancel_val
+            order.can_reschedule = can_reschedule_val
+            order.cancellation_deadline = deadline
+        
+        order.save()
+        
+        # Update each order item's appointment to new date/time (first at new time, then + duration + padding)
+        new_time = change_request.requested_time or order.scheduled_time or time_obj(9, 0)
+        current_start = timezone.make_aware(
+            datetime.combine(change_request.requested_date, new_time)
+        )
+        for item in order.items.select_related('appointment', 'service').all():
+            if item.appointment and item.service:
+                duration_minutes = item.service.duration
+                padding = getattr(item.service, 'padding_time', None) or 0
+                end_dt = current_start + timedelta(minutes=duration_minutes)
+                item.appointment.start_time = current_start
+                item.appointment.end_time = end_dt
+                item.appointment.save()
+                current_start = end_dt + timedelta(minutes=padding)
+
+        # Update change request
+        change_request.status = 'approved'
+        change_request.reviewed_by = request.user
+        change_request.reviewed_at = timezone.now()
+        change_request.review_notes = request.data.get('review_notes', '')
+        change_request.save()
+        
+        try:
+            from apps.notifications.email_service import send_change_request_approved
+            send_change_request_approved(change_request)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to send change request approved email: {e}")
+        
+        return Response({
+            'success': True,
+            'data': OrderSerializer(order).data,
+            'meta': {
+                'message': 'Change request approved and order updated',
+            }
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'], url_path='reject')
+    def reject(self, request, pk=None):
+        """Reject change request (admin/manager)."""
+        change_request = self.get_object()
+        
+        if change_request.status != 'pending':
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'INVALID_STATUS',
+                    'message': f'Change request is already {change_request.status}',
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Update change request
+        change_request.status = 'rejected'
+        change_request.reviewed_by = request.user
+        change_request.reviewed_at = timezone.now()
+        change_request.review_notes = request.data.get('review_notes', '')
+        change_request.save()
+        
+        try:
+            from apps.notifications.email_service import send_change_request_rejected
+            send_change_request_rejected(change_request)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to send change request rejected email: {e}")
+        
+        return Response({
+            'success': True,
+            'data': {
+                'id': change_request.id,
+                'status': change_request.status,
+                'reviewed_by': change_request.reviewed_by.email if change_request.reviewed_by else None,
+                'reviewed_at': change_request.reviewed_at,
+            },
+            'meta': {
+                'message': 'Change request rejected',
+            }
+        }, status=status.HTTP_200_OK)
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -198,11 +469,11 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         """Use simplified serializer for list views."""
         if self.action == 'list':
-            return OrderListSerializer
+            return OrderSerializer
         return OrderSerializer
     
     def get_queryset(self):
-        """Filter by current user if customer, or all if admin/manager."""
+        """Filter by current user's customer profile if customer, or all if admin/manager."""
         queryset = super().get_queryset()
         
         # Customer can only see their own orders
@@ -212,18 +483,12 @@ class OrderViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(customer=customer)
             except Customer.DoesNotExist:
                 queryset = queryset.none()
-        
-        # Manager can see orders within their scope
-        elif self.request.user.role == 'manager':
-            # TODO: Implement manager scope filtering
-            pass
-        
-        # Admin can see all orders
-        
-        # Apply filters
-        status_filter = self.request.query_params.get('status')
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
+        # Admin/Manager can see all orders
+        elif self.request.user.role in ['admin', 'manager']:
+            # Filter by customer_id if provided
+            customer_id = self.request.query_params.get('customer_id')
+            if customer_id:
+                queryset = queryset.filter(customer_id=customer_id)
         
         return queryset
     
@@ -231,31 +496,98 @@ class OrderViewSet(viewsets.ModelViewSet):
         """Override permissions for write operations."""
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             if self.request.user.role == 'customer':
-                # Customer can only manage their own orders
+                # Customer can only cancel their own orders
                 return [IsAuthenticated()]
             return [IsAdminOrManager()]
         return [IsAuthenticated()]
-    
+
+    def list(self, request, *args, **kwargs):
+        """List orders with response shape { success, data, meta } for frontend."""
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'count': queryset.count()},
+        }, status=status.HTTP_200_OK)
+
+    def get_paginated_response(self, data):
+        """Return paginated response in shape { success, data, meta }."""
+        pagination = self.paginator
+        return Response({
+            'success': True,
+            'data': data,
+            'meta': {
+                'count': pagination.page.paginator.count,
+                'next': pagination.get_next_link(),
+                'previous': pagination.get_previous_link(),
+            },
+        }, status=status.HTTP_200_OK)
+
+    def retrieve(self, request, *args, **kwargs):
+        """Return order detail in shape { success, data } for frontend."""
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+        }, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post'], url_path='cancel')
     def cancel(self, request, pk=None):
-        """Cancel order (customer can cancel if allowed by 24h policy)."""
+        """Cancel order (customer/admin/manager)."""
         order = self.get_object()
         
+        # Check permissions
+        if request.user.role == 'customer':
+            try:
+                customer = Customer.objects.get(user=request.user)
+                if order.customer != customer:
+                    return Response({
+                        'success': False,
+                        'error': {
+                            'code': 'PERMISSION_DENIED',
+                            'message': 'You can only cancel your own orders',
+                        }
+                    }, status=status.HTTP_403_FORBIDDEN)
+            except Customer.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': {
+                        'code': 'NOT_FOUND',
+                        'message': 'Customer profile not found',
+                    }
+                }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if order can be cancelled
         if not order.can_cancel:
             return Response({
                 'success': False,
                 'error': {
                     'code': 'CANCELLATION_NOT_ALLOWED',
-                    'message': f'Cancellation deadline has passed. Deadline was {order.cancellation_deadline}',
+                    'message': f'Orders cannot be cancelled within {order.cancellation_policy_hours} hours of the scheduled time.',
                 }
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Cancel order
         order.status = 'cancelled'
         order.save()
         
+        try:
+            from apps.notifications.email_service import send_booking_cancellation
+            send_booking_cancellation(order)
+        except Exception as e:
+            logger = __import__('logging').getLogger(__name__)
+            logger.warning(f"Could not send cancellation email for order {order.order_number}: {e}")
+        
+        serializer = self.get_serializer(order)
         return Response({
             'success': True,
-            'data': OrderSerializer(order).data,
+            'data': serializer.data,
             'meta': {
                 'message': 'Order cancelled successfully',
             }
@@ -263,25 +595,34 @@ class OrderViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'], url_path='request-change')
     def request_change(self, request, pk=None):
-        """
-        Request date/time change (customer can request change if allowed by 24h policy).
-        POST /api/cus/orders/{id}/request-change/
-        Body: {"scheduled_date": "2024-01-20", "scheduled_time": "14:00", "notes": "Change request reason"}
-        """
+        """Request order change (customer)."""
         order = self.get_object()
         
-        if not order.can_reschedule:
-            return Response({
-                'success': False,
-                'error': {
-                    'code': 'RESCHEDULE_NOT_ALLOWED',
-                    'message': f'Rescheduling deadline has passed. Deadline was {order.cancellation_deadline}',
-                }
-            }, status=status.HTTP_400_BAD_REQUEST)
+        # Check permissions
+        if request.user.role == 'customer':
+            try:
+                customer = Customer.objects.get(user=request.user)
+                if order.customer != customer:
+                    return Response({
+                        'success': False,
+                        'error': {
+                            'code': 'PERMISSION_DENIED',
+                            'message': 'You can only request changes to your own orders',
+                        }
+                    }, status=status.HTTP_403_FORBIDDEN)
+            except Customer.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': {
+                        'code': 'NOT_FOUND',
+                        'message': 'Customer profile not found',
+                    }
+                }, status=status.HTTP_404_NOT_FOUND)
         
+        # Validate request data
         new_date = request.data.get('scheduled_date')
         new_time = request.data.get('scheduled_time')
-        notes = request.data.get('notes', '')
+        reason = request.data.get('reason', '')
         
         if not new_date:
             return Response({
@@ -292,38 +633,47 @@ class OrderViewSet(viewsets.ModelViewSet):
                 }
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # TODO: Implement change request workflow (create change request record)
-        # For now, update the order directly (admin approval would be needed in production)
+        # Check if order can be rescheduled
+        if not order.can_reschedule:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'RESCHEDULE_NOT_ALLOWED',
+                    'message': f'Orders cannot be rescheduled within {order.cancellation_policy_hours} hours of the scheduled time.',
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
         
-        from django.utils.dateparse import parse_date, parse_time
+        # Check if order status allows changes
+        if order.status in ['completed', 'cancelled']:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'INVALID_STATUS',
+                    'message': f'Cannot request changes for orders with status: {order.status}',
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
         
-        order.scheduled_date = parse_date(new_date)
-        if new_time:
-            order.scheduled_time = parse_time(new_time)
+        # Create change request
+        change_request = ChangeRequest.objects.create(
+            order=order,
+            requested_date=new_date,
+            requested_time=new_time,
+            reason=reason,
+            status='pending'
+        )
         
-        if notes:
-            order.notes = f"{order.notes or ''}\n\nChange Request: {notes}".strip()
-        
-        # Recalculate cancellation deadline
-        if order.scheduled_date and order.scheduled_time:
-            scheduled_datetime = timezone.make_aware(
-                datetime.combine(order.scheduled_date, order.scheduled_time)
-            )
-            can_cancel_val, can_reschedule_val, deadline = can_cancel_or_reschedule(
-                scheduled_datetime,
-                order.cancellation_policy_hours
-            )
-            order.can_cancel = can_cancel_val
-            order.can_reschedule = can_reschedule_val
-            order.cancellation_deadline = deadline
-        
-        order.save()
+        try:
+            from apps.notifications.email_service import send_change_request_submitted
+            send_change_request_submitted(change_request)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to send change request submitted email: {e}")
         
         return Response({
             'success': True,
             'data': OrderSerializer(order).data,
             'meta': {
-                'message': 'Change request submitted successfully',
+                'message': 'Change request submitted. A manager will review your request and contact you.',
             }
         }, status=status.HTTP_200_OK)
 
@@ -378,3 +728,410 @@ def guest_order_by_token_view(request, tracking_token):
         'data': serializer.data,
         'meta': {}
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def guest_check_email_view(request):
+    """
+    Check if email exists for account linking (public).
+    POST /api/bkg/guest/check-email/
+    Body: { 'email': 'user@example.com' }
+    """
+    email = request.data.get('email')
+    if not email:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'VALIDATION_ERROR',
+                'message': 'Email is required',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Normalize email
+    email = email.lower().strip()
+    
+    # Check if user exists
+    email_exists = User.objects.filter(email__iexact=email).exists()
+    
+    # Check if customer exists (with or without user account)
+    customer_exists = Customer.objects.filter(email__iexact=email).exists()
+    
+    return Response({
+        'success': True,
+        'data': {
+            'email': email,
+            'email_exists': email_exists,
+            'customer_exists': customer_exists,
+            'has_account': email_exists,  # User account exists
+            'suggestion': 'Login to link your order to your account' if email_exists else 'Register to create an account and link your order'
+        },
+        'meta': {}
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def guest_order_cancel_view(request, order_number):
+    """
+    Cancel guest order by order number (public).
+    POST /api/bkg/guest/order/{order_number}/cancel/
+    """
+    try:
+        order = Order.objects.get(order_number=order_number)
+    except Order.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'NOT_FOUND',
+                'message': 'Order not found',
+            }
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if order can be cancelled
+    if not order.can_cancel:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'CANCELLATION_NOT_ALLOWED',
+                'message': f'Orders cannot be cancelled within {order.cancellation_policy_hours} hours of the scheduled time.',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if order status allows cancellation
+    if order.status in ['completed', 'cancelled']:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'INVALID_STATUS',
+                'message': f'Cannot cancel order with status: {order.status}',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Cancel order
+    order.status = 'cancelled'
+    order.save()
+    
+    try:
+        from apps.notifications.email_service import send_booking_cancellation
+        send_booking_cancellation(order)
+    except Exception as e:
+        logger = __import__('logging').getLogger(__name__)
+        logger.warning(f"Could not send cancellation email for order {order.order_number}: {e}")
+    
+    return Response({
+        'success': True,
+        'data': OrderSerializer(order).data,
+        'meta': {
+            'message': 'Order cancelled successfully',
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def guest_order_request_change_view(request, order_number):
+    """
+    Request order change by order number (public).
+    POST /api/bkg/guest/order/{order_number}/request-change/
+    Body: { 'scheduled_date': '2024-01-20', 'scheduled_time': '10:00:00', 'reason': 'Need to reschedule' }
+    """
+    try:
+        order = Order.objects.get(order_number=order_number)
+    except Order.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'NOT_FOUND',
+                'message': 'Order not found',
+            }
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Validate request data
+    new_date = request.data.get('scheduled_date')
+    new_time = request.data.get('scheduled_time')
+    reason = request.data.get('reason', '')
+    
+    if not new_date:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'VALIDATION_ERROR',
+                'message': 'scheduled_date is required',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if order can be rescheduled
+    if not order.can_reschedule:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'RESCHEDULE_NOT_ALLOWED',
+                'message': f'Orders cannot be rescheduled within {order.cancellation_policy_hours} hours of the scheduled time.',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if order status allows changes
+    if order.status in ['completed', 'cancelled']:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'INVALID_STATUS',
+                'message': f'Cannot request changes for orders with status: {order.status}',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Create change request
+    change_request = ChangeRequest.objects.create(
+        order=order,
+        requested_date=new_date,
+        requested_time=new_time,
+        reason=reason,
+        status='pending'
+    )
+    
+    # TODO: Send notification to manager/admin
+    
+    return Response({
+        'success': True,
+        'data': OrderSerializer(order).data,
+        'meta': {
+            'message': 'Change request submitted. A manager will review your request and contact you.',
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def guest_order_link_login_view(request, order_number):
+    """
+    Link guest order to existing account via login (public).
+    POST /api/bkg/guest/order/{order_number}/link-login/
+    Body: { 'email': 'user@example.com', 'password': 'password' }
+    """
+    try:
+        order = Order.objects.get(order_number=order_number)
+    except Order.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'NOT_FOUND',
+                'message': 'Order not found',
+            }
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if order is already linked
+    if order.customer and order.customer.user:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'ALREADY_LINKED',
+                'message': 'This order is already linked to an account',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    email = request.data.get('email')
+    password = request.data.get('password')
+    
+    if not email or not password:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'VALIDATION_ERROR',
+                'message': 'Email and password are required',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Authenticate user
+    from django.contrib.auth import authenticate
+    user = authenticate(request, email=email.lower().strip(), password=password)
+    
+    if not user:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'INVALID_CREDENTIALS',
+                'message': 'Invalid email or password',
+            }
+        }, status=status.HTTP_401_UNAUTHORIZED)
+    
+    # Verify email matches order email
+    if order.guest_email and order.guest_email.lower() != email.lower():
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'EMAIL_MISMATCH',
+                'message': 'Email does not match the order email',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Get or create customer for this user
+    customer, created = Customer.objects.get_or_create(
+        user=user,
+        defaults={
+            'email': user.email,
+            'name': f'{user.first_name} {user.last_name}'.strip() or user.email,
+        }
+    )
+    
+    # Link order to customer
+    order.customer = customer
+    order.account_linked_at = timezone.now()
+    order.is_guest_order = False
+    order.save()
+    
+    serializer = OrderSerializer(order)
+    return Response({
+        'success': True,
+        'data': serializer.data,
+        'meta': {
+            'message': 'Order successfully linked to your account',
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'role': user.role,
+            }
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def guest_order_link_register_view(request, order_number):
+    """
+    Link guest order to new account via registration (public).
+    POST /api/bkg/guest/order/{order_number}/link-register/
+    Body: { 'email': 'user@example.com', 'password': 'password', 'password_confirm': 'password' }
+    """
+    try:
+        order = Order.objects.get(order_number=order_number)
+    except Order.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'NOT_FOUND',
+                'message': 'Order not found',
+            }
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if order is already linked
+    if order.customer and order.customer.user:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'ALREADY_LINKED',
+                'message': 'This order is already linked to an account',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    email = request.data.get('email')
+    password = request.data.get('password')
+    password_confirm = request.data.get('password_confirm')
+    
+    if not email or not password or not password_confirm:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'VALIDATION_ERROR',
+                'message': 'Email, password, and password confirmation are required',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Verify email matches order email
+    if order.guest_email and order.guest_email.lower() != email.lower():
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'EMAIL_MISMATCH',
+                'message': 'Email does not match the order email',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if email already exists
+    if User.objects.filter(email__iexact=email).exists():
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'EMAIL_EXISTS',
+                'message': 'An account with this email already exists. Please login instead.',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Validate password
+    if password != password_confirm:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'VALIDATION_ERROR',
+                'message': 'Passwords do not match',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if len(password) < 8:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'VALIDATION_ERROR',
+                'message': 'Password must be at least 8 characters long',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Generate username from email if not provided
+    email_clean = email.lower().strip()
+    base_username = email_clean.split('@')[0]
+    username = base_username
+    counter = 1
+    while User.objects.filter(username=username).exists():
+        username = f"{base_username}{counter}"
+        counter += 1
+    
+    # Create user account
+    user = User.objects.create_user(
+        username=username,
+        email=email_clean,
+        password=password,
+        role='customer',
+        is_verified=True,  # Auto-verify for account linking
+    )
+    
+    # Set name from order if available
+    if order.guest_name:
+        name_parts = order.guest_name.split(' ', 1)
+        user.first_name = name_parts[0]
+        if len(name_parts) > 1:
+            user.last_name = name_parts[1]
+        user.save()
+    
+    # Get or create customer for this user
+    customer, created = Customer.objects.get_or_create(
+        user=user,
+        defaults={
+            'email': user.email,
+            'name': order.guest_name or f'{user.first_name} {user.last_name}'.strip() or user.email,
+            'phone': order.guest_phone or '',
+        }
+    )
+    
+    # Link order to customer
+    order.customer = customer
+    order.account_linked_at = timezone.now()
+    order.is_guest_order = False
+    order.save()
+    
+    serializer = OrderSerializer(order)
+    return Response({
+        'success': True,
+        'data': serializer.data,
+        'meta': {
+            'message': 'Account created and order successfully linked',
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'role': user.role,
+            },
+            'tokens': {
+                'access': '',  # Will be generated by login endpoint
+                'refresh': '',
+            }
+        }
+    }, status=status.HTTP_201_CREATED)

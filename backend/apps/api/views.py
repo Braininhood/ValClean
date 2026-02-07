@@ -55,7 +55,31 @@ def api_root(request):
                         'subscriptions': '/api/bkg/subscriptions/',
                         'orders': '/api/bkg/orders/',
                     },
+                    'guest_access': {
+                        'description': 'Guest order/subscription access (NO AUTH REQUIRED)',
+                        'orders': {
+                            'get_by_number': '/api/bkg/guest/order/{order_number}/',
+                            'get_by_token': '/api/bkg/guest/order/token/{tracking_token}/',
+                        },
+                        'subscriptions': {
+                            'get_by_number': '/api/bkg/guest/subscription/{subscription_number}/',
+                            'get_by_token': '/api/bkg/guest/subscription/token/{tracking_token}/',
+                        },
+                        'account_linking': {
+                            'check_email': '/api/bkg/guest/check-email/',
+                            'link_order_login': '/api/bkg/guest/order/{order_number}/link-login/',
+                            'link_order_register': '/api/bkg/guest/order/{order_number}/link-register/',
+                            'link_subscription_login': '/api/bkg/guest/subscription/{subscription_number}/link-login/',
+                            'link_subscription_register': '/api/bkg/guest/subscription/{subscription_number}/link-register/',
+                            'description': 'Optional post-order account linking (Day 6 feature)',
+                        },
+                    },
                     'slots': '/api/slots/',
+                    'address': {
+                        'autocomplete': '/api/addr/autocomplete/?query=10+Downing+Street',
+                        'validate': '/api/addr/validate/',
+                        'description': 'Google Places API integration for address autocomplete',
+                    },
                     'auth': {
                         'register': '/api/aut/register/',
                         'login': '/api/aut/login/',

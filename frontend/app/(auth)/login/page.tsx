@@ -1,18 +1,37 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/components/auth/AuthProvider'
+import { supabase } from '@/lib/supabase/client'
 
-export default function LoginPage() {
+const ROLE_PREFIX: Record<string, string> = {
+  admin: 'ad',
+  customer: 'cus',
+  staff: 'st',
+  manager: 'man',
+}
+
+function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { login, isLoading } = useAuth()
+  const { login, isLoading, isAuthenticated, user } = useAuthContext()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const googleAuthAvailable = !!supabase
+  const showGoogleAuth = true
+
+  // If already authenticated, redirect to role dashboard (e.g. after Google callback or refresh on /login)
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user?.role) {
+      const prefix = ROLE_PREFIX[user.role] ?? 'cus'
+      router.replace(`/${prefix}/dashboard`)
+    }
+  }, [isLoading, isAuthenticated, user, router])
 
   // Read URL params once on mount (safely handle searchParams)
   useEffect(() => {
@@ -47,12 +66,8 @@ export default function LoginPage() {
 
     try {
       const response = await login({ email, password })
-      // Check if user is customer (this page is only for customers)
-      if (response.user.role !== 'customer') {
-        setError('This login is only for customers. Please use the correct login page for your role.')
-        return
-      }
-      // Redirect handled by useAuth hook (will go to /cus/dashboard)
+      // useAuth hook redirects to role dashboard: admin -> /ad/dashboard, customer -> /cus/dashboard, etc.
+      return
     } catch (err: any) {
       // SECURITY: Backend always returns "Invalid email or password" for both cases
       // (email not found OR wrong password) to prevent user enumeration
@@ -132,11 +147,54 @@ export default function LoginPage() {
           >
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
+
+          {showGoogleAuth && (
+            <>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                title={!googleAuthAvailable ? 'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local to enable' : undefined}
+                disabled={googleLoading || !googleAuthAvailable}
+                onClick={async () => {
+                  if (!supabase) return
+                  setGoogleLoading(true)
+                  setError(null)
+                  try {
+                    const { error: err } = await supabase.auth.signInWithOAuth({
+                      provider: 'google',
+                      options: { redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined },
+                    })
+                    if (err) setError(err.message)
+                  } catch (e) {
+                    setError('Google sign-in failed')
+                  } finally {
+                    setGoogleLoading(false)
+                  }
+                }}
+                className="w-full py-3 border border-border rounded-lg hover:bg-muted transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                {googleLoading ? 'Redirecting...' : !googleAuthAvailable ? 'Sign in with Google (configure Supabase)' : 'Sign in with Google'}
+              </button>
+            </>
+          )}
         </form>
 
         <div className="text-center text-sm text-muted-foreground">
           <p>
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/register" className="text-primary hover:underline">
               Register
             </Link>
@@ -149,5 +207,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
+      <LoginPageContent />
+    </Suspense>
   )
 }

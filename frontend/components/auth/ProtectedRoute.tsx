@@ -5,7 +5,7 @@
  */
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthContext } from './AuthProvider'
 import type { UserRole } from '@/types/auth'
@@ -21,29 +21,35 @@ export function ProtectedRoute({
   requiredRole,
   redirectTo = '/login'
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user } = useAuthContext()
+  const { isAuthenticated, isLoading, user, checkAuth } = useAuthContext()
   const router = useRouter()
+  const triedRecheck = useRef(false)
 
   useEffect(() => {
+    // If we have a token but context not hydrated yet, try checkAuth once (e.g. after Google redirect)
+    const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('access_token')
+    if (!isLoading && !isAuthenticated && !user && hasToken && !triedRecheck.current) {
+      triedRecheck.current = true
+      checkAuth().then(() => {})
+      return
+    }
+
     if (!isLoading) {
-      // Check authentication
       if (!isAuthenticated || !user) {
         router.push(redirectTo)
         return
       }
 
-      // Check role requirement
       if (requiredRole) {
         const allowedRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole]
         if (!allowedRoles.includes(user.role)) {
-          // Redirect to appropriate dashboard based on user's role
           const rolePrefix = getRolePrefix(user.role)
           router.push(`/${rolePrefix}/dashboard`)
           return
         }
       }
     }
-  }, [isAuthenticated, isLoading, user, requiredRole, router, redirectTo])
+  }, [isAuthenticated, isLoading, user, requiredRole, router, redirectTo, checkAuth])
 
   // Show loading state
   if (isLoading) {

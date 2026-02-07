@@ -31,15 +31,18 @@ interface BookingState {
     staff_id?: number
   }>
   
-  // Step 5: Guest Details (NO LOGIN REQUIRED)
+  // Step 5: Guest Details (NO LOGIN REQUIRED; pre-fill when logged in)
   guestEmail: string | null
   guestName: string | null
   guestPhone: string | null
   address: AddressData | null
   notes: string | null
-  
+  /** Set when logged-in customer pre-fills details (for order creation) */
+  customerId: number | null
+
   // Actions
   setPostcode: (postcode: string) => void
+  setCustomerId: (id: number | null) => void
   setSelectedService: (serviceId: number | null) => void
   addServiceToOrder: (serviceId: number, quantity?: number) => void
   removeServiceFromOrder: (serviceId: number) => void
@@ -67,6 +70,7 @@ const initialState = {
   guestPhone: null,
   address: null,
   notes: null,
+  customerId: null,
 }
 
 export const useBookingStore = create<BookingState>((set) => ({
@@ -99,6 +103,8 @@ export const useBookingStore = create<BookingState>((set) => ({
 
   setGuestDetails: (email, name, phone, address) =>
     set({ guestEmail: email, guestName: name, guestPhone: phone, address }),
+
+  setCustomerId: (id) => set({ customerId: id }),
 
   setNotes: (notes) => set({ notes }),
 

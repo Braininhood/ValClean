@@ -4,6 +4,20 @@
 
 This document provides a **step-by-step implementation guide** for building the VALClean booking system. Each phase includes detailed tasks, acceptance criteria, and deliverables.
 
+### Supabase (current stack)
+
+**VALClean now uses Supabase.** Keep this in mind across the roadmap:
+
+| Supabase service | Use in VALClean |
+|-----------------|-----------------|
+| **Database** | PostgreSQL hosted on Supabase. Django connects via `DATABASE_URL`. All app tables (users, orders, appointments, etc.) live here. |
+| **Auth (optional)** | Supabase Auth for sign-in/sign-up; Google OAuth enabled in Dashboard. Frontend: `lib/supabase/client.ts`, `useSupabaseAuth`. |
+| **Storage (optional)** | File uploads (e.g. avatars, service images) can use Supabase Storage; backend: `apps.core.supabase_storage`. |
+| **Edge Functions (optional)** | Serverless tasks (e.g. webhooks, calendar sync) without running everything in Django/Celery. |
+
+- **Setup:** See **[SUPABASE_SETUP.md](./SUPABASE_SETUP.md)** for database connection, migrations, RLS, seed data, and env vars.
+- **Reuse where it fits:** OAuth (Google/Microsoft) for Auth and calendar, DB for all state, Storage for files, Edge Functions for background jobs.
+
 ---
 
 ## Phase 1: Foundation & Setup (Weeks 1-3)
@@ -13,17 +27,17 @@ This document provides a **step-by-step implementation guide** for building the 
 #### Day 1-2: Backend Setup
 **Tasks:**
 - [ ] Initialize Django project with proper structure
-- [ ] Set up SQLite database for development (db.sqlite3)
-- [ ] Configure environment variables (.env)
+- [ ] Set up database: **Supabase PostgreSQL** (primary; see [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)); SQLite optional for local-only dev
+- [ ] Configure environment variables (.env): `DATABASE_URL`, Supabase vars (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, etc.)
 - [ ] Set up Django REST Framework
-- [ ] Configure CORS settings (for localhost:3000)
+- [ ] Configure CORS settings (for localhost:3000 and frontend origin)
 - [ ] Set up logging and error handling
 - [ ] Initialize Git repository
 - [ ] Configure development settings (localhost:8000)
 
 **Deliverables:**
 - Working Django project
-- SQLite database connection established
+- **Supabase** (or local) database connection established
 - Basic API structure
 - Development server running on localhost:8000
 
@@ -56,17 +70,17 @@ This document provides a **step-by-step implementation guide** for building the 
 - [ ] Create Appointment and CustomerAppointment models
 - [ ] Add calendar_event_id (JSON) and calendar_synced_to (JSON) to Appointment
 - [ ] Create initial migrations
-- [ ] Run migrations (SQLite)
+- [ ] Run migrations against **Supabase PostgreSQL** (see [SUPABASE_SETUP.md](./SUPABASE_SETUP.md))
 - [ ] Create admin superuser
 
 **Deliverables:**
-- Complete database schema (SQLite)
+- Complete database schema (**Supabase** PostgreSQL)
 - Django admin access
 - Sample data capability
 - Manager role support
 
 **Acceptance Criteria:**
-- All models created and migrated to SQLite
+- All models created and migrated (Supabase DB)
 - Admin panel accessible at localhost:8000/admin
 - Can create sample data via admin
 - Manager model with permission fields
@@ -77,11 +91,12 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 1-2: Authentication System
 **Tasks:**
-- [ ] Implement JWT authentication
+- [ ] Implement JWT authentication (Django and/or **Supabase Auth**; see [SUPABASE_SETUP.md](./SUPABASE_SETUP.md))
 - [ ] Create login endpoint
 - [ ] Create register endpoint
 - [ ] Create password reset flow
 - [ ] Create email verification
+- [ ] **Optional:** Use Supabase Auth + OAuth (Google, etc.) in Dashboard → Authentication → Providers
 - [ ] Implement role-based permissions (Admin, Manager, Staff, Customer)
 - [ ] Create manager permission system
 - [ ] Create authentication middleware
@@ -89,7 +104,7 @@ This document provides a **step-by-step implementation guide** for building the 
 
 **Deliverables:**
 - Working authentication API
-- JWT token generation
+- JWT token generation (or Supabase sessions)
 - Role-based access control (4 roles)
 - Manager permission system
 
@@ -214,15 +229,15 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 6: Post-Order Account Linking 
 **Tasks:**
-- [ ] Implement email checking API endpoint (`/api/bkg/guest/check-email/`)
-- [ ] Create account linking prompt UI (after order completion)
-- [ ] Login modal for existing account linking
-- [ ] Registration modal for new account creation (pre-filled details)
-- [ ] "Skip" option for customers who don't want to register
-- [ ] Account linking API endpoints:
+- [x] Implement email checking API endpoint (`/api/bkg/guest/check-email/`)
+- [x] Create account linking prompt UI (after order completion)
+- [x] Login modal for existing account linking
+- [x] Registration modal for new account creation (pre-filled details)
+- [x] "Skip" option for customers who don't want to register
+- [x] Account linking API endpoints:
   - `/api/bkg/guest/order/{order_number}/link-login/`
   - `/api/bkg/guest/order/{order_number}/link-register/`
-- [ ] Guest order linking logic (update customer FK when linked)
+- [x] Guest order linking logic (update customer FK when linked)
 
 **Deliverables:**
 - Post-order account linking flow
@@ -246,7 +261,7 @@ This document provides a **step-by-step implementation guide** for building the 
 
 ### Week 4: Payment Integration & Calendar Sync
 
-#### Day 1-2: Stripe Integration
+#### Day 1-2: Stripe Integration -*Temporarily unavailable – waiting for customer access.*
 **Tasks:**
 - [ ] Install Stripe SDK
 - [ ] Create payment intent endpoint
@@ -256,11 +271,11 @@ This document provides a **step-by-step implementation guide** for building the 
 - [ ] Error handling for payments
 
 **Deliverables:**
-- Stripe payment integration
+- Stripe payment integration 
 - Payment processing
 - Webhook handling
 
-#### Day 3: PayPal Integration
+#### Day 3: PayPal Integration - *Temporarily unavailable – waiting for customer access.*
 **Tasks:**
 - [ ] Install PayPal SDK
 - [ ] Create PayPal order endpoint
@@ -273,17 +288,29 @@ This document provides a **step-by-step implementation guide** for building the 
 - Multiple payment options
 
 #### Day 4-5: Multi-Calendar Integration (All Roles)
+
+**Note: We now work with Supabase.** Use Supabase where it fits to avoid duplicating work:
+- **Supabase Auth → OAuth (callback URL):**  
+  **Callback URL (for OAuth):** `https://[PROJECT_REF].supabase.co/auth/v1/callback`  
+  Example: `https://lonmjafmvdvzevaggwem.supabase.co/auth/v1/callback`  
+  Configure this in [Supabase Dashboard](https://supabase.com/dashboard) → Authentication → URL Configuration, and in each provider (Google, etc.) as the redirect URI.
+- **Supabase Auth → OAuth providers:** Enable Google in Dashboard → Authentication → Providers. **Microsoft (Azure AD / Outlook):** *Temporarily unavailable – waiting for customer access.* Reuse Google OAuth for calendar where possible (e.g. same token for Auth + Calendar scope).
+- **Supabase Database:** Calendar connection state (tokens, refresh tokens, provider, user link) lives in our Django models/tables already in Supabase (e.g. `calendar_sync` or profile-related tables).
+- **Supabase Edge Functions** (optional): For serverless calendar sync (e.g. webhook handlers, background sync) if we don’t want to run everything in Django/Celery.
+- **Supabase Storage** (optional): Store .ics files or export artifacts if needed.
+
 **Tasks:**
-- [ ] Set up Google Calendar API
-- [ ] Set up Microsoft Graph API (Outlook)
+- [ ] Set up Google Calendar API (use Supabase Google OAuth; callback URL above)
+- [ ] Microsoft Graph API (Outlook): *Paused until customer provides access*
 - [ ] Set up Apple Calendar (iCal/CalDAV)
-- [ ] OAuth 2.0 flow for Google and Outlook
-- [ ] Calendar sync in Profile model (all users)
+- [ ] OAuth 2.0 flow for Google (Supabase callback); Outlook when available
+- [ ] Calendar sync in Profile model (all users); store tokens/state in Supabase DB
 - [ ] Calendar connection UI for all roles
 - [ ] Create calendar event on booking (auto-sync)
 - [ ] Update calendar event on changes
 - [ ] Delete calendar event on cancellation
 - [ ] Add custom events to external calendars (all roles)
+- [ ] **Order confirmation page: "Add booking to calendar"** (download .ics, Add to Google Calendar)
 - [ ] Two-way sync (optional)
 - [ ] Calendar sync status dashboard
 - [ ] Bulk sync operations (admin)
@@ -291,14 +318,16 @@ This document provides a **step-by-step implementation guide** for building the 
 
 **Deliverables:**
 - Google Calendar sync (all roles)
-- Outlook Calendar sync (all roles)
+- Outlook Calendar sync (all roles) – *when customer access is provided*
 - Apple Calendar support (all roles)
 - Custom event creation (all roles)
+- **Add to calendar on confirmation page (.ics + Google Calendar)**
 - Calendar sync management UI
-- OAuth flow for all providers
+- OAuth flow for Google (Supabase callback); Microsoft when available
 
 **Acceptance Criteria:**
 - Payments process successfully
+- **Customer can add booking to calendar from order confirmation page**
 - Calendar events created automatically for all roles
 - Staff can sync schedule to personal calendar
 - Customer can sync appointments to personal calendar
@@ -306,7 +335,7 @@ This document provides a **step-by-step implementation guide** for building the 
 - Admin can sync all appointments to personal calendar
 - All roles can add custom events to external calendars
 - Webhooks handle payment status
-- OAuth flow works smoothly for all providers
+- OAuth flow works smoothly for Google (Supabase); Microsoft when available
 
 ---
 
@@ -314,14 +343,14 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 1-2: Google Places API Integration
 **Tasks:**
-- [ ] Set up Google Places API
-- [ ] Get Google API key
-- [ ] Create address autocomplete endpoint
-- [ ] Implement Google Places Autocomplete widget
-- [ ] Address form population on selection
-- [ ] Postcode extraction from address
-- [ ] Manual address entry fallback
-- [ ] Address validation
+- [x] Set up Google Places API
+- [x] Get Google API key
+- [x] Create address autocomplete endpoint
+- [x] Implement Google Places Autocomplete widget
+- [x] Address form population on selection
+- [x] Postcode extraction from address
+- [x] Manual address entry fallback
+- [x] Address validation
 
 **Deliverables:**
 - Google Places address autocomplete
@@ -329,21 +358,29 @@ This document provides a **step-by-step implementation guide** for building the 
 - Form integration
 - Postcode extraction
 
-#### Day 3-4: Email Notifications
+**Verification (double-checked):**
+- **Backend:** `GET /api/addr/autocomplete/?query=...` and `GET|POST /api/addr/validate/?place_id=...` or `?postcode=...` (see `backend/apps/core/views_address.py`, `backend/apps/core/address.py`). UK-only (`country:gb`). Requires `GOOGLE_MAPS_API_KEY` or `GOOGLE_PLACES_API_KEY` in `backend/.env`; enable **Places API** and **Geocoding API** in Google Cloud.
+- **Frontend:** Booking details page (`frontend/app/booking/details/page.tsx`) uses autocomplete → on select calls validate with `place_id` → populates address line1, line2, city, postcode, country. Manual fields and fallback if no results or API key missing.
+- **Flow:** Type address/postcode → suggestions from backend → select → validate returns full address → form filled; user can edit. Without API key, autocomplete returns empty and user can enter address manually.
+
+#### Day 3-4: Email Notifications (Google Gmail + Supabase)
+
+**Stack:** **Google Gmail SMTP** for sending (Django); optional **Supabase Edge Functions** or **pg_cron** for reminder cron. Configure in `backend/.env`: `EMAIL_HOST=smtp.gmail.com`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` (use [Google App Password](https://support.google.com/accounts/answer/185833)), `DEFAULT_FROM_EMAIL`. See `backend/.env.example`.
+
 **Tasks:**
-- [ ] Set up email service (SendGrid/Resend)
-- [ ] Create email templates
-- [ ] Booking confirmation email
-- [ ] Reminder email
-- [ ] Cancellation email
-- [ ] Email queue (Celery)
+- [x] Set up email service: **Google Gmail SMTP** (Django); optional Supabase Edge Functions for queue
+- [x] Create email templates (`backend/templates/emails/`: `booking_confirmation`, `booking_reminder`, `booking_cancellation` .html + .txt)
+- [x] Booking confirmation email (sent on order confirm via `apps/notifications/email_service.send_booking_confirmation` and order signals/views)
+- [x] Reminder email (template + `send_booking_reminder`; run daily via `python manage.py send_booking_reminders` or cron / Supabase pg_cron)
+- [x] Cancellation email (sent when order is cancelled – customer and guest cancel endpoints)
+- [x] Reminder job: management command `send_booking_reminders` (optional: Celery beat or Supabase Edge Function / pg_cron to run daily)
 
 **Deliverables:**
-- Email notification system
-- Email templates
-- Automated emails
+- [x] Email notification system (Google Gmail SMTP)
+- [x] Email templates (confirmation, reminder, cancellation)
+- [x] Automated emails (confirmation on book; cancellation on cancel; reminders via cron/command)
 
-#### Day 5: SMS Notifications
+#### Day 5: SMS Notifications *Temporarily unavailable – waiting for customer access.*
 **Tasks:**
 - [ ] Set up Twilio
 - [ ] Create SMS service
@@ -369,16 +406,17 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 1-2: Dashboard Overview
 **Tasks:**
-- [ ] Create admin dashboard layout
-- [ ] Key metrics widgets
-- [ ] Recent activity feed
-- [ ] Quick actions panel
-- [ ] Real-time updates (WebSocket)
+- [x] Create admin dashboard layout (`/ad/dashboard` with `DashboardLayout`)
+- [x] Key metrics widgets (orders today/week, appointments today, revenue today/month, customers, staff, pending change requests)
+- [x] Recent activity feed (recent orders + upcoming appointments; links to `/ad/orders` and order detail)
+- [x] Quick actions panel (New booking, Customers, Orders, Revenue report, Staff, Services)
+- [x] Auto-refresh every 60s (lightweight “real-time”; WebSocket optional for later)
 
 **Deliverables:**
-- Admin dashboard
-- Metrics display
-- Quick actions
+- [x] Admin dashboard (`frontend/app/ad/dashboard/page.tsx`)
+- [x] Metrics display (API: `GET /api/ad/reports/dashboard/` – `backend/apps/reports/views.dashboard_overview_view`)
+- [x] Quick actions + recent orders + upcoming appointments
+- [x] Admin orders list and detail (`/ad/orders`, `/ad/orders/[id]`) for dashboard links
 
 #### Day 3-4: Calendar Management
 **Tasks:**
@@ -419,57 +457,87 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 1-2: Staff Management
 **Tasks:**
-- [ ] Staff list view
-- [ ] Staff detail/edit pages
-- [ ] Schedule management UI
-- [ ] Service assignments
-- [ ] **Area/Postcode Assignment** (NEW)
-  - [ ] Postcode assignment interface
-  - [ ] Radius configuration (km)
-  - [ ] Multiple areas per staff
-  - [ ] Area coverage map visualization
-  - [ ] Postcode-to-area distance calculation
-- [ ] Performance metrics
-- [ ] Calendar integration per staff
+- [x] **Backend: Staff models & API** ✅
+  - [x] Staff, StaffSchedule, StaffService, StaffArea models
+  - [x] StaffViewSet, StaffAreaViewSet, StaffScheduleViewSet, StaffServiceViewSet
+  - [x] Postcode utilities (distance calculation, get_staff_for_postcode)
+  - [x] Django Admin with inlines (services, schedules, areas)
+  - [x] StaffArea model with postcode + radius_km
+  - [x] Multiple areas per staff (via StaffArea model)
+  - [x] Postcode-to-area distance calculation (Haversine formula)
+- [x] **Frontend: Staff list view** ✅
+- [x] **Frontend: Staff detail/edit pages** ✅
+- [x] **Frontend: Schedule management UI** ✅
+- [x] **Frontend: Service assignments UI** ✅
+- [x] **Frontend: Area/Postcode Assignment Interface** ✅
+  - [x] Postcode assignment interface
+  - [x] Radius configuration (km)
+  - [x] Multiple areas per staff (UI)
+  - [x] Area coverage map visualization (Google Maps) ✅
+- [x] **Frontend: Performance metrics** ✅
+  - [x] Jobs completed, revenue, completion rate
+  - [x] Response time, no-show rate
+  - [x] Services breakdown
+  - [x] Period filters (7/30/90 days)
+- [x] **Frontend: Calendar integration per staff** ✅
+  - [x] Calendar status display
+  - [x] Google Calendar integration status
+  - [x] Outlook integration status
+  - [x] Apple Calendar info (.ics download)
 
 **Deliverables:**
-- Staff management system
-- Schedule editor
-- Area/postcode assignment system
-- Performance tracking
+- ✅ Backend: Staff management system (API complete)
+- ✅ Backend: Area/postcode assignment system (models & logic complete)
+- ✅ Frontend: Staff management UI (complete)
+- ✅ Frontend: Schedule editor (complete)
+- ✅ Frontend: Area/postcode assignment UI (complete)
+- ✅ Frontend: Performance tracking (complete)
+- ✅ Frontend: Calendar integration per staff (complete)
+
+**Status:** ✅ **100% COMPLETE** - All Week 7, Day 1-2 tasks implemented!
+**See:** `PERFORMANCE_AND_CALENDAR_IMPLEMENTATION.md` for full details.
+
+**Status:** ✅ **COMPLETE** - All core functionality implemented!
+**See:** `STAFF_MANAGEMENT_IMPLEMENTATION_COMPLETE.md` for full details.
 
 #### Day 3-4: Customer Management
 **Tasks:**
-- [ ] Customer list view
-- [ ] Customer detail pages
-- [ ] Booking history
-- [ ] Payment history
-- [ ] Notes and tags
-- [ ] Search and filters
+- [x] Customer list view ✅
+- [x] Customer detail pages ✅
+- [x] Booking history ✅
+- [x] Payment history ✅
+- [x] Notes and tags ✅
+- [x] Search and filters ✅
 
 **Deliverables:**
-- Customer management system
-- History tracking
-- Search capabilities
+- ✅ Customer management system
+- ✅ History tracking
+- ✅ Search capabilities
+
+**Status:** ✅ **100% COMPLETE** - All Week 7, Day 3-4 tasks implemented!
+**See:** `CUSTOMER_MANAGEMENT_IMPLEMENTATION.md` for full details.
 
 #### Day 5: Service Management
 **Tasks:**
-- [ ] Service list view
-- [ ] Service create/edit forms
-- [ ] Category management
-- [ ] Pricing management
-- [ ] Staff assignments
-- [ ] Drag-and-drop ordering
+- [x] Service list view ✅
+- [x] Service create/edit forms ✅
+- [x] Category management ✅
+- [x] Pricing management ✅
+- [x] Staff assignments ✅
+- [x] Drag-and-drop ordering ✅
 
 **Deliverables:**
-- Service management system
-- Category organization
-- Pricing controls
+- ✅ Service management system
+- ✅ Category organization
+- ✅ Pricing controls
 
 **Acceptance Criteria:**
-- All management interfaces work
-- Data can be created/updated/deleted
-- Search and filters function properly
+- ✅ All management interfaces work
+- ✅ Data can be created/updated/deleted
+- ✅ Search and filters function properly
+
+**Status:** ✅ **100% COMPLETE** - All Week 7, Day 5 tasks implemented!
+**See:** `SERVICE_MANAGEMENT_IMPLEMENTATION.md` for full details.
 
 ---
 
@@ -477,51 +545,60 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 1-2: Staff Portal
 **Tasks:**
-- [ ] Staff dashboard
-- [ ] Today's schedule view
-- [ ] Job list view
-- [ ] Job detail view
-- [ ] Check-in/Check-out
-- [ ] Photo upload
-- [ ] Status updates
+- [x] Staff dashboard ✅
+- [x] Today's schedule view ✅
+- [x] Job list view ✅
+- [x] Job detail view ✅
+- [x] Check-in/Check-out ✅
+- [x] Photo upload ✅
+- [x] Status updates ✅
 
 **Deliverables:**
-- Staff portal
-- Job management
-- Mobile-responsive
+- ✅ Staff portal
+- ✅ Job management
+- ✅ Mobile-responsive
+
+**Status:** ✅ **100% COMPLETE** - All Week 8, Day 1-2 tasks implemented!
+**See:** `STAFF_PORTAL_IMPLEMENTATION.md` for full details.
 
 #### Day 3-4: Customer Portal
 **Tasks:**
-- [ ] Customer dashboard
-- [ ] Upcoming appointments
-- [ ] Past appointments
-- [ ] Appointment detail view
-- [ ] Cancel/reschedule functionality
-- [ ] Payment history
-- [ ] Profile management
+- [x] Customer dashboard ✅
+- [x] Upcoming appointments ✅
+- [x] Past appointments ✅
+- [x] Appointment detail view ✅
+- [x] Cancel/reschedule functionality ✅
+- [x] Payment history ✅
+- [x] Profile management ✅
 
 **Deliverables:**
-- Customer portal
-- Self-service features
-- Profile management
+- ✅ Customer portal
+- ✅ Self-service features
+- ✅ Profile management
+
+**Status:** ✅ **100% COMPLETE** - All Week 8, Day 3-4 tasks implemented!
+**See:** `CUSTOMER_PORTAL_IMPLEMENTATION.md` for full details.
 
 #### Day 5: Mobile Optimization
 **Tasks:**
-- [ ] Responsive design testing
-- [ ] Mobile navigation
-- [ ] Touch-friendly interactions
-- [ ] Mobile form optimization
-- [ ] PWA setup (optional)
+- [x] Responsive design testing ✅
+- [x] Mobile navigation ✅
+- [x] Touch-friendly interactions ✅
+- [x] Mobile form optimization ✅
+- [x] PWA setup ✅
 
 **Deliverables:**
-- Mobile-optimized UI
-- Touch interactions
-- Responsive layouts
+- ✅ Mobile-optimized UI
+- ✅ Touch interactions
+- ✅ Responsive layouts
 
 **Acceptance Criteria:**
-- Portals work on all devices
-- Mobile experience is smooth
-- All features accessible on mobile
+- ✅ Portals work on all devices
+- ✅ Mobile experience is smooth
+- ✅ All features accessible on mobile
+
+**Status:** ✅ **100% COMPLETE** - All Week 8, Day 5 tasks implemented!
+**See:** `MOBILE_OPTIMIZATION_IMPLEMENTATION.md` for full details.
 
 ---
 
@@ -533,86 +610,95 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 1-2: Subscription System (Guest Checkout Support)
 **Tasks:**
-- [ ] Subscription model (frequency, duration, etc.)
-  - [ ] `customer` FK (nullable for guest subscriptions)
-  - [ ] `guest_email`, `guest_name`, `guest_phone` (for guest subscriptions)
-  - [ ] `subscription_number` (unique identifier)
-  - [ ] `tracking_token` (for guest access via email link)
-  - [ ] `is_guest_subscription` flag
-  - [ ] `account_linked_at` timestamp
-- [ ] SubscriptionAppointment model
-- [ ] Subscription creation logic (supports guest checkout)
-- [ ] Automatic appointment generation from subscriptions
-- [ ] Subscription schedule calculation
+- [x] Subscription model (frequency, duration, etc.) ✅
+  - [x] `customer` FK (nullable for guest subscriptions) ✅
+  - [x] `guest_email`, `guest_name`, `guest_phone` (for guest subscriptions) ✅
+  - [x] `subscription_number` (unique identifier) ✅
+  - [x] `tracking_token` (for guest access via email link) ✅
+  - [x] `is_guest_subscription` flag ✅
+  - [x] `account_linked_at` timestamp ✅
+- [x] SubscriptionAppointment model ✅
+- [x] Subscription creation logic (supports guest checkout) ✅
+- [x] Automatic appointment generation from subscriptions ✅
+- [x] Subscription schedule calculation ✅
 - [ ] UI for subscription selection (weekly/biweekly/monthly, 1-12 months)
 - [ ] Subscription preview
-- [ ] Staff schedule showing subscription appointments
-- [ ] 24h cancellation policy for subscription appointments
-- [ ] Guest subscription access endpoints (no auth required)
+- [x] Staff schedule showing subscription appointments ✅
+- [x] 24h cancellation policy for subscription appointments ✅
+- [x] Guest subscription access endpoints (no auth required) ✅
 
 **Deliverables:**
-- Subscription system
-- Automatic appointment generation
-- Subscription management
-- Staff schedule integration
+- ✅ Subscription system
+- ✅ Automatic appointment generation (intelligent scheduling - checks staff availability, moves to next day if needed)
+- ✅ Subscription management (backend)
+- ✅ Staff schedule integration
+
+**Status:** ✅ **95% COMPLETE** - Backend fully implemented! Frontend UI pending.
+**See:** `SUBSCRIPTION_SYSTEM_IMPLEMENTATION.md` for full details.
 
 #### Day 3-4: Order System (Multi-Service, Guest Checkout Support)
 **Tasks:**
-- [ ] Order model
-  - [ ] `customer` FK (nullable for guest orders)
-  - [ ] `guest_email`, `guest_name`, `guest_phone` (for guest orders)
-  - [ ] `order_number` (unique identifier)
-  - [ ] `tracking_token` (for guest access via email link)
-  - [ ] `is_guest_order` flag
-  - [ ] `account_linked_at` timestamp
-  - [ ] Guest address fields (address_line1, city, postcode, etc.)
-- [ ] OrderItem model
-- [ ] Multi-service order creation (supports guest checkout - NO AUTH REQUIRED)
-- [ ] Order status management
-- [ ] Order scheduling logic
+- [x] Order model ✅
+  - [x] `customer` FK (nullable for guest orders) ✅
+  - [x] `guest_email`, `guest_name`, `guest_phone` (for guest orders) ✅
+  - [x] `order_number` (unique identifier) ✅
+  - [x] `tracking_token` (for guest access via email link) ✅
+  - [x] `is_guest_order` flag ✅
+  - [x] `account_linked_at` timestamp ✅
+  - [x] Guest address fields (address_line1, city, postcode, etc.) ✅
+- [x] OrderItem model ✅
+- [x] Multi-service order creation (supports guest checkout - NO AUTH REQUIRED) ✅
+- [x] Order status management ✅
+- [x] Order scheduling logic ✅
 - [ ] UI for adding multiple services to order (guest-friendly)
-- [ ] Order summary and pricing
-- [ ] Staff assignment for order items
-- [ ] 24h cancellation policy for orders
-- [ ] Order change request system
-- [ ] Guest order access endpoints (no auth required)
-- [ ] Guest order tracking by order number + email
+- [x] Order summary and pricing ✅
+- [x] Staff assignment for order items ✅
+- [x] 24h cancellation policy for orders ✅
+- [x] Order change request system ✅
+- [x] Guest order access endpoints (no auth required) ✅
+- [x] Guest order tracking by order number + email ✅
 
 **Deliverables:**
-- Order system
-- Multi-service booking
-- Order management
-- Change request workflow
+- ✅ Order system
+- ✅ Multi-service booking
+- ✅ Order management
+- ✅ Change request workflow
+
+**Status:** ✅ **95% COMPLETE** - Backend fully implemented! Frontend UI for multi-service selection pending.
+**See:** `ORDER_SYSTEM_IMPLEMENTATION.md` for full details.
 
 #### Day 3-4: Coupon System
 **Tasks:**
-- [ ] Coupon model
-- [ ] Coupon validation logic
-- [ ] Coupon application UI
-- [ ] Usage tracking
-- [ ] Expiry management
-- [ ] Service restrictions
+- [x] Coupon model ✅
+- [x] Coupon validation logic ✅
+- [x] Coupon application UI ✅
+- [x] Usage tracking ✅
+- [x] Expiry management ✅
+- [x] Service restrictions ✅
 
 **Deliverables:**
-- Coupon system
-- Discount application
-- Usage tracking
+- ✅ Coupon system
+- ✅ Discount application
+- ✅ Usage tracking
+
+**Status:** ✅ **100% COMPLETE** - All Week 9, Day 3-4 tasks implemented!
+**See:** `COUPON_SYSTEM_IMPLEMENTATION.md` for full details.
 
 #### Day 5: Order Management & Cancellation Policies (Guest Support)
 **Tasks:**
-- [ ] Order change request UI (customer and guest)
-- [ ] Guest order change request (via email link or order number lookup)
-- [ ] Order change approval workflow (admin)
-- [ ] Cancellation policy enforcement (24h before)
-- [ ] Subscription appointment cancellation (24h before)
-- [ ] Order cancellation (24h before scheduled date)
-  - [ ] Guest order cancellation (via email link or order number)
-- [ ] Cancellation deadline calculation
-- [ ] Can_cancel/can_reschedule flags
-- [ ] Customer order management interface (if account linked)
-- [ ] Guest order management interface (via email link/tracking token)
-- [ ] Order status tracking (works for both guest and account-linked orders)
-- [ ] Guest order tracking page (no login required)
+- [x] Order change request UI (customer and guest) ✅
+- [x] Guest order change request (via email link or order number lookup) ✅
+- [x] Order change approval workflow (admin) ✅
+- [x] Cancellation policy enforcement (24h before) ✅
+- [x] Subscription appointment cancellation (24h before) ✅
+- [x] Order cancellation (24h before scheduled date) ✅
+  - [x] Guest order cancellation (via email link or order number) ✅
+- [x] Cancellation deadline calculation ✅
+- [x] Can_cancel/can_reschedule flags ✅
+- [x] Customer order management interface (if account linked) ✅
+- [x] Guest order management interface (via email link/tracking token) ✅
+- [x] Order status tracking (works for both guest and account-linked orders) ✅
+- [x] Guest order tracking page (no login required) ✅
 
 **Deliverables:**
 - Order management system
@@ -638,12 +724,13 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 1-2: Revenue Reports
 **Tasks:**
-- [ ] Revenue calculation logic
-- [ ] Revenue by period (day/week/month)
-- [ ] Revenue by service
-- [ ] Revenue by staff
-- [ ] Revenue charts/graphs
-- [ ] Export to CSV/PDF
+- [x] Revenue calculation logic ✅
+- [x] Revenue by period (day/week/month) ✅
+- [x] Revenue by service ✅
+- [x] Revenue by staff ✅
+- [x] Revenue charts/graphs ✅
+- [x] Export to CSV ✅
+- [x] Export to PDF (requires reportlab library - documented) ✅
 
 **Deliverables:**
 - Revenue reporting
@@ -652,30 +739,30 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 3-4: Appointment Reports
 **Tasks:**
-- [ ] Appointment statistics
-- [ ] Booking trends
-- [ ] Popular services
-- [ ] Peak times analysis
-- [ ] Cancellation rates
-- [ ] Conversion metrics
+- [x] Appointment statistics
+- [x] Booking trends
+- [x] Popular services
+- [x] Peak times analysis
+- [x] Cancellation rates
+- [x] Conversion metrics
 
 **Deliverables:**
-- Appointment analytics
-- Trend analysis
-- Performance metrics
+- Appointment analytics (`GET /api/ad/reports/appointments/`; frontend: `/ad/reports/appointments`)
+- Trend analysis (booking_trends by day; peak_times by hour and day of week)
+- Performance metrics (cancellation_rates, conversion_metrics, popular_services)
 
 #### Day 5: Staff Performance Reports
 **Tasks:**
-- [ ] Jobs completed
-- [ ] Customer ratings
-- [ ] Utilization rate
-- [ ] Revenue per staff
-- [ ] Performance comparisons
+- [x] Jobs completed
+- [x] Customer ratings (placeholder: avg_rating/rating_count in API; no rating model yet)
+- [x] Utilization rate
+- [x] Revenue per staff
+- [x] Performance comparisons
 
 **Deliverables:**
-- Staff performance tracking
-- Comparative analytics
-- Performance dashboards
+- Staff performance tracking (`GET /api/ad/reports/staff-performance/`; frontend: `/ad/reports/staff-performance`)
+- Comparative analytics (rank by jobs, revenue, utilization)
+- Performance dashboards (summary + per-staff table)
 
 **Acceptance Criteria:**
 - Reports generate accurately
@@ -689,28 +776,29 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 1-2: Route Optimization
 **Tasks:**
-- [ ] Google Maps integration
-- [ ] Distance calculation
-- [ ] Route optimization algorithm
-- [ ] Multi-stop routing
-- [ ] Route visualization
-- [ ] Estimated travel time
+- [x] Google Maps integration (Geocoding + Distance Matrix API; map on frontend via NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
+- [x] Distance calculation (Distance Matrix API in `backend/apps/core/route_utils.py`)
+- [x] Route optimization algorithm (greedy nearest-neighbour in `route_utils.optimize_route_greedy`)
+- [x] Multi-stop routing (POST `/api/ad/routes/optimize/`; GET `/api/ad/routes/staff-day/` for staff+date)
+- [x] Route visualization (markers + polyline on map at `/ad/routes`)
+- [x] Estimated travel time (per-leg and total in response; displayed on page)
 
 **Deliverables:**
-- Route optimization
-- Map visualization
-- Travel time estimates
+- Route optimization (`/ad/routes`: load staff day → edit stops → optimize → ordered list + map)
+- Map visualization (Google Maps with numbered markers and polyline for optimized order)
+- Travel time estimates (leg minutes and total minutes)
 
 #### Day 3-4: Calendar Sync UI & Management
 **Tasks:**
-- [ ] Calendar connection interface (all roles)
-- [ ] Calendar sync settings page
-- [ ] Sync status indicators
-- [ ] Manual sync trigger
-- [ ] Bulk sync operations (admin)
-- [ ] Custom event creation UI
-- [ ] Calendar event management
-- [ ] Sync error handling and retry
+- [x] Calendar connection interface (all roles); store connection state in **Django models** (Profile)
+- [x] Calendar sync settings page (`/settings/calendar` for all roles)
+- [x] Sync status indicators (last_sync_at, last_sync_error in status + UI)
+- [x] Manual sync trigger (POST `/api/calendar/sync/`)
+- [x] Bulk sync operations (admin) (POST `/api/calendar/sync-bulk/`; UI at `/ad/settings/calendar`)
+- [x] Custom event creation UI (form on settings page; POST `/api/calendar/events/`)
+- [x] Calendar event management (GET `/api/calendar/events/` lists synced appointments)
+- [x] Sync error handling and retry (last_sync_error stored; manual "Sync now" retry)
+- [ ] **Optional:** Supabase Edge Functions for serverless sync jobs
 
 **Deliverables:**
 - Calendar sync UI for all roles
@@ -720,17 +808,17 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 5: Calendar Sync Testing & Optimization
 **Tasks:**
-- [ ] Test calendar sync for all roles
-- [ ] Test custom event creation
-- [ ] Test two-way sync (if enabled)
-- [ ] Performance optimization
-- [ ] Error recovery mechanisms
-- [ ] Sync conflict resolution
+- [x] Test calendar sync for all roles (backend tests in `apps/calendar_sync/tests.py`: status, manual sync, bulk sync; Staff/Customer paths covered; Admin/Manager use bulk or settings)
+- [x] Test custom event creation (API validation tests: POST without start/end returns 400; GET events returns 200 with `events` array)
+- [ ] Test two-way sync (if enabled) — **not in scope**: current design is one-way (VALClean → external calendar only)
+- [x] Performance optimization (sync is per-user, batch of appointments; acceptable for typical load; no N+1 in list)
+- [x] Error recovery mechanisms (`last_sync_error` stored in Profile; "Sync now" retry; UI shows error; friendlier message when all events fail: "Try syncing again or reconnect your calendar")
+- [ ] Sync conflict resolution — **future**: no merge of external calendar edits; conflicts not auto-resolved
 
 **Deliverables:**
-- Tested calendar sync system
-- Optimized sync performance
-- Error recovery
+- Tested calendar sync system (`apps/calendar_sync/tests.py`)
+- Optimized sync performance (per-user batch; error message on full failure)
+- Error recovery (last_sync_error + retry + reconnect hint)
 
 **Acceptance Criteria:**
 - Route optimization saves time
@@ -747,26 +835,25 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 1-2: Backend Optimization
 **Tasks:**
-- [ ] Database query optimization
-- [ ] Add database indexes
-- [ ] Implement caching (Redis)
-- [ ] API response optimization
-- [ ] Background task optimization
-- [ ] Load testing
+- [x] **Database:** Query optimization on **Supabase PostgreSQL**; indexes already on orders, appointments, subscriptions, staff, services (see [PHASE5_OPTIMIZATION.md](./PHASE5_OPTIMIZATION.md))
+- [x] Implement caching (LocMemCache in base when no REDIS_URL; Redis in production when REDIS_URL set; database cache option for Supabase-only)
+- [x] API response optimization (select_related/prefetch_related used across orders, appointments, staff, customers, services)
+- [ ] Background task optimization (Celery optional when REDIS_URL set)
+- [ ] Load testing (locust/k6/wrk – manual)
 
 **Deliverables:**
-- Optimized backend
+- Optimized backend (cache + query patterns documented in PHASE5_OPTIMIZATION.md)
 - Fast API responses
-- Efficient database queries
+- Efficient database queries (Supabase)
 
 #### Day 3-4: Frontend Optimization
 **Tasks:**
-- [ ] Code splitting
-- [ ] Image optimization
-- [ ] Lazy loading
-- [ ] Bundle size optimization
-- [ ] Performance monitoring
-- [ ] Lighthouse optimization
+- [x] Code splitting (Next.js App Router automatic per-route)
+- [ ] Image optimization (use `next/image` for images; add `images.domains` if CDN)
+- [ ] Lazy loading (use `next/dynamic` for heavy client components)
+- [ ] Bundle size optimization (run `@next/bundle-analyzer`; manual)
+- [ ] Performance monitoring (optional: Vercel Analytics / Lighthouse CI)
+- [ ] Lighthouse optimization (run against production build; target > 90)
 
 **Deliverables:**
 - Fast page loads
@@ -775,16 +862,16 @@ This document provides a **step-by-step implementation guide** for building the 
 
 #### Day 5: SEO Optimization
 **Tasks:**
-- [ ] Meta tags
-- [ ] Open Graph tags
-- [ ] Structured data (JSON-LD)
-- [ ] Sitemap generation
-- [ ] robots.txt
-- [ ] SEO testing
+- [x] Meta tags (root layout: title template, description; metadataBase)
+- [x] Open Graph tags (openGraph in layout; siteName, title, description, locale)
+- [x] Structured data (JSON-LD: Organization + WebSite on home; `frontend/lib/seo.ts`)
+- [x] Sitemap generation (`app/sitemap.ts` → `/sitemap.xml`)
+- [x] robots.txt (`app/robots.ts` → `/robots.txt`; allow /, disallow /api/, /auth/, dashboards; sitemap link)
+- [ ] SEO testing (manual: Rich Results Test, Lighthouse SEO)
 
 **Deliverables:**
-- SEO-optimized pages
-- Rich snippets
+- SEO-optimized pages (meta, OG, JSON-LD, sitemap, robots)
+- Rich snippets (Organization, WebSite)
 - Search engine visibility
 
 **Acceptance Criteria:**
@@ -902,7 +989,8 @@ This document provides a **step-by-step implementation guide** for building the 
 #### Day 1-2: Production Setup
 **Tasks:**
 - [ ] Production environment setup
-- [ ] Database migration
+- [ ] **Supabase:** Production project (or same project); `DATABASE_URL`, Supabase API keys, RLS and backups (see [SUPABASE_SETUP.md](./SUPABASE_SETUP.md))
+- [ ] Database migration (run against Supabase)
 - [ ] SSL certificates
 - [ ] Domain configuration
 - [ ] CDN setup
@@ -910,6 +998,7 @@ This document provides a **step-by-step implementation guide** for building the 
 
 **Deliverables:**
 - Production environment
+- **Supabase** DB (and optional Auth/Storage) configured for production
 - Secure hosting
 - Monitoring active
 
@@ -917,14 +1006,14 @@ This document provides a **step-by-step implementation guide** for building the 
 **Tasks:**
 - [ ] Deploy backend
 - [ ] Deploy frontend
-- [ ] Database migration
+- [ ] Database migration (Supabase; env `DATABASE_URL`, Supabase keys)
 - [ ] Static files collection
-- [ ] Environment variables
+- [ ] Environment variables (incl. `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` if using Supabase Auth)
 - [ ] Smoke testing
 
 **Deliverables:**
 - Live system
-- All features working
+- All features working (DB/Auth/Storage on Supabase where used)
 - Performance verified
 
 #### Day 5: Launch & Monitoring
@@ -1001,7 +1090,7 @@ This document provides a **step-by-step implementation guide** for building the 
 ## Risk Mitigation
 
 ### Technical Risks
-- **Database Performance**: Implement caching and indexing early
+- **Database (Supabase)**: Use indexing and connection pooling; monitor usage in Supabase Dashboard; RLS and backups as per [SUPABASE_SETUP.md](./SUPABASE_SETUP.md).
 - **Payment Failures**: Multiple payment gateways and retry logic
 - **Calendar Sync Issues**: Robust error handling and retry mechanisms
 - **Third-Party API Failures**: Fallback options and graceful degradation
@@ -1021,6 +1110,8 @@ This document provides a **step-by-step implementation guide** for building the 
 ---
 
 *This roadmap is a living document and will be updated as the project progresses.*
+
+**Stack:** Backend (Django), Frontend (Next.js), **Database & optional Auth/Storage (Supabase)**. See **[SUPABASE_SETUP.md](./SUPABASE_SETUP.md)** for Supabase setup and configuration.
 
 **Last Updated:** [Current Date]
 **Version:** 1.0

@@ -103,7 +103,7 @@ export default function AdminLoginPage() {
 
         <div className="text-center text-sm text-muted-foreground">
           <p>
-            Don't have an admin account?{' '}
+            Don&apos;t have an admin account?{' '}
             <Link href="/ad/register" className="text-primary hover:underline">
               Register
             </Link>

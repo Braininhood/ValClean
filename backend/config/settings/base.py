@@ -60,6 +60,8 @@ INSTALLED_APPS = [
     'apps.orders',
     'apps.notifications',
     'apps.calendar_sync',
+    'apps.coupons',
+    'apps.reports',
 ]
 
 MIDDLEWARE = [
@@ -193,6 +195,16 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
+# Cache (Phase 5: optimization)
+# Development: local memory; production can use REDIS_URL (see production.py) or database
+if not env('REDIS_URL', default=None):
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'OPTIONS': {'MAX_ENTRIES': 1000},
+        }
+    }
+
 # CORS Settings (for Next.js frontend on localhost:3000)
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
     'http://localhost:3000',
@@ -289,6 +301,12 @@ GOOGLE_CALENDAR_CLIENT_SECRET = env('GOOGLE_CALENDAR_CLIENT_SECRET', default='')
 # Microsoft Services (Outlook Calendar)
 MICROSOFT_CLIENT_ID = env('MICROSOFT_CLIENT_ID', default='')
 MICROSOFT_CLIENT_SECRET = env('MICROSOFT_CLIENT_SECRET', default='')
+
+# Supabase (DB via DATABASE_URL in dev/prod; API for auth/storage)
+SUPABASE_URL = env('SUPABASE_URL', default='')
+SUPABASE_ANON_KEY = env('SUPABASE_ANON_KEY', default='')
+SUPABASE_SERVICE_ROLE_KEY = env('SUPABASE_SERVICE_ROLE_KEY', default='')
+SUPABASE_JWT_SECRET = env('SUPABASE_JWT_SECRET', default='')
 
 # Logging Configuration
 LOGGING = {

@@ -3,7 +3,7 @@ Orders app serializers.
 Order and OrderItem serializers with guest checkout support.
 """
 from rest_framework import serializers
-from .models import Order, OrderItem
+from .models import Order, OrderItem, ChangeRequest
 from apps.services.serializers import ServiceListSerializer
 from apps.staff.serializers import StaffListSerializer
 from apps.customers.serializers import CustomerListSerializer, GuestCustomerSerializer
@@ -95,6 +95,9 @@ class OrderCreateSerializer(serializers.Serializer):
     # Additional information
     notes = serializers.CharField(required=False, allow_blank=True)
     
+    # Coupon code (optional)
+    coupon_code = serializers.CharField(required=False, allow_blank=True, help_text='Coupon code to apply')
+    
     def validate_items(self, value):
         """Validate order items structure."""
         if not value:
@@ -141,3 +144,20 @@ class OrderListSerializer(serializers.ModelSerializer):
         if obj.customer:
             return obj.customer.name
         return obj.guest_name or obj.guest_email
+
+
+class ChangeRequestSerializer(serializers.ModelSerializer):
+    """
+    Change request serializer.
+    """
+    order_number = serializers.CharField(source='order.order_number', read_only=True)
+    reviewed_by_email = serializers.CharField(source='reviewed_by.email', read_only=True, allow_null=True)
+    
+    class Meta:
+        model = ChangeRequest
+        fields = [
+            'id', 'order', 'order_number', 'requested_date', 'requested_time',
+            'reason', 'status', 'reviewed_by', 'reviewed_by_email',
+            'reviewed_at', 'review_notes', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'reviewed_by', 'reviewed_at', 'created_at', 'updated_at']

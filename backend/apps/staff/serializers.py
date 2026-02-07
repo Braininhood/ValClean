@@ -9,13 +9,29 @@ from apps.services.serializers import ServiceListSerializer
 
 class StaffAreaSerializer(serializers.ModelSerializer):
     """
-    Staff service area serializer.
+    Staff service area serializer (postcode + radius; optional service for per-service area).
     """
+    service_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    service_name = serializers.CharField(source='service.name', read_only=True, allow_null=True)
+
     class Meta:
         model = StaffArea
-        fields = ['id', 'staff', 'postcode', 'radius_km', 'is_active',
+        fields = ['id', 'staff', 'service', 'service_id', 'service_name', 'postcode', 'radius_miles', 'is_active',
                   'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'staff', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        service_id = validated_data.pop('service_id', None)
+        from apps.services.models import Service
+        validated_data['service'] = Service.objects.get(id=service_id) if service_id else None
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        service_id = validated_data.pop('service_id', None)
+        if 'service_id' in self.initial_data:
+            from apps.services.models import Service
+            instance.service = Service.objects.get(id=service_id) if service_id else None
+        return super().update(instance, validated_data)
 
 
 class StaffScheduleSerializer(serializers.ModelSerializer):
@@ -77,5 +93,5 @@ class StaffListSerializer(serializers.ModelSerializer):
     def get_service_areas(self, obj):
         """Return active service areas for this staff member."""
         areas = obj.service_areas.filter(is_active=True)
-        return [{'postcode': area.postcode, 'radius_km': float(area.radius_km)} 
+        return [{'postcode': area.postcode, 'radius_miles': float(area.radius_miles)} 
                 for area in areas]

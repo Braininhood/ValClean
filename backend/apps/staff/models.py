@@ -186,7 +186,10 @@ class StaffService(TimeStampedModel):
 class StaffArea(TimeStampedModel):
     """
     Staff service area assignment.
-    Defines postcode and radius (in km) where staff member can provide services.
+    Defines postcode and radius (in miles) where staff member can provide services.
+    If service is set, this area applies only when the customer is booking that service;
+    if service is null, this area applies to all services this staff offers.
+    UK uses miles, not kilometers.
     """
     staff = models.ForeignKey(
         Staff,
@@ -194,14 +197,22 @@ class StaffArea(TimeStampedModel):
         related_name='service_areas',
         help_text='Staff member'
     )
+    service = models.ForeignKey(
+        'services.Service',
+        on_delete=models.CASCADE,
+        related_name='staff_areas',
+        null=True,
+        blank=True,
+        help_text='If set, this area applies only to this service; null = all services'
+    )
     postcode = models.CharField(
         max_length=20,
         help_text='Center postcode (e.g., SW1A 1AA)'
     )
-    radius_km = models.DecimalField(
+    radius_miles = models.DecimalField(
         max_digits=5,
         decimal_places=2,
-        help_text='Service radius in kilometers from center postcode'
+        help_text='Service radius in miles from center postcode'
     )
     is_active = models.BooleanField(
         default=True,
@@ -219,4 +230,4 @@ class StaffArea(TimeStampedModel):
         ]
     
     def __str__(self):
-        return f"{self.staff.name} - {self.postcode} ({self.radius_km}km)"
+        return f"{self.staff.name} - {self.postcode} ({self.radius_miles} miles)"

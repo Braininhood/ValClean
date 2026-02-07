@@ -1,28 +1,28 @@
-import Link from 'next/link'
+import { jsonLdOrganization, jsonLdWebSite, siteConfig } from '@/lib/seo'
+import { HomeCTA } from '@/components/home/HomeCTA'
 
 export default function Home() {
+  const orgJsonLd = jsonLdOrganization()
+  const webJsonLd = jsonLdWebSite()
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-8">
+      {/* Structured data (Phase 5: SEO) */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webJsonLd) }}
+      />
       <div className="text-center space-y-8">
         <h1 className="text-4xl font-bold">VALClean Booking System</h1>
         <p className="text-xl text-muted-foreground">
           Professional booking system for cleaning services
         </p>
-        
-        <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
-          <Link
-            href="/booking"
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Book Now
-          </Link>
-          <Link
-            href="/login"
-            className="px-6 py-3 border border-border rounded-lg hover:bg-accent transition-colors"
-          >
-            Login
-          </Link>
-        </div>
+
+        <HomeCTA />
 
         <div className="mt-12 text-sm text-muted-foreground">
           <p>Development: Frontend (localhost:3000) + Backend (localhost:8000)</p>

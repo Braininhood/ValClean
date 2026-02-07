@@ -109,7 +109,12 @@ class Appointment(TimeStampedModel):
         null=True,
         help_text='Location-specific notes (gate codes, parking, etc.)'
     )
-    
+    completion_photos = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Job completion photos in Supabase Storage: list of {url, path, uploaded_at}'
+    )
+
     class Meta:
         verbose_name = 'appointment'
         verbose_name_plural = 'appointments'

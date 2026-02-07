@@ -9,9 +9,20 @@ from apps.services.serializers import ServiceListSerializer
 from apps.customers.serializers import CustomerSerializer, CustomerListSerializer
 
 
+class CustomerBookingSummarySerializer(serializers.ModelSerializer):
+    """Minimal customer booking info for inclusion in Appointment (can_cancel, can_reschedule, price)."""
+    class Meta:
+        model = CustomerAppointment
+        fields = [
+            'id', 'total_price', 'deposit_paid', 'payment_status',
+            'can_cancel', 'can_reschedule', 'cancellation_deadline', 'cancellation_policy_hours',
+        ]
+        read_only_fields = fields
+
+
 class AppointmentSerializer(serializers.ModelSerializer):
     """
-    Appointment serializer with calendar sync fields.
+    Appointment serializer with calendar sync fields and optional customer_booking.
     """
     staff = StaffListSerializer(read_only=True)
     staff_id = serializers.IntegerField(write_only=True, required=True)
@@ -19,14 +30,20 @@ class AppointmentSerializer(serializers.ModelSerializer):
     service_id = serializers.IntegerField(write_only=True, required=True)
     subscription_number = serializers.CharField(source='subscription.subscription_number', read_only=True, allow_null=True)
     order_number = serializers.CharField(source='order.order_number', read_only=True, allow_null=True)
-    
+    order_id = serializers.IntegerField(source='order.id', read_only=True, allow_null=True)
+    subscription_id = serializers.IntegerField(source='subscription.id', read_only=True, allow_null=True)
+    customer_booking = CustomerBookingSummarySerializer(read_only=True, allow_null=True)
+
     class Meta:
         model = Appointment
         fields = ['id', 'staff', 'staff_id', 'service', 'service_id',
                   'start_time', 'end_time', 'status', 'appointment_type',
-                  'subscription', 'subscription_number', 'order', 'order_number',
+                  'subscription', 'subscription_number', 'subscription_id',
+                  'order', 'order_number', 'order_id',
+                  'customer_booking',
                   'calendar_event_id', 'calendar_synced_to', 'internal_notes',
-                  'location_notes', 'created_at', 'updated_at']
+                  'location_notes', 'completion_photos',
+                  'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
         extra_kwargs = {
             'calendar_event_id': {'required': False, 'allow_null': True},

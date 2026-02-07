@@ -7,6 +7,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils import timezone
+from django.db.models import Q
 from datetime import datetime, timedelta
 from apps.core.permissions import (
     IsCustomer, IsAdminOrManager, IsStaff, IsStaffOrManager, IsOwnerOrAdmin
@@ -180,13 +181,16 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
         """Filter by user role."""
         queryset = super().get_queryset()
         
-        # Customer can only see their own appointments
+        # Customer can only see their own appointments (via CustomerAppointment, Order, or Subscription)
         if self.request.user.role == 'customer':
             try:
                 customer = Customer.objects.get(user=self.request.user)
-                customer_appointments = CustomerAppointment.objects.filter(customer=customer)
-                appointment_ids = customer_appointments.values_list('appointment_id', flat=True)
-                queryset = queryset.filter(id__in=appointment_ids)
+                # Include: linked by CustomerAppointment, or by Order, or by Subscription
+                queryset = queryset.filter(
+                    Q(customer_booking__customer=customer)
+                    | Q(order__customer=customer)
+                    | Q(subscription__customer=customer)
+                ).distinct()
             except Customer.DoesNotExist:
                 queryset = queryset.none()
         
@@ -207,10 +211,12 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
         
         # Admin can see all appointments
         
-        # Apply filters
+        # Apply filters (status can be comma-separated: pending,confirmed)
         status_filter = self.request.query_params.get('status')
         if status_filter:
-            queryset = queryset.filter(status=status_filter)
+            statuses = [s.strip() for s in status_filter.split(',') if s.strip()]
+            if statuses:
+                queryset = queryset.filter(status__in=statuses)
         
         date_from = self.request.query_params.get('date_from')
         if date_from:
@@ -221,6 +227,15 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(start_time__lte=date_to)
         
         return queryset
+
+    def retrieve(self, request, *args, **kwargs):
+        """Return appointment detail wrapped as { success, data } for staff/customer consistency."""
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+        })
     
     def get_permissions(self):
         """Override permissions for write operations."""
@@ -228,6 +243,217 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
             return [IsAdminOrManager()]
         return [IsAuthenticated()]
     
+    @action(detail=True, methods=['post'], url_path='checkin', permission_classes=[IsAuthenticated])
+    def checkin(self, request, pk=None):
+        """
+        Check in to appointment (staff only).
+        POST /api/st/jobs/{id}/checkin/
+        """
+        appointment = self.get_object()
+        
+        # Verify staff owns this appointment
+        if request.user.role == 'staff':
+            from apps.staff.models import Staff
+            try:
+                staff = Staff.objects.get(user=request.user)
+                if appointment.staff != staff:
+                    return Response({
+                        'success': False,
+                        'error': {
+                            'code': 'PERMISSION_DENIED',
+                            'message': 'You can only check in to your own appointments',
+                        }
+                    }, status=status.HTTP_403_FORBIDDEN)
+            except Staff.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': {
+                        'code': 'STAFF_NOT_FOUND',
+                        'message': 'Staff profile not found',
+                    }
+                }, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'PERMISSION_DENIED',
+                    'message': 'Only staff members can check in',
+                }
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Update status to in_progress
+        if appointment.status not in ['pending', 'confirmed']:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'INVALID_STATUS',
+                    'message': f'Cannot check in. Current status: {appointment.status}',
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        appointment.status = 'in_progress'
+        appointment.save(update_fields=['status'])
+        
+        serializer = self.get_serializer(appointment)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {
+                'message': 'Checked in successfully',
+            }
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'], url_path='complete', permission_classes=[IsAuthenticated])
+    def complete(self, request, pk=None):
+        """
+        Complete appointment (staff only).
+        POST /api/st/jobs/{id}/complete/
+        Body: { "notes": "...", "photos": [...] } (optional)
+        """
+        appointment = self.get_object()
+        
+        # Verify staff owns this appointment
+        if request.user.role == 'staff':
+            from apps.staff.models import Staff
+            try:
+                staff = Staff.objects.get(user=request.user)
+                if appointment.staff != staff:
+                    return Response({
+                        'success': False,
+                        'error': {
+                            'code': 'PERMISSION_DENIED',
+                            'message': 'You can only complete your own appointments',
+                        }
+                    }, status=status.HTTP_403_FORBIDDEN)
+            except Staff.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': {
+                        'code': 'STAFF_NOT_FOUND',
+                        'message': 'Staff profile not found',
+                    }
+                }, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'PERMISSION_DENIED',
+                    'message': 'Only staff members can complete jobs',
+                }
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Update status to completed
+        if appointment.status not in ['in_progress', 'confirmed', 'pending']:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'INVALID_STATUS',
+                    'message': f'Cannot complete. Current status: {appointment.status}',
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Update status to completed and notes if provided
+        notes = request.data.get('notes')
+        appointment.status = 'completed'
+        if notes:
+            appointment.internal_notes = notes
+            appointment.save(update_fields=['status', 'internal_notes'])
+        else:
+            appointment.save(update_fields=['status'])
+
+        # Send "cleaning complete" email to customer
+        try:
+            from apps.notifications.email_service import send_cleaning_complete
+            send_cleaning_complete(appointment)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning('Failed to send cleaning complete email: %s', e)
+
+        serializer = self.get_serializer(appointment)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {
+                'message': 'Job completed successfully',
+            }
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='upload-photo', permission_classes=[IsAuthenticated])
+    def upload_photo(self, request, pk=None):
+        """
+        Upload job completion photo(s) to Supabase Storage.
+        POST /api/st/jobs/{id}/upload-photo/
+        Body: multipart/form-data with one or more "file" fields (images).
+        Requires Supabase bucket "job-photos" to exist (create in Supabase Dashboard > Storage if needed).
+        """
+        appointment = self.get_object()
+        if request.user.role != 'staff':
+            return Response({
+                'success': False,
+                'error': {'code': 'PERMISSION_DENIED', 'message': 'Only staff can upload job photos.'},
+            }, status=status.HTTP_403_FORBIDDEN)
+        from apps.staff.models import Staff
+        try:
+            staff = Staff.objects.get(user=request.user)
+        except Staff.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': {'code': 'STAFF_NOT_FOUND', 'message': 'Staff profile not found.'},
+            }, status=status.HTTP_404_NOT_FOUND)
+        if appointment.staff_id != staff.id:
+            return Response({
+                'success': False,
+                'error': {'code': 'PERMISSION_DENIED', 'message': 'You can only upload photos for your own jobs.'},
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        files = request.FILES.getlist('file') or ([request.FILES.get('file')] if request.FILES.get('file') else [])
+        if not files:
+            return Response({
+                'success': False,
+                'error': {'code': 'NO_FILE', 'message': 'No file(s) provided. Use multipart/form-data with "file" field(s).'},
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.core.supabase_storage import supabase_storage
+        bucket = 'job-photos'
+        folder = f'appointment_{appointment.id}'
+        added = []
+        for f in files:
+            if not f or not getattr(f, 'name', None):
+                continue
+            if not (getattr(f, 'content_type', '') or '').startswith('image/'):
+                continue
+            timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"{timestamp}_{f.name}"
+            file_path = f"{folder}/{filename}" if folder else filename
+            file_data = f.read()
+            result = supabase_storage.upload_file(
+                bucket=bucket,
+                file_path=file_path,
+                file_data=file_data,
+                content_type=f.content_type or 'image/jpeg',
+                upsert=True,
+            )
+            if result.get('success') and result.get('url'):
+                entry = {
+                    'url': result['url'],
+                    'path': result.get('path', file_path),
+                    'uploaded_at': timezone.now().isoformat(),
+                }
+                added.append(entry)
+                appointment.completion_photos = list(appointment.completion_photos or []) + [entry]
+        if added:
+            appointment.save(update_fields=['completion_photos'])
+
+        serializer = self.get_serializer(appointment)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {
+                'message': f'Uploaded {len(added)} photo(s).',
+                'added': len(added),
+            },
+        }, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post'], url_path='cancel')
     def cancel(self, request, pk=None):
         """
@@ -275,6 +501,90 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
             }
         }, status=status.HTTP_200_OK)
     
+    @action(detail=True, methods=['get'], url_path='available-slots')
+    def available_slots(self, request, pk=None):
+        """
+        Get available time slots for rescheduling this appointment (same shape as /api/slots/).
+        GET /api/cus/appointments/{id}/available-slots/?date=2024-01-15
+        Uses appointment's service, optional staff, and postcode from order/subscription/customer.
+        """
+        appointment = self.get_object()
+        date_param = request.query_params.get('date')
+        if not date_param:
+            return Response({
+                'success': False,
+                'error': {'code': 'VALIDATION_ERROR', 'message': 'date parameter is required (YYYY-MM-DD)'},
+            }, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            target_date = datetime.strptime(date_param, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({
+                'success': False,
+                'error': {'code': 'INVALID_DATE', 'message': 'Invalid date format. Use YYYY-MM-DD.'},
+            }, status=status.HTTP_400_BAD_REQUEST)
+        today = timezone.now().date()
+        if target_date < today:
+            return Response({
+                'success': False,
+                'error': {'code': 'INVALID_DATE', 'message': 'Cannot reschedule to a past date.'},
+            }, status=status.HTTP_400_BAD_REQUEST)
+        postcode = None
+        if appointment.order_id:
+            order = appointment.order
+            postcode = (getattr(order, 'postcode', None) or '') or (order.customer and order.customer.postcode) or ''
+        elif appointment.subscription_id:
+            sub = appointment.subscription
+            postcode = (getattr(sub, 'postcode', None) or '') or (sub.customer and sub.customer.postcode) or ''
+        if not postcode:
+            ca = getattr(appointment, 'customer_booking', None)
+            if ca and ca.customer_id:
+                postcode = ca.customer.postcode or ''
+        if not postcode or not postcode.strip():
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'NO_POSTCODE',
+                    'message': 'No postcode on file for this booking. Please contact support to reschedule.',
+                },
+            }, status=status.HTTP_400_BAD_REQUEST)
+        from apps.core.address import validate_postcode_with_google
+        validation_result = validate_postcode_with_google(postcode.strip())
+        if not validation_result.get('valid') or not validation_result.get('is_uk'):
+            return Response({
+                'success': False,
+                'error': {'code': 'INVALID_POSTCODE', 'message': validation_result.get('error', 'Invalid UK postcode.')},
+            }, status=status.HTTP_400_BAD_REQUEST)
+        validated_postcode = validation_result.get('formatted', postcode.strip())
+        try:
+            from .slots_utils import get_available_slots
+            staff_id = appointment.staff_id if appointment.staff_id else None
+            slots = get_available_slots(
+                postcode=validated_postcode,
+                service_id=appointment.service_id,
+                target_date=target_date,
+                staff_id=staff_id,
+            )
+            return Response({
+                'success': True,
+                'data': {
+                    'date': date_param,
+                    'service_id': appointment.service_id,
+                    'staff_id': staff_id,
+                    'slots': slots,
+                },
+                'meta': {
+                    'count': len(slots),
+                    'available_count': sum(1 for s in slots if s.get('available')),
+                },
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).exception('available_slots for appointment %s', pk)
+            return Response({
+                'success': False,
+                'error': {'code': 'SLOTS_ERROR', 'message': str(e)},
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=True, methods=['post'], url_path='reschedule')
     def reschedule(self, request, pk=None):
         """
@@ -380,34 +690,71 @@ def available_slots_view(request):
     # Use validated/formatted postcode
     validated_postcode = validation_result.get('formatted', postcode)
     
-    # TODO: Implement available slots calculation based on:
-    # 1. Staff schedules for the selected date
-    # 2. Existing appointments for the selected date
-    # 3. Service duration and padding time
-    # 4. Staff availability (breaks, holidays)
-    # For now, return a placeholder response
-    slots = [
-        {'time': '09:00', 'available': True},
-        {'time': '10:00', 'available': True},
-        {'time': '11:00', 'available': False},
-        {'time': '12:00', 'available': False},  # Lunch break
-        {'time': '13:00', 'available': False},  # Lunch break
-        {'time': '14:00', 'available': True},
-        {'time': '15:00', 'available': True},
-        {'time': '16:00', 'available': True},
-    ]
+    # Parse date
+    try:
+        target_date = datetime.strptime(date, '%Y-%m-%d').date()
+    except ValueError:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'INVALID_DATE',
+                'message': 'Invalid date format. Use YYYY-MM-DD format.',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
     
-    return Response({
-        'success': True,
-        'data': {
-            'postcode': validated_postcode,
-            'service_id': service_id,
-            'date': date,
-            'staff_id': staff_id,
-            'slots': slots,
-        },
-        'meta': {
-            'count': len(slots),
-            'available_count': sum(1 for slot in slots if slot['available']),
-        }
-    }, status=status.HTTP_200_OK)
+    # Check if date is in the past
+    today = timezone.now().date()
+    if target_date < today:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'INVALID_DATE',
+                'message': 'Cannot book appointments in the past.',
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Parse staff_id if provided
+    parsed_staff_id = None
+    if staff_id:
+        try:
+            parsed_staff_id = int(staff_id)
+        except ValueError:
+            pass
+    
+    # Calculate available slots
+    try:
+        from .slots_utils import get_available_slots
+        slots = get_available_slots(
+            postcode=validated_postcode,
+            service_id=int(service_id),
+            target_date=target_date,
+            staff_id=parsed_staff_id
+        )
+        
+        return Response({
+            'success': True,
+            'data': {
+                'postcode': validated_postcode,
+                'service_id': int(service_id),
+                'date': date,
+                'staff_id': parsed_staff_id,
+                'slots': slots,
+            },
+            'meta': {
+                'count': len(slots),
+                'available_count': sum(1 for slot in slots if slot['available']),
+            }
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        # Log the error for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error calculating available slots: {str(e)}", exc_info=True)
+        
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'SLOTS_CALCULATION_ERROR',
+                'message': f'Error calculating available slots: {str(e)}',
+            }
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

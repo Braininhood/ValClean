@@ -20,17 +20,27 @@ export const PUBLIC_ENDPOINTS = {
     DETAIL: (id: string | number) => `/stf/${id}/`,
   },
   
+  // Coupons (Security: /api/coupons/)
+  COUPONS: {
+    LIST: '/coupons/',
+    ACTIVE: '/coupons/active/',
+    VALIDATE: '/coupons/validate/',
+    DETAIL: (id: string | number) => `/coupons/${id}/`,
+  },
+  
   // Bookings/Orders (Security: /api/bkg/)
   BOOKINGS: {
     CREATE: '/bkg/',
     SUBSCRIPTION: '/bkg/subscription/',
-    ORDER: '/bkg/order/',
+    /** Create subscription (recurring booking) - POST */
+    SUBSCRIPTIONS_CREATE: '/bkg/subscriptions/',
+    ORDER: '/bkg/orders/',
     CANCEL: (id: string | number) => `/bkg/${id}/cancel/`,
     
     // Guest order access (NO AUTH REQUIRED)
     GUEST_ORDER: (orderNumber: string) => `/bkg/guest/order/${orderNumber}/`,
     GUEST_ORDER_VERIFY: (orderNumber: string) => `/bkg/guest/order/${orderNumber}/verify/`,
-    GUEST_ORDER_TRACK: (token: string) => `/bkg/guest/order/track/${token}/`,
+    GUEST_ORDER_TRACK: (token: string) => `/bkg/guest/order/token/${token}/`,
     GUEST_ORDER_CANCEL: (orderNumber: string) => `/bkg/guest/order/${orderNumber}/cancel/`,
     GUEST_ORDER_REQUEST_CHANGE: (orderNumber: string) => `/bkg/guest/order/${orderNumber}/request-change/`,
     GUEST_ORDER_LINK_LOGIN: (orderNumber: string) => `/bkg/guest/order/${orderNumber}/link-login/`,
@@ -39,7 +49,7 @@ export const PUBLIC_ENDPOINTS = {
     // Guest subscription access (NO AUTH REQUIRED)
     GUEST_SUBSCRIPTION: (subscriptionNumber: string) => `/bkg/guest/subscription/${subscriptionNumber}/`,
     GUEST_SUBSCRIPTION_VERIFY: (subscriptionNumber: string) => `/bkg/guest/subscription/${subscriptionNumber}/verify/`,
-    GUEST_SUBSCRIPTION_TRACK: (token: string) => `/bkg/guest/subscription/track/${token}/`,
+    GUEST_SUBSCRIPTION_TRACK: (token: string) => `/bkg/guest/subscription/token/${token}/`,
     GUEST_SUBSCRIPTION_PAUSE: (subscriptionNumber: string) => `/bkg/guest/subscription/${subscriptionNumber}/pause/`,
     GUEST_SUBSCRIPTION_CANCEL: (subscriptionNumber: string) => `/bkg/guest/subscription/${subscriptionNumber}/cancel/`,
     GUEST_SUBSCRIPTION_APPOINTMENT_CANCEL: (subscriptionNumber: string, apptId: string | number) => 
@@ -60,6 +70,7 @@ export const PUBLIC_ENDPOINTS = {
   // Authentication (Security: /api/aut/)
   AUTH: {
     LOGIN: '/aut/login/',
+    GOOGLE: '/aut/google/',
     REGISTER: '/aut/register/',
     LOGOUT: '/aut/logout/',
     REFRESH: '/aut/refresh/',
@@ -69,7 +80,7 @@ export const PUBLIC_ENDPOINTS = {
   
   // Available Slots (Security: /api/slots/)
   SLOTS: {
-    LIST: '/slots/',
+    AVAILABLE: '/slots/',
   },
   
   // Payments (Security: /api/pay/)
@@ -89,6 +100,7 @@ export const CUSTOMER_ENDPOINTS = {
     DETAIL: (id: string | number) => `/cus/appointments/${id}/`,
     CANCEL: (id: string | number) => `/cus/appointments/${id}/cancel/`,
     RESCHEDULE: (id: string | number) => `/cus/appointments/${id}/reschedule/`,
+    AVAILABLE_SLOTS: (id: string | number) => `/cus/appointments/${id}/available-slots/`,
   },
   
   SUBSCRIPTIONS: {
@@ -97,9 +109,12 @@ export const CUSTOMER_ENDPOINTS = {
     DETAIL: (id: string | number) => `/cus/subscriptions/${id}/`,
     UPDATE: (id: string | number) => `/cus/subscriptions/${id}/`,
     PAUSE: (id: string | number) => `/cus/subscriptions/${id}/pause/`,
+    ACTIVATE: (id: string | number) => `/cus/subscriptions/${id}/activate/`,
     CANCEL: (id: string | number) => `/cus/subscriptions/${id}/cancel/`,
-    APPOINTMENT_CANCEL: (id: string | number, apptId: string | number) => 
+    APPOINTMENT_CANCEL: (id: string | number, apptId: string | number) =>
       `/cus/subscriptions/${id}/appointments/${apptId}/cancel/`,
+    APPOINTMENT_REQUEST_CHANGE: (id: string | number, apptId: string | number) =>
+      `/cus/subscriptions/${id}/appointments/${apptId}/request-change/`,
   },
   
   ORDERS: {
@@ -135,20 +150,41 @@ export const STAFF_ENDPOINTS = {
   SCHEDULE: '/st/schedule/',
   JOBS: {
     LIST: '/st/jobs/',
+    DETAIL: (id: string | number) => `/st/jobs/${id}/`,
     CHECKIN: (id: string | number) => `/st/jobs/${id}/checkin/`,
     COMPLETE: (id: string | number) => `/st/jobs/${id}/complete/`,
+    UPLOAD_PHOTO: (id: string | number) => `/st/jobs/${id}/upload-photo/`,
   },
   AVAILABILITY: {
     GET: '/st/availability/',
     UPDATE: '/st/availability/',
   },
+  SERVICES: {
+    LIST: '/st/services/',
+    DETAIL: (id: string | number) => `/st/services/${id}/`,
+    CREATE: '/st/services/',
+    UPDATE: (id: string | number) => `/st/services/${id}/`,
+    DELETE: (id: string | number) => `/st/services/${id}/`,
+  },
+  AREAS: {
+    LIST: '/st/areas/',
+    DETAIL: (id: string | number) => `/st/areas/${id}/`,
+    CREATE: '/st/areas/',
+    UPDATE: (id: string | number) => `/st/areas/${id}/`,
+    DELETE: (id: string | number) => `/st/areas/${id}/`,
+  },
+  CATEGORIES: {
+    LIST: '/st/categories/',
+  },
+  // Note: Calendar endpoints are shared across all roles. Use CALENDAR_ENDPOINTS instead.
+  // These endpoints below point to non-existent routes - kept for reference but not used.
   CALENDAR: {
-    CONNECT: '/st/calendar/connect/',
-    STATUS: '/st/calendar/status/',
-    SYNC: '/st/calendar/sync/',
-    DISCONNECT: '/st/calendar/disconnect/',
-    EVENTS: '/st/calendar/events/',
-    ADD_EVENT: '/st/calendar/add-event/',
+    CONNECT: '/calendar/google/connect/', // Use CALENDAR_ENDPOINTS.GOOGLE_CONNECT instead
+    STATUS: '/calendar/status/', // Use CALENDAR_ENDPOINTS.STATUS instead
+    SYNC: '/calendar/sync/', // Use CALENDAR_ENDPOINTS.SYNC instead
+    DISCONNECT: '/calendar/google/disconnect/', // Use CALENDAR_ENDPOINTS.GOOGLE_DISCONNECT instead
+    EVENTS: '/calendar/events/', // Use CALENDAR_ENDPOINTS.EVENTS instead
+    ADD_EVENT: '/calendar/events/', // Use CALENDAR_ENDPOINTS.EVENTS instead
   },
 };
 
@@ -196,11 +232,34 @@ export const ADMIN_ENDPOINTS = {
     CREATE: '/ad/staff/',
     UPDATE: (id: string | number) => `/ad/staff/${id}/`,
     DELETE: (id: string | number) => `/ad/staff/${id}/`,
+    PERFORMANCE: (id: string | number) => `/ad/staff/${id}/performance/`,
+    AREAS: {
+      LIST: (staffId?: string | number) => staffId ? `/ad/staff-areas/?staff_id=${staffId}` : '/ad/staff-areas/',
+      CREATE: '/ad/staff-areas/',
+      UPDATE: (id: string | number) => `/ad/staff-areas/${id}/`,
+      DELETE: (id: string | number) => `/ad/staff-areas/${id}/`,
+    },
+    SCHEDULES: {
+      LIST: (staffId?: string | number) => staffId ? `/ad/staff-schedules/?staff_id=${staffId}` : '/ad/staff-schedules/',
+      CREATE: '/ad/staff-schedules/',
+      UPDATE: (id: string | number) => `/ad/staff-schedules/${id}/`,
+      DELETE: (id: string | number) => `/ad/staff-schedules/${id}/`,
+    },
+    SERVICES: {
+      LIST: (staffId?: string | number) => staffId ? `/ad/staff-services/?staff_id=${staffId}` : '/ad/staff-services/',
+      CREATE: '/ad/staff-services/',
+      UPDATE: (id: string | number) => `/ad/staff-services/${id}/`,
+      DELETE: (id: string | number) => `/ad/staff-services/${id}/`,
+    },
   },
   CUSTOMERS: {
     LIST: '/ad/customers/',
+    CREATE: '/ad/customers/',
     DETAIL: (id: string | number) => `/ad/customers/${id}/`,
     UPDATE: (id: string | number) => `/ad/customers/${id}/`,
+    DELETE: (id: string | number) => `/ad/customers/${id}/`,
+    BOOKINGS: (id: string | number) => `/ad/customers/${id}/bookings/`,
+    PAYMENTS: (id: string | number) => `/ad/customers/${id}/payments/`,
   },
   MANAGERS: {
     LIST: '/ad/managers/',
@@ -214,6 +273,15 @@ export const ADMIN_ENDPOINTS = {
     CREATE: '/ad/services/',
     UPDATE: (id: string | number) => `/ad/services/${id}/`,
     DELETE: (id: string | number) => `/ad/services/${id}/`,
+    REORDER: '/ad/services/reorder/',
+    APPROVE: (id: string | number) => `/ad/services/${id}/approve/`,
+  },
+  CATEGORIES: {
+    LIST: '/ad/categories/',
+    CREATE: '/ad/categories/',
+    UPDATE: (id: string | number) => `/ad/categories/${id}/`,
+    DELETE: (id: string | number) => `/ad/categories/${id}/`,
+    REORDER: '/ad/categories/reorder/',
   },
   SUBSCRIPTIONS: {
     LIST: '/ad/subscriptions/',
@@ -232,18 +300,38 @@ export const ADMIN_ENDPOINTS = {
   },
   REPORTS: {
     REVENUE: '/ad/reports/revenue/',
+    DASHBOARD: '/ad/reports/dashboard/',
     APPOINTMENTS: '/ad/reports/appointments/',
     STAFF_PERFORMANCE: '/ad/reports/staff-performance/',
     SUBSCRIPTIONS: '/ad/reports/subscriptions/',
     ORDERS: '/ad/reports/orders/',
   },
-  CALENDAR: {
-    CONNECT: '/ad/calendar/connect/',
-    STATUS: '/ad/calendar/status/',
-    SYNC: '/ad/calendar/sync/',
-    DISCONNECT: '/ad/calendar/disconnect/',
-    EVENTS: '/ad/calendar/events/',
-    ADD_EVENT: '/ad/calendar/add-event/',
-    BULK_SYNC: '/ad/calendar/bulk-sync/',
+  ROUTES: {
+    OPTIMIZE: '/ad/routes/optimize/',
+    STAFF_DAY: '/ad/routes/staff-day/',
   },
+  CALENDAR: {
+    CONNECT: '/calendar/google/connect/',
+    STATUS: '/calendar/status/',
+    SYNC: '/calendar/sync/',
+    DISCONNECT: '/calendar/google/disconnect/',
+    EVENTS: '/calendar/events/',
+    ADD_EVENT: '/calendar/events/',
+    OUTLOOK_CONNECT: '/calendar/outlook/connect/',
+    OUTLOOK_DISCONNECT: '/calendar/outlook/disconnect/',
+    SYNC_BULK: '/calendar/sync-bulk/',
+  },
+};
+
+// Shared calendar API (same for all roles: /api/calendar/)
+export const CALENDAR_ENDPOINTS = {
+  STATUS: '/calendar/status/',
+  SYNC: '/calendar/sync/',
+  SYNC_BULK: '/calendar/sync-bulk/',
+  EVENTS: '/calendar/events/',
+  GOOGLE_CONNECT: '/calendar/google/connect/',
+  GOOGLE_DISCONNECT: '/calendar/google/disconnect/',
+  OUTLOOK_CONNECT: '/calendar/outlook/connect/',
+  OUTLOOK_DISCONNECT: '/calendar/outlook/disconnect/',
+  ICS: (appointmentId: number) => `/calendar/ics/${appointmentId}/`,
 };

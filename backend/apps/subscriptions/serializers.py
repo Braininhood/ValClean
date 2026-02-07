@@ -21,9 +21,9 @@ class SubscriptionAppointmentSerializer(serializers.ModelSerializer):
         model = SubscriptionAppointment
         fields = ['id', 'subscription', 'appointment', 'appointment_id',
                   'sequence_number', 'scheduled_date', 'status',
-                  'can_cancel', 'cancellation_deadline',
+                  'can_cancel', 'can_reschedule', 'cancellation_deadline',
                   'created_at', 'updated_at']
-        read_only_fields = ['id', 'can_cancel', 'cancellation_deadline',
+        read_only_fields = ['id', 'can_cancel', 'can_reschedule', 'cancellation_deadline',
                              'created_at', 'updated_at']
 
 

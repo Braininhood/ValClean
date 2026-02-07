@@ -229,32 +229,32 @@ class Command(BaseCommand):
             {
                 'staff': staff_members[0],  # John
                 'postcode': 'SW1A 1AA',  # Central London
-                'radius_km': Decimal('15.00'),
+                'radius_miles': Decimal('9.32'),  # ~15 km converted to miles
             },
             {
                 'staff': staff_members[0],
                 'postcode': 'W1A 0AX',  # West End
-                'radius_km': Decimal('10.00'),
+                'radius_miles': Decimal('6.21'),  # ~10 km converted to miles
             },
             {
                 'staff': staff_members[1],  # Sarah
                 'postcode': 'SW1A 1AA',  # Central London
-                'radius_km': Decimal('20.00'),
+                'radius_miles': Decimal('12.43'),  # ~20 km converted to miles
             },
             {
                 'staff': staff_members[1],
                 'postcode': 'N1 9GU',  # North London
-                'radius_km': Decimal('15.00'),
+                'radius_miles': Decimal('9.32'),  # ~15 km converted to miles
             },
             {
                 'staff': staff_members[2],  # Mike
                 'postcode': 'SW1A 1AA',  # Central London
-                'radius_km': Decimal('25.00'),
+                'radius_miles': Decimal('15.53'),  # ~25 km converted to miles
             },
             {
                 'staff': staff_members[2],
                 'postcode': 'E1 6AN',  # East London
-                'radius_km': Decimal('20.00'),
+                'radius_miles': Decimal('12.43'),  # ~20 km converted to miles
             },
         ]
 
@@ -263,12 +263,12 @@ class Command(BaseCommand):
                 staff=area_data['staff'],
                 postcode=area_data['postcode'],
                 defaults={
-                    'radius_km': area_data['radius_km'],
+                    'radius_miles': area_data['radius_miles'],
                     'is_active': True,
                 }
             )
             if created:
-                self.stdout.write(f'  [OK] Created service area: {area.staff.name} - {area.postcode} ({area.radius_km}km)')
+                self.stdout.write(f'  [OK] Created service area: {area.staff.name} - {area.postcode} ({area.radius_miles} miles)')
 
         # 7. Create Sample Appointments (for next week)
         self.stdout.write('\nCreating sample appointments...')

@@ -274,6 +274,10 @@ class SubscriptionAppointment(TimeStampedModel):
         default=True,
         help_text='Can cancel this subscription appointment (based on 24h policy)'
     )
+    can_reschedule = models.BooleanField(
+        default=True,
+        help_text='Can request change of date/time (based on 24h policy)'
+    )
     cancellation_deadline = models.DateTimeField(
         null=True,
         blank=True,
@@ -291,13 +295,57 @@ class SubscriptionAppointment(TimeStampedModel):
         return f"{self.subscription.subscription_number} - Appointment #{self.sequence_number} - {self.scheduled_date}"
     
     def save(self, *args, **kwargs):
-        # Calculate cancellation deadline based on appointment start time
+        # Calculate cancellation/reschedule deadline based on appointment start time
         if self.appointment and self.appointment.start_time:
-            can_cancel_val, _, deadline = can_cancel_or_reschedule(
+            can_cancel_val, can_reschedule_val, deadline = can_cancel_or_reschedule(
                 self.appointment.start_time,
                 self.subscription.cancellation_policy_hours
             )
             self.can_cancel = can_cancel_val
+            self.can_reschedule = can_reschedule_val
             self.cancellation_deadline = deadline
         
         super().save(*args, **kwargs)
+
+
+class SubscriptionAppointmentChangeRequest(TimeStampedModel):
+    """
+    Change request for a single subscription visit (reschedule date/time).
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    subscription_appointment = models.ForeignKey(
+        SubscriptionAppointment,
+        on_delete=models.CASCADE,
+        related_name='change_requests',
+        help_text='Subscription visit to reschedule'
+    )
+    requested_date = models.DateField(help_text='Requested new date')
+    requested_time = models.TimeField(null=True, blank=True, help_text='Requested new time')
+    reason = models.TextField(blank=True, null=True, help_text='Reason for change')
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        help_text='Change request status'
+    )
+    reviewed_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_subscription_change_requests',
+        help_text='User who reviewed this request'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'subscriptions_subscriptionappointmentchangerequest'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Change request for subscription visit #{self.subscription_appointment.sequence_number} - {self.status}"

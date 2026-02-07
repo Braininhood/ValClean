@@ -2,14 +2,76 @@
 
 ## 🔐 Development Credentials
 
-**Admin Panel URL:** http://localhost:8000/admin/
-
 ### Default Admin User
 
 **Username:** `admin`  
-**Email:** `admin@valclean.uk`  
+**Email:** `admin@valclean.uk` or `admin@valclean.local` (if created via seed_data)  
 **Password:** `admin123`  
 **Role:** `admin`
+
+---
+
+## 🔗 Access Links
+
+| Purpose | URL |
+|--------|-----|
+| **Django Admin (backend)** | http://localhost:8000/admin/ |
+| **Admin Dashboard (frontend)** | http://localhost:3000/ad/dashboard |
+| **Frontend login (then go to Dashboard)** | http://localhost:3000/login |
+
+- **Django Admin:** Manage users, orders, appointments, services, etc. directly in the backend. Log in with username `admin` and password `admin123`.
+- **Admin Dashboard:** Metrics, recent orders, upcoming appointments, quick actions. Log in at http://localhost:3000/login with the same admin credentials (use **email** + password), then click **Dashboard** in the nav or open http://localhost:3000/ad/dashboard.
+
+---
+
+## 🔄 Restore Superuser Account
+
+If you forgot the admin password or the superuser was lost (e.g. after DB reset):
+
+### Option 1: Reset existing superuser password (recommended)
+
+From the `backend` folder:
+
+```powershell
+cd backend
+.\venv\Scripts\Activate.ps1
+python reset_admin_password.py
+```
+
+This sets the password to `admin123` for all users that are superuser or staff.
+
+- **Django admin:** Log in with **username** `admin` and password `admin123`.
+- **Frontend (Admin Dashboard):** Log in at http://localhost:3000/login with **email** (e.g. `admin@valclean.uk`) and password `admin123`, then go to Dashboard.
+
+### Option 2: Create or update the `admin` user
+
+From the `backend` folder:
+
+```powershell
+cd backend
+.\venv\Scripts\Activate.ps1
+python create_superuser.py
+```
+
+This creates a user with username `admin`, email `admin@valclean.uk`, password `admin123`, and sets `role=admin`, `is_staff=True`, `is_superuser=True`. If the user already exists, it updates the password and flags.
+
+### Option 3: Seed data (creates admin + sample data)
+
+```powershell
+cd backend
+.\venv\Scripts\Activate.ps1
+python manage.py seed_data --settings=config.settings.development
+```
+
+Creates admin user `admin@valclean.local` with default password (see seed_data output, often `ChangeMe123!`). Then reset password if needed: `python reset_admin_password.py` (after ensuring that user is superuser) or use `python create_superuser.py` for `admin` / `admin@valclean.uk`.
+
+### Option 4: Django changepassword (if you know the username)
+
+```powershell
+python manage.py changepassword admin
+```
+
+You will be prompted to enter a new password.
 
 ---
 
@@ -175,7 +237,9 @@ The system supports four user roles:
 
 ## 📝 Admin Panel URLs
 
-- **Admin Panel:** http://localhost:8000/admin/
+- **Django Admin (backend):** http://localhost:8000/admin/
+- **Admin Dashboard (frontend):** http://localhost:3000/ad/dashboard
+- **Frontend login:** http://localhost:3000/login (use admin email + password, then open Dashboard)
 - **API Documentation:** http://localhost:8000/api/docs/
 - **API Root:** http://localhost:8000/api/
 - **API Schema:** http://localhost:8000/api/schema/

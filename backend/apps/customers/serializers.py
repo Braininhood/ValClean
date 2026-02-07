@@ -40,9 +40,16 @@ class CustomerListSerializer(serializers.ModelSerializer):
     """
     Simplified customer serializer for list views.
     """
+    user_id = serializers.IntegerField(source='user.id', read_only=True, allow_null=True)
+    has_user_account = serializers.SerializerMethodField()
+    
     class Meta:
         model = Customer
-        fields = ['id', 'name', 'email', 'phone', 'postcode', 'city', 'created_at']
+        fields = ['id', 'name', 'email', 'phone', 'postcode', 'city', 'user_id', 'has_user_account', 'created_at']
+    
+    def get_has_user_account(self, obj):
+        """Check if customer has a user account."""
+        return obj.user is not None
 
 
 class GuestCustomerSerializer(serializers.Serializer):

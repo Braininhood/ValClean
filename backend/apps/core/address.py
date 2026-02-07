@@ -118,6 +118,9 @@ def get_address_autocomplete(query, api_key=None):
     api_key = api_key or getattr(settings, 'GOOGLE_PLACES_API_KEY', None) or getattr(settings, 'GOOGLE_MAPS_API_KEY', None)
     
     if not api_key:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning("Google Maps API key not configured. Please add GOOGLE_MAPS_API_KEY or GOOGLE_PLACES_API_KEY to your .env file.")
         return []
     
     url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json'
@@ -125,13 +128,24 @@ def get_address_autocomplete(query, api_key=None):
         'input': query,
         'key': api_key,
         'components': 'country:gb',  # UK only
-        'types': '(regions)',  # Focus on regions/postcodes for postcode-first flow
+        # Remove types restriction to get all results (addresses, establishments, etc.)
     }
     
     try:
-        response = requests.get(url, params=params, timeout=5)
+        response = requests.get(url, params=params, timeout=10)
+        
+        # Log request details
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Google Places Autocomplete request: query='{query}', url={url}")
+        logger.info(f"Response status code: {response.status_code}")
+        
         if response.status_code == 200:
             data = response.json()
+            
+            # Log API response for debugging
+            logger.info(f"Google Places Autocomplete response: status={data.get('status')}, predictions={len(data.get('predictions', []))}")
+            
             if data.get('status') == 'OK':
                 predictions = data.get('predictions', [])
                 # Format results for easier use
@@ -143,13 +157,109 @@ def get_address_autocomplete(query, api_key=None):
                         'structured_formatting': prediction.get('structured_formatting', {}),
                         'types': prediction.get('types', []),
                     })
+                logger.info(f"Returning {len(formatted_results)} formatted results")
                 return formatted_results
+            elif data.get('status') == 'ZERO_RESULTS':
+                logger.info(f"No results found for query: {query}")
+                return []
+            else:
+                # Log other statuses (INVALID_REQUEST, OVER_QUERY_LIMIT, etc.)
+                error_msg = data.get('error_message', 'No error message')
+                logger.warning(f"Google Places Autocomplete status: {data.get('status')}, error_message: {error_msg}")
+                return []
+        else:
+            logger.error(f"Google Places API returned non-200 status: {response.status_code}")
+            logger.error(f"Response text: {response.text[:500]}")
+            return []
     except Exception as e:
         # Log error but don't break the flow
-        # In production, use proper logging: logger.error(f"Autocomplete error: {e}")
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Autocomplete error: {e}", exc_info=True)
         pass
     
     return []
+
+
+def get_place_details(place_id, api_key=None):
+    """
+    Get full address details from Google Places API using place_id.
+    
+    Args:
+        place_id: Google Places place_id
+        api_key: Google Places API key (from settings if not provided)
+    
+    Returns:
+        dict: {
+            'address_line1': str,
+            'address_line2': str,
+            'city': str,
+            'postcode': str,
+            'country': str,
+            'lat': float,
+            'lng': float,
+            'formatted_address': str,
+        } or None
+    """
+    api_key = api_key or getattr(settings, 'GOOGLE_PLACES_API_KEY', None) or getattr(settings, 'GOOGLE_MAPS_API_KEY', None)
+    
+    if not api_key:
+        return None
+    
+    url = 'https://maps.googleapis.com/maps/api/place/details/json'
+    params = {
+        'place_id': place_id,
+        'key': api_key,
+        'fields': 'formatted_address,address_components,geometry',
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'OK' and data.get('result'):
+                result = data['result']
+                components = {}
+                
+                # Extract address components
+                for component in result.get('address_components', []):
+                    types = component.get('types', [])
+                    if 'street_number' in types:
+                        components['street_number'] = component.get('long_name')
+                    if 'route' in types:
+                        components['route'] = component.get('long_name')
+                    if 'locality' in types or 'postal_town' in types:
+                        components['city'] = component.get('long_name')
+                    if 'postal_code' in types:
+                        components['postcode'] = component.get('long_name')
+                    if 'country' in types:
+                        components['country'] = component.get('long_name')
+                
+                location = result.get('geometry', {}).get('location', {})
+                
+                # Build address
+                address_line1 = ''
+                if components.get('street_number'):
+                    address_line1 += components['street_number'] + ' '
+                if components.get('route'):
+                    address_line1 += components['route']
+                address_line1 = address_line1.strip()
+                
+                return {
+                    'address_line1': address_line1 or result.get('formatted_address', '').split(',')[0],
+                    'address_line2': '',
+                    'city': components.get('city', ''),
+                    'postcode': components.get('postcode', ''),
+                    'country': components.get('country', 'United Kingdom'),
+                    'lat': location.get('lat'),
+                    'lng': location.get('lng'),
+                    'formatted_address': result.get('formatted_address', ''),
+                }
+    except Exception as e:
+        # Log error but don't break the flow
+        pass
+    
+    return None
 
 
 def validate_postcode_with_google(postcode):

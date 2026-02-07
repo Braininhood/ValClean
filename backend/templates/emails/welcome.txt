@@ -1,0 +1,20 @@
+Welcome to VALClean!
+
+Dear {{ customer_name|default:customer_email }},
+
+Thank you for signing up with VALClean. Your account has been created successfully.
+
+You can now:
+- Book cleaning services online
+- Manage your appointments from your dashboard
+- View your order history
+
+Log in: {{ frontend_url }}/login
+
+If you have any questions, please contact us.
+
+Best regards,
+VALClean Team
+
+---
+This is an automated email. Please do not reply directly to this message.

@@ -41,12 +41,23 @@ def validate_phone_uk(value):
     return value
 
 
-def validate_radius_km(value):
+def validate_radius_miles(value):
     """
-    Validate radius in kilometers (should be positive and reasonable).
+    Validate radius in miles (should be positive and reasonable).
+    UK uses miles, not kilometers.
     """
     if value <= 0:
         raise ValidationError('Radius must be greater than 0.')
-    if value > 100:
-        raise ValidationError('Radius cannot exceed 100 km.')
+    if value > 60:
+        raise ValidationError('Radius cannot exceed 60 miles.')
     return value
+
+
+# Keep old function name for backward compatibility
+def validate_radius_km(value):
+    """
+    DEPRECATED: Use validate_radius_miles instead.
+    This function now validates miles, not kilometers.
+    Kept for backward compatibility.
+    """
+    return validate_radius_miles(value)

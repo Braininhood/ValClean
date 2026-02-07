@@ -13,31 +13,53 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useBookingStore } from '@/store/booking-store'
 import { validateUKPostcode, formatPostcode } from '@/lib/utils'
+import { apiClient } from '@/lib/api/client'
+import { PUBLIC_ENDPOINTS } from '@/lib/api/endpoints'
 
 export default function PostcodePage() {
   const router = useRouter()
   const { postcode, setPostcode } = useBookingStore()
   const [inputValue, setInputValue] = useState(postcode || '')
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setLoading(true)
 
     const formatted = formatPostcode(inputValue)
     
-    // First, validate UK postcode format
+    // First, validate UK postcode format on client side
     if (!validateUKPostcode(formatted)) {
       setError('Please enter a valid UK postcode (e.g., SW1A 1AA). VALClean currently operates only in the UK.')
+      setLoading(false)
       return
     }
 
-    // TODO: Add API call to validate postcode is actually in UK
-    // For now, format validation is enough (UK postcode format = UK location)
-    // When API endpoints are created, we'll verify with Google Maps API
+    try {
+      // Validate postcode with backend API (checks format + UK location via Google Maps)
+      const response = await apiClient.get(PUBLIC_ENDPOINTS.SERVICES.BY_POSTCODE, {
+        params: { postcode: formatted }
+      })
 
-    setPostcode(formatted)
-    router.push('/booking/services')
+      if (response.data.success) {
+        // Postcode is valid and services are available (even if count is 0)
+        setPostcode(formatted)
+        router.push('/booking/services')
+      } else {
+        // Handle error from API
+        const errorMessage = response.data.error?.message || 'Invalid postcode. Please try again.'
+        setError(errorMessage)
+      }
+    } catch (err: any) {
+      // Handle API errors
+      const errorMessage = err.response?.data?.error?.message || 
+                          'Unable to validate postcode. Please check your connection and try again.'
+      setError(errorMessage)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -77,15 +99,16 @@ export default function PostcodePage() {
               autoFocus
             />
             <p className="mt-2 text-sm text-muted-foreground">
-              We'll show you services available in your UK area
+              We&apos;ll show you services available in your UK area
             </p>
           </div>
 
           <button
             type="submit"
-            className="w-full py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
+            disabled={loading}
+            className="w-full py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Continue
+            {loading ? 'Validating...' : 'Continue'}
           </button>
         </form>
 

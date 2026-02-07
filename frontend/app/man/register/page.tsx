@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
@@ -11,7 +11,7 @@ import { apiClient } from '@/lib/api/client'
  * Route: /man/register
  * Requires invitation token for manager registration
  */
-export default function ManagerRegisterPage() {
+function ManagerRegisterPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { register, isLoading } = useAuth()
@@ -238,5 +238,13 @@ export default function ManagerRegisterPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ManagerRegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
+      <ManagerRegisterPageContent />
+    </Suspense>
   )
 }

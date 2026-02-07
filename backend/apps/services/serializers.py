@@ -41,8 +41,23 @@ class ServiceListSerializer(serializers.ModelSerializer):
     Simplified service serializer for list views (public endpoints).
     """
     category_name = serializers.CharField(source='category.name', read_only=True)
-    
+    extras = serializers.JSONField(required=False, default=list)
+
     class Meta:
         model = Service
-        fields = ['id', 'category_name', 'name', 'slug', 'duration', 'price', 
-                  'currency', 'image', 'color', 'is_active']
+        fields = ['id', 'category_name', 'name', 'slug', 'description', 'duration', 'price',
+                  'currency', 'image', 'color', 'is_active', 'capacity', 'padding_time', 'extras']
+
+
+class StaffServiceCreateUpdateSerializer(serializers.ModelSerializer):
+    """
+    For staff: create new service (pending approval) or update service they created / their overrides.
+    """
+    category_id = serializers.IntegerField(write_only=True, required=True)
+    extras = serializers.JSONField(required=False, default=list)
+
+    class Meta:
+        model = Service
+        fields = ['id', 'category_id', 'name', 'slug', 'description', 'duration', 'price', 'currency',
+                  'extras', 'approval_status', 'created_by_staff', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'slug', 'approval_status', 'created_by_staff', 'created_at', 'updated_at']

@@ -130,7 +130,34 @@ class Service(TimeStampedModel):
         default=True,
         help_text='Service is active and available for booking'
     )
-    
+
+    # Add-ons (e.g. [{"name": "Inside windows", "price": "10.00"}, ...])
+    extras = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Optional extras/add-ons: list of {name, price (string or number), description?}'
+    )
+
+    # Staff-created services require admin/manager approval before visible to customers
+    APPROVAL_CHOICES = [
+        ('approved', 'Approved'),
+        ('pending_approval', 'Pending approval'),
+    ]
+    approval_status = models.CharField(
+        max_length=20,
+        choices=APPROVAL_CHOICES,
+        default='approved',
+        help_text='Approved = visible to customers; Pending = only after admin/manager approval'
+    )
+    created_by_staff = models.ForeignKey(
+        'staff.Staff',
+        on_delete=models.SET_NULL,
+        related_name='services_created',
+        null=True,
+        blank=True,
+        help_text='Staff who created this service (requires approval if set)'
+    )
+
     class Meta:
         verbose_name = 'service'
         verbose_name_plural = 'services'

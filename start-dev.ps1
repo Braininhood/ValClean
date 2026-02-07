@@ -94,6 +94,7 @@ Write-Host '=== Frontend Server (Next.js) ===' -ForegroundColor Green
 Write-Host 'Running at: http://localhost:3000' -ForegroundColor Green
 Write-Host 'Press Ctrl+C to stop' -ForegroundColor Yellow
 Write-Host ''
+`$env:WATCHPACK_POLLING='true'
 npm run dev
 "@
 

@@ -23,6 +23,11 @@ A comprehensive, best-in-class appointment booking system combining the best fea
 - ✅ User experience design
 - ✅ Success metrics and KPIs
 
+### Repository & deployment
+
+- **[GITHUB_SETUP.md](GITHUB_SETUP.md)** – Push project to GitHub and keep repo structure correct.
+- **[docs/AWS_DEPLOYMENT_GUIDE.md](docs/AWS_DEPLOYMENT_GUIDE.md)** – Full step-by-step guide to deploy on AWS (VPC, RDS, EC2, ALB, HTTPS, DNS).
+
 ---
 
 ## Original Project

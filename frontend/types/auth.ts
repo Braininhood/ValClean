@@ -5,8 +5,9 @@
 export type UserRole = 'admin' | 'manager' | 'staff' | 'customer';
 
 export interface User {
-  id: number;
-  username: string;
+  /** Django backend uses number; Supabase uses UUID string */
+  id: number | string;
+  username?: string;
   email: string;
   role: UserRole;
   first_name?: string;
@@ -14,9 +15,9 @@ export interface User {
   name?: string; // Computed from first_name + last_name
   phone?: string;
   avatar?: string;
-  is_active: boolean;
-  is_verified: boolean;
-  date_joined: string;
+  is_active?: boolean;
+  is_verified?: boolean;
+  date_joined?: string;
   created_at?: string;
   updated_at?: string;
 }

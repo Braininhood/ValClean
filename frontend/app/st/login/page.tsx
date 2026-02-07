@@ -103,7 +103,7 @@ export default function StaffLoginPage() {
 
         <div className="text-center text-sm text-muted-foreground">
           <p>
-            Don't have a staff account?{' '}
+            Don&apos;t have a staff account?{' '}
             <Link href="/st/register" className="text-primary hover:underline">
               Register
             </Link>

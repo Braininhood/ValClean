@@ -7,11 +7,11 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time as time_obj
 from dateutil.relativedelta import relativedelta  # Requires python-dateutil (already in requirements.txt)
 from apps.core.permissions import IsCustomer, IsAdminOrManager, IsOwnerOrAdmin
 from apps.core.utils import can_cancel_or_reschedule
-from .models import Subscription, SubscriptionAppointment
+from .models import Subscription, SubscriptionAppointment, SubscriptionAppointmentChangeRequest
 from .serializers import (
     SubscriptionSerializer, SubscriptionListSerializer,
     SubscriptionAppointmentSerializer, SubscriptionCreateSerializer
@@ -148,7 +148,15 @@ class SubscriptionPublicViewSet(viewsets.ModelViewSet):
             country=serializer.validated_data.get('country', 'United Kingdom'),
         )
         
-        # TODO: Create subscription appointments (schedule all appointments)
+        # Generate subscription appointments automatically
+        try:
+            from .subscription_utils import generate_subscription_appointments
+            generate_subscription_appointments(subscription)
+        except Exception as e:
+            # Log error but don't fail subscription creation
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error generating subscription appointments: {str(e)}", exc_info=True)
         
         # Serialize response
         subscription_serializer = SubscriptionSerializer(subscription)
@@ -209,7 +217,43 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(status=status_filter)
         
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        """List subscriptions with response shape { success, data, meta } for frontend."""
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'count': queryset.count()},
+        }, status=status.HTTP_200_OK)
+
+    def get_paginated_response(self, data):
+        """Return paginated response in shape { success, data, meta }."""
+        pagination = self.paginator
+        return Response({
+            'success': True,
+            'data': data,
+            'meta': {
+                'count': pagination.page.paginator.count,
+                'next': pagination.get_next_link(),
+                'previous': pagination.get_previous_link(),
+            },
+        }, status=status.HTTP_200_OK)
     
+    def retrieve(self, request, *args, **kwargs):
+        """Return subscription detail in shape { success, data } for frontend."""
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+        }, status=status.HTTP_200_OK)
+
     def get_permissions(self):
         """Override permissions for write operations."""
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
@@ -243,6 +287,31 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                 'message': 'Subscription paused successfully',
             }
         }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='activate')
+    def activate(self, request, pk=None):
+        """Activate (resume) a paused subscription (customer can activate their own)."""
+        subscription = self.get_object()
+        
+        if subscription.status != 'paused':
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'INVALID_STATUS',
+                    'message': 'Only paused subscriptions can be activated',
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        subscription.status = 'active'
+        subscription.save()
+        
+        return Response({
+            'success': True,
+            'data': SubscriptionSerializer(subscription).data,
+            'meta': {
+                'message': 'Subscription activated successfully',
+            }
+        }, status=status.HTTP_200_OK)
     
     @action(detail=True, methods=['post'], url_path='cancel')
     def cancel(self, request, pk=None):
@@ -266,6 +335,157 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             'data': SubscriptionSerializer(subscription).data,
             'meta': {
                 'message': 'Subscription cancelled successfully',
+            }
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'], url_path='appointments/(?P<appointment_id>[^/.]+)/cancel')
+    def cancel_appointment(self, request, pk=None, appointment_id=None):
+        """Cancel a specific subscription appointment (24h policy enforced)."""
+        subscription = self.get_object()
+        
+        try:
+            subscription_appointment = SubscriptionAppointment.objects.get(
+                subscription=subscription,
+                id=appointment_id
+            )
+        except SubscriptionAppointment.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'NOT_FOUND',
+                    'message': 'Subscription appointment not found',
+                }
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if appointment can be cancelled (24h policy)
+        if not subscription_appointment.can_cancel:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'CANCELLATION_NOT_ALLOWED',
+                    'message': f'Appointment cannot be cancelled within {subscription.cancellation_policy_hours} hours of scheduled time. Deadline was {subscription_appointment.cancellation_deadline}',
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if already cancelled
+        if subscription_appointment.status == 'cancelled':
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'ALREADY_CANCELLED',
+                    'message': 'Appointment is already cancelled',
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Cancel the appointment
+        subscription_appointment.status = 'cancelled'
+        subscription_appointment.save()
+        
+        # Also cancel the linked appointment if it exists
+        if subscription_appointment.appointment:
+            subscription_appointment.appointment.status = 'cancelled'
+            subscription_appointment.appointment.save()
+        
+        return Response({
+            'success': True,
+            'data': SubscriptionAppointmentSerializer(subscription_appointment).data,
+            'meta': {
+                'message': 'Subscription appointment cancelled successfully',
+            }
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='appointments/(?P<appointment_id>[^/.]+)/request-change')
+    def request_change_appointment(self, request, pk=None, appointment_id=None):
+        """Request a date/time change for a single subscription visit (24h policy enforced)."""
+        subscription = self.get_object()
+        try:
+            subscription_appointment = SubscriptionAppointment.objects.get(
+                subscription=subscription,
+                id=appointment_id
+            )
+        except SubscriptionAppointment.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'NOT_FOUND',
+                    'message': 'Subscription visit not found',
+                }
+            }, status=status.HTTP_404_NOT_FOUND)
+        if request.user.role == 'customer':
+            try:
+                customer = Customer.objects.get(user=request.user)
+                if subscription.customer != customer:
+                    return Response({
+                        'success': False,
+                        'error': {
+                            'code': 'PERMISSION_DENIED',
+                            'message': 'You can only request changes for your own subscription',
+                        }
+                    }, status=status.HTTP_403_FORBIDDEN)
+            except Customer.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': {
+                        'code': 'NOT_FOUND',
+                        'message': 'Customer profile not found',
+                    }
+                }, status=status.HTTP_404_NOT_FOUND)
+        if not subscription_appointment.can_reschedule:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'RESCHEDULE_NOT_ALLOWED',
+                    'message': f'Changes are not allowed within {subscription.cancellation_policy_hours} hours of the scheduled time.',
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if subscription_appointment.status == 'cancelled':
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'INVALID_STATUS',
+                    'message': 'Cannot request change for a cancelled visit',
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+        new_date = request.data.get('scheduled_date')
+        new_time = request.data.get('scheduled_time')
+        reason = request.data.get('reason', '')
+        if not new_date:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'VALIDATION_ERROR',
+                    'message': 'scheduled_date is required',
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+        requested_time_parsed = None
+        if new_time and isinstance(new_time, str):
+            parts = new_time.strip().split(':')
+            if len(parts) >= 2:
+                try:
+                    h, m = int(parts[0]), int(parts[1])
+                    requested_time_parsed = time_obj(h, m, 0)
+                except (ValueError, TypeError):
+                    pass
+        elif new_time:
+            requested_time_parsed = new_time
+        change_request = SubscriptionAppointmentChangeRequest.objects.create(
+            subscription_appointment=subscription_appointment,
+            requested_date=new_date,
+            requested_time=requested_time_parsed,
+            reason=reason or None,
+            status='pending',
+        )
+        try:
+            from apps.notifications.email_service import send_subscription_visit_change_request_submitted
+            send_subscription_visit_change_request_submitted(change_request)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning('Failed to send subscription visit change request email: %s', e)
+        return Response({
+            'success': True,
+            'data': SubscriptionAppointmentSerializer(subscription_appointment).data,
+            'meta': {
+                'message': 'Change request submitted. We will review and contact you.',
             }
         }, status=status.HTTP_200_OK)
 
