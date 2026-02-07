@@ -77,6 +77,10 @@ backend/*.sqlite3
 celerybeat-schedule
 celerybeat.pid
 
+# ---- Local dev scripts (not for repo) ----
+start-dev.ps1
+stop-dev.ps1
+
 # ---- Misc ----
 *.pem
 npm-debug.log*
