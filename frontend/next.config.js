@@ -7,8 +7,8 @@ const apiOrigin = apiUrl ? new URL(apiUrl).origin : 'http://localhost:8000';
 const nextConfig = {
   reactStrictMode: true,
 
-  // Allow build to succeed; run `npm run lint` separately to fix warnings (Next 14)
-  eslint: { ignoreDuringBuilds: true },
+  // Next 16: required when using custom webpack (dev only); avoids "Turbopack + webpack config" error
+  turbopack: {},
 
   // Allow 127.0.0.1 in dev so _next/* and webpack-hmr work when opening app at http://127.0.0.1:3000
   allowedDevOrigins: [
