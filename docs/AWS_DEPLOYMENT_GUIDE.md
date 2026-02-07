@@ -694,6 +694,8 @@ openssl rand -hex 32
 
 ## 11. Deployment and updates
 
+**Frontend:** To avoid long build times (15+ min) on small EC2 instances, use **build in GitHub Actions** and deploy the artifact to EC2. See **[Deploy frontend without building on EC2](DEPLOY_FRONTEND_NO_BUILD_EC2.md)**.
+
 All commands below are for **Ubuntu** on the EC2 instance. Run in order (SSH in first).
 
 1. **SSH to EC2**: `ssh -i your-key.pem ubuntu@<EC2-IP>`

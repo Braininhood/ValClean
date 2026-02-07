@@ -11,6 +11,9 @@ const isNext16 = nextVersion.startsWith('16.');
 const nextConfig = {
   reactStrictMode: true,
 
+  // Production: standalone folder for deploy without npm run build on server (run node server.js)
+  output: 'standalone',
+
   ...(isNext16
     ? { turbopack: {} }
     : { eslint: { ignoreDuringBuilds: true } }),
