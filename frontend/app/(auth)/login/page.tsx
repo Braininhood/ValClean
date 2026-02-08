@@ -65,14 +65,14 @@ function LoginPageContent() {
     }
 
     try {
-      const response = await login({ email, password })
+      await login({ email, password })
       // useAuth hook redirects to role dashboard: admin -> /ad/dashboard, customer -> /cus/dashboard, etc.
       return
     } catch (err: any) {
       // SECURITY: Backend always returns "Invalid email or password" for both cases
       // (email not found OR wrong password) to prevent user enumeration
       // Frontend shows the generic error message without revealing which case it is
-      const errorCode = err?.error?.code || err?.code
+      const _errorCode = err?.error?.code || err?.code
       const errorMessage = err?.error?.message || err?.message || 'Invalid email or password'
       
       // Show generic error message (prevents user enumeration)
@@ -172,7 +172,7 @@ function LoginPageContent() {
                       options: { redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined },
                     })
                     if (err) setError(err.message)
-                  } catch (e) {
+                  } catch (_e) {
                     setError('Google sign-in failed')
                   } finally {
                     setGoogleLoading(false)

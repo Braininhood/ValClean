@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { apiClient } from '@/lib/api/client'
 
 export default function ForgotPasswordPage() {
-  const router = useRouter()
+  const _router = useRouter()
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)

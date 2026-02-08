@@ -2,8 +2,6 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { apiClient } from '@/lib/api/client'
-import { ADMIN_ENDPOINTS } from '@/lib/api/endpoints'
 
 interface DragDropOrderProps {
   items: Array<{ id: number; name: string; position: number }>

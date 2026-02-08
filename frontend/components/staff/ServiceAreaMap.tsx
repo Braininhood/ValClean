@@ -42,7 +42,7 @@ export function ServiceAreaMap({ areas, centerPostcode, onAreaClick }: ServiceAr
             setLoading(false)
           }
         }
-      } catch (err) {
+      } catch (_err) {
         // Fallback: try environment variable
         const envKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
         if (envKey) {

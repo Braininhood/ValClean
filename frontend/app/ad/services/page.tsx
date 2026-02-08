@@ -5,12 +5,11 @@ import { DashboardLayout } from '@/components/layouts/DashboardLayout'
 import { Button } from '@/components/ui/button'
 import { DragDropOrder } from '@/components/service/DragDropOrder'
 import { apiClient } from '@/lib/api/client'
-import { ADMIN_ENDPOINTS, PUBLIC_ENDPOINTS } from '@/lib/api/endpoints'
+import { ADMIN_ENDPOINTS } from '@/lib/api/endpoints'
 import type { Service, ServiceListResponse, Category, CategoryListResponse, ReorderResponse } from '@/types/service'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-
 /**
  * Admin Service List Page
  * Route: /ad/services (Security: /ad/)

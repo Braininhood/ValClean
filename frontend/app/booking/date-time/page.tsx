@@ -113,8 +113,8 @@ export default function DateTimePage() {
   })
 
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-  const availableSlots = slots.filter(slot => slot.available)
-  const unavailableSlots = slots.filter(slot => !slot.available)
+  const _availableSlots = slots.filter(slot => slot.available)
+  const _unavailableSlots = slots.filter(slot => !slot.available)
   const formatTimeDisplay = (time: string) => {
     const [hours, minutes] = time.split(':').map(Number)
     const period = hours >= 12 ? 'PM' : 'AM'

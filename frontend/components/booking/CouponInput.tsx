@@ -37,7 +37,7 @@ export function CouponInput({
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [validating, setValidating] = useState(false)
+  const [_validating, setValidating] = useState(false)
 
   const handleValidate = async () => {
     if (!code.trim()) {

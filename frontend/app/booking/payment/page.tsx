@@ -36,7 +36,7 @@ export default function PaymentPage() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [orderData, setOrderData] = useState<any>(null)
+  const [_orderData, setOrderData] = useState<unknown>(null)
   const [serviceDetails, setServiceDetails] = useState<{
     name: string
     price: number
@@ -113,7 +113,7 @@ export default function PaymentPage() {
 
     try {
       // Parse date and time
-      const [year, month, day] = selectedDate.split('-').map(Number)
+      const [_year, _month, _day] = selectedDate.split('-').map(Number)
       const [hours, minutes] = selectedTime.split(':').map(Number)
 
       // Create order (send customer_id when logged-in customer so order is linked and has full info)

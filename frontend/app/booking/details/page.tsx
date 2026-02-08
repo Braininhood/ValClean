@@ -34,7 +34,7 @@ export default function GuestDetailsPage() {
     selectedService,
     selectedDate,
     selectedTime,
-    selectedStaff,
+    selectedStaff: _selectedStaff,
     setPostcode: setStorePostcode,
     setGuestDetails,
     setNotes,
@@ -229,7 +229,7 @@ export default function GuestDetailsPage() {
           postcode: addressData.postcode || postcode,
         }))
       }
-    } catch (error) {
+    } catch (_error) {
       // Silently fail - user can fill manually
     }
   }
@@ -306,7 +306,7 @@ export default function GuestDetailsPage() {
           country: addressData.country || 'United Kingdom',
         }))
       }
-    } catch (error) {
+    } catch (_error) {
       // If API fails, try to parse from description
       const parts = suggestion.description.split(',')
       if (parts.length > 0) {

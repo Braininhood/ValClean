@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
 import { apiClient } from '@/lib/api/client'
 import { ADMIN_ENDPOINTS, CALENDAR_ENDPOINTS } from '@/lib/api/endpoints'
 
@@ -18,11 +17,11 @@ interface CalendarStatus {
   has_refresh_token: boolean
 }
 
-export function StaffCalendarIntegration({ staffId, staffUserId }: StaffCalendarIntegrationProps) {
+export function StaffCalendarIntegration({ staffId: _staffId, staffUserId }: StaffCalendarIntegrationProps) {
   const [status, setStatus] = useState<CalendarStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [connecting, setConnecting] = useState(false)
+  const [_connecting, setConnecting] = useState(false)
 
   useEffect(() => {
     if (staffUserId) {
@@ -57,7 +56,7 @@ export function StaffCalendarIntegration({ staffId, staffUserId }: StaffCalendar
     }
   }
 
-  const handleConnect = async (provider: 'google' | 'outlook') => {
+  const _handleConnect = async (_provider: 'google' | 'outlook') => {
     try {
       setConnecting(true)
       setError(null)
@@ -79,7 +78,7 @@ export function StaffCalendarIntegration({ staffId, staffUserId }: StaffCalendar
     }
   }
 
-  const handleDisconnect = async () => {
+  const _handleDisconnect = async () => {
     if (!confirm('Are you sure you want to disconnect the calendar?')) {
       return
     }

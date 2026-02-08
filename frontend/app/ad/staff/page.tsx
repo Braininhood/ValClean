@@ -8,8 +8,6 @@ import { ADMIN_ENDPOINTS } from '@/lib/api/endpoints'
 import type { Staff, StaffListResponse } from '@/types/staff'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-
 /**
  * Admin Staff List Page
  * Route: /ad/staff (Security: /ad/)

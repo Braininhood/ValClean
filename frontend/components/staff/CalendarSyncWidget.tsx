@@ -17,7 +17,7 @@ interface CalendarStatus {
 }
 
 export function CalendarSyncWidget() {
-  const router = useRouter()
+  const _router = useRouter()
   const [status, setStatus] = useState<CalendarStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -33,7 +33,7 @@ export function CalendarSyncWidget() {
       if (res.data.success && res.data.data) {
         setStatus(res.data.data)
       }
-    } catch (e: any) {
+    } catch (_e: unknown) {
       // If status fetch fails, assume not connected
       setStatus({
         calendar_sync_enabled: false,
@@ -55,8 +55,8 @@ export function CalendarSyncWidget() {
       if (res.data.success) {
         fetchStatus() // Refresh status
       }
-    } catch (e: any) {
-      console.error('Sync failed:', e)
+    } catch (_e: unknown) {
+      console.error('Sync failed:', _e)
     } finally {
       setSyncing(false)
     }

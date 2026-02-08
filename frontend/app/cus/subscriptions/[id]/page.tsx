@@ -41,7 +41,7 @@ interface SubscriptionDetail {
 }
 
 export default function SubscriptionDetailPage() {
-  const router = useRouter()
+  const _router = useRouter()
   const params = useParams()
   const id = params?.id as string
   const [sub, setSub] = useState<SubscriptionDetail | null>(null)

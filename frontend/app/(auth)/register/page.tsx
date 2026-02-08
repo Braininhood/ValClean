@@ -77,7 +77,7 @@ function RegisterPageContent() {
     } catch (err: any) {
       // Handle other validation errors (password mismatch, invalid role, etc.)
       // Note: Email duplicates are now handled by redirect_to_login flag (returns 200 OK)
-      const errorCode = err?.error?.code || err?.code
+      const _errorCode = err?.error?.code || err?.code
       const errorMessage = err?.error?.message || err?.message || 'Registration failed. Please try again.'
       
       // Extract field-specific errors from DRF validation errors

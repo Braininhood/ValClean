@@ -205,7 +205,7 @@ class ApiClient {
       if (refreshToken) {
         await this.post('/aut/logout/', { refresh: refreshToken });
       }
-    } catch (error) {
+    } catch (_error) {
       // Continue with logout even if API call fails
     } finally {
       this.clearTokens();

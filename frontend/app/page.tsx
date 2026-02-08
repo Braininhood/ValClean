@@ -1,4 +1,4 @@
-import { jsonLdOrganization, jsonLdWebSite, siteConfig } from '@/lib/seo'
+import { jsonLdOrganization, jsonLdWebSite } from '@/lib/seo'
 import { HomeCTA } from '@/components/home/HomeCTA'
 
 export default function Home() {
@@ -23,10 +23,6 @@ export default function Home() {
         </p>
 
         <HomeCTA />
-
-        <div className="mt-12 text-sm text-muted-foreground">
-          <p>Development: Frontend (localhost:3000) + Backend (localhost:8000)</p>
-        </div>
       </div>
     </main>
   )

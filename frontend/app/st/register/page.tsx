@@ -59,7 +59,7 @@ function StaffRegisterPageContent() {
     }
   }, [searchParams])
 
-  const emailFromLogin = searchParams.get('email')
+  const _emailFromLogin = searchParams.get('email')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

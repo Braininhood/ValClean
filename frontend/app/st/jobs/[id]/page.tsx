@@ -86,7 +86,7 @@ export default function StaffJobDetail() {
     }
   }
 
-  const handleUpdateStatus = async (newStatus: string) => {
+  const _handleUpdateStatus = async (newStatus: string) => {
     try {
       setActionLoading(true)
       setError(null)

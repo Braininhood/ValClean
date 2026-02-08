@@ -3,7 +3,7 @@
  * Next.js serves this at /sitemap.xml
  */
 import { MetadataRoute } from 'next'
-import { siteConfig, getAbsoluteUrl } from '@/lib/seo'
+import { getAbsoluteUrl } from '@/lib/seo'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = getAbsoluteUrl('')

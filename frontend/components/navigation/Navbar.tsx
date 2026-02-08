@@ -9,7 +9,6 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useAuthContext } from '@/components/auth/AuthProvider'
-import { RoleBasedRoute } from '@/components/auth/RoleBasedRoute'
 import type { UserRole } from '@/types/auth'
 
 export function Navbar() {

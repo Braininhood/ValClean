@@ -26,7 +26,7 @@ interface BulkResult {
 }
 
 export default function AdminCalendarBulkSyncPage() {
-  const router = useRouter()
+  const _router = useRouter()
   const [staffList, setStaffList] = useState<StaffItem[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -51,7 +51,7 @@ export default function AdminCalendarBulkSyncPage() {
         email: s.email ?? s.user_email ?? '',
       }))
       setStaffList(list)
-    } catch (e) {
+    } catch (_e) {
       setMessage({ type: 'error', text: 'Failed to load staff list' })
     } finally {
       setLoading(false)
