@@ -230,22 +230,17 @@ def logout_view(request):
         if refresh_token:
             token = RefreshToken(refresh_token)
             token.blacklist()
-        # Always return 200 so frontend can clear tokens even when already logged out
-        return Response({
-            'success': True,
-            'data': {},
-            'meta': {
-                'message': 'Logout successful',
-            }
-        }, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({
-            'success': False,
-            'error': {
-                'code': 'INVALID_TOKEN',
-                'message': 'Invalid refresh token',
-            }
-        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception:
+        # Invalid/expired/already blacklisted token - still return 200 so frontend can clear state
+        pass
+    # Always return 200 so frontend can clear tokens (avoids 400 in console when token already invalid)
+    return Response({
+        'success': True,
+        'data': {},
+        'meta': {
+            'message': 'Logout successful',
+        }
+    }, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

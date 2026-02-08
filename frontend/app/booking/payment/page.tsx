@@ -379,9 +379,9 @@ export default function PaymentPage() {
         )}
 
 
-        {/* Guest Information */}
+        {/* Customer Information */}
         <div className="mb-8 p-6 border border-border rounded-lg">
-          <h2 className="text-xl font-semibold mb-4">Guest Information</h2>
+          <h2 className="text-xl font-semibold mb-4">Customer Information</h2>
           <div className="space-y-2 text-sm">
             <div>
               <span className="text-muted-foreground">Name:</span>{' '}
