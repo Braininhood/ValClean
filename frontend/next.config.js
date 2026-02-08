@@ -76,11 +76,6 @@ const nextConfig = {
     return config;
   },
   
-  // Suppress WebSocket connection warnings
-  devIndicators: {
-    buildActivity: false,
-  },
-  
   // API proxy for development (optional - frontend and backend run separately)
   // Note: Frontend makes direct API calls, so rewrites are not needed
   // async rewrites() {

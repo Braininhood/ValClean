@@ -4,7 +4,7 @@ import './globals.css'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import { siteConfig, getAbsoluteUrl } from '@/lib/seo'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], preload: false })
 
 const baseUrl = getAbsoluteUrl('')
 
