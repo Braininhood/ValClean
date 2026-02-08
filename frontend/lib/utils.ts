@@ -15,12 +15,21 @@ export function formatPostcode(postcode: string): string {
   return postcode.toUpperCase().trim()
 }
 
+/** UK postcode regex: 1–2 letters, digit, optional digit/letter, optional space, digit, 2 letters (no C,I,K,M,O,V) */
+const UK_POSTCODE_PATTERN = /^[A-Z]{1,2}[0-9R][0-9A-Z]?\s?[0-9][ABD-HJLNP-UW-Z]{2}$/i
+
 /**
- * Validate UK postcode format
+ * Normalize UK postcode for validation and display (trim, uppercase, single space)
+ */
+export function normalizeUKPostcode(postcode: string): string {
+  return postcode.trim().toUpperCase().replace(/\s+/g, ' ')
+}
+
+/**
+ * Validate UK postcode format (use normalized form for consistency)
  */
 export function validateUKPostcode(postcode: string): boolean {
-  const pattern = /^[A-Z]{1,2}[0-9R][0-9A-Z]?\s?[0-9][ABD-HJLNP-UW-Z]{2}$/i
-  return pattern.test(postcode.trim())
+  return UK_POSTCODE_PATTERN.test(normalizeUKPostcode(postcode))
 }
 
 /**

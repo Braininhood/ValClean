@@ -14,7 +14,7 @@ import { apiClient } from '@/lib/api/client'
 import { PUBLIC_ENDPOINTS } from '@/lib/api/endpoints'
 import { CUSTOMER_ENDPOINTS } from '@/lib/api/endpoints'
 import { useAuthContext } from '@/components/auth/AuthProvider'
-import { validateUKPostcode } from '@/lib/utils'
+import { validateUKPostcode, normalizeUKPostcode } from '@/lib/utils'
 import type { AddressData } from '@/types/api'
 
 interface AddressSuggestion {
@@ -35,6 +35,7 @@ export default function GuestDetailsPage() {
     selectedDate,
     selectedTime,
     selectedStaff,
+    setPostcode: setStorePostcode,
     setGuestDetails,
     setNotes,
     setCustomerId,
@@ -318,7 +319,7 @@ export default function GuestDetailsPage() {
     }
   }
 
-  const validateForm = (): boolean => {
+  const validateForm = (): { valid: boolean; errors: Record<string, string> } => {
     const newErrors: Record<string, string> = {}
 
     if (!formData.name.trim()) {
@@ -342,62 +343,89 @@ export default function GuestDetailsPage() {
     }
 
     if (!formData.city.trim()) {
-      newErrors.city = 'City is required'
+      newErrors.city = 'City/town is required'
     }
 
     if (!formData.postcode.trim()) {
       newErrors.postcode = 'Postcode is required'
     } else if (!validateUKPostcode(formData.postcode)) {
-      newErrors.postcode = 'Please enter a valid UK postcode'
+      newErrors.postcode = 'Please enter a valid UK postcode (e.g. SW1A 2AD or M1 1AA)'
     }
 
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    return { valid: Object.keys(newErrors).length === 0, errors: newErrors }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (postcodeServiceUnavailable) {
-      setErrors({ submit: 'Please change your postcode or choose a different service before continuing.' })
+      setErrors({ submit: 'This service is not available for the postcode you entered. Please use an address we cover or choose a different service.' })
       return
     }
 
-    // Validate all required fields before proceeding
-    if (!validateForm()) {
-      // Scroll to first error
-      const firstErrorField = Object.keys(errors)[0]
+    const normalizedPostcode = normalizeUKPostcode(formData.postcode)
+
+    const { valid, errors: validationErrors } = validateForm()
+    if (!valid) {
+      const firstErrorField = Object.keys(validationErrors)[0]
       if (firstErrorField) {
-        const element = document.getElementById(firstErrorField)
-        element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        element?.focus()
+        setTimeout(() => {
+          const element = document.getElementById(firstErrorField)
+          element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          element?.focus()
+        }, 0)
       }
       return
     }
 
-    // Double-check all required fields are filled
     if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim() ||
         !formData.address_line1.trim() || !formData.city.trim() || !formData.postcode.trim()) {
-      setErrors({
-        submit: 'Please fill in all required fields before proceeding.',
-      })
+      setErrors({ submit: 'Please fill in all required fields before continuing.' })
       return
     }
+
+    // Final check: ensure selected service is available for this postcode (handles manual or autofill)
+    setLoading(true)
+    setErrors({})
+    try {
+      const response = await apiClient.get(PUBLIC_ENDPOINTS.SERVICES.BY_POSTCODE, {
+        params: { postcode: normalizedPostcode },
+      })
+      const serviceIds: number[] = response.data?.success && Array.isArray(response.data.data)
+        ? response.data.data.map((s: { id: number }) => s.id)
+        : []
+      if (!serviceIds.includes(selectedService!)) {
+        setErrors({
+          submit: 'This service is not available for your address. Please use a postcode we cover or go back to choose a different service.',
+          postcode: 'We don\'t cover this postcode for the selected service.',
+        })
+        setLoading(false)
+        return
+      }
+    } catch {
+      setErrors({
+        submit: 'We couldn\'t check your address. Please try again or use a different postcode.',
+      })
+      setLoading(false)
+      return
+    }
+    setLoading(false)
 
     const addressData: AddressData = {
       line1: formData.address_line1.trim(),
       line2: formData.address_line2.trim(),
       city: formData.city.trim(),
-      postcode: formData.postcode.trim(),
+      postcode: normalizedPostcode,
       country: formData.country,
     }
 
     setGuestDetails(formData.email.trim(), formData.name.trim(), formData.phone.trim(), addressData)
+    setStorePostcode(normalizedPostcode)
     if (notes) {
       setNotes(notes)
     }
 
-    // Navigate to payment page
     router.push('/booking/payment')
   }
 
@@ -697,7 +725,7 @@ export default function GuestDetailsPage() {
               disabled={loading}
               className="flex-1 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold disabled:opacity-50"
             >
-              {loading ? 'Processing...' : 'Confirm Your Details'}
+              {loading ? 'Checking address…' : 'Confirm Your Details'}
             </button>
           </div>
         </form>

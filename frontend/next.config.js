@@ -16,7 +16,7 @@ const nextConfig = {
 
   ...(isNext16
     ? { turbopack: {} }
-    : { eslint: { ignoreDuringBuilds: true } }),
+    : { eslint: { ignoreDuringBuilds: false } }),
 
   // Allow 127.0.0.1 in dev so _next/* and webpack-hmr work when opening app at http://127.0.0.1:3000
   allowedDevOrigins: [
