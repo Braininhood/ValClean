@@ -153,7 +153,7 @@ python manage.py createsuperuser
 **Default Admin Credentials (Development):**
 - **Username:** `admin`
 - **Email:** `admin@valclean.uk`
-- **Password:** `admin123`
+- **Password:** `*******`
 - **Admin Panel:** http://localhost:8000/admin/
 
 **⚠️ Important:** Change the admin password in production!
