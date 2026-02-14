@@ -303,6 +303,7 @@ export const ADMIN_ENDPOINTS = {
     LIST: '/ad/orders/',
     DETAIL: (id: string | number) => `/ad/orders/${id}/`,
     UPDATE: (id: string | number) => `/ad/orders/${id}/`,
+    DELETE: (id: string | number) => `/ad/orders/${id}/`,
     SEND_REMINDER: (id: string | number) => `/ad/orders/${id}/send-reminder/`,
     APPROVE_CHANGE: (id: string | number) => `/ad/orders/${id}/approve-change/`,
     CANCEL: (id: string | number) => `/ad/orders/${id}/cancel/`,
