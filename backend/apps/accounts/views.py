@@ -313,10 +313,14 @@ def google_oauth_start_view(request):
             prompt='consent'
         )
         
-        # Store state and scopes in session for verification in callback
+        # Store state in cache so callback works without session cookie (e.g. cross-origin redirect from Google)
+        from django.core.cache import cache
+        cache_key = f'google_oauth_login_state_{state}'
+        cache.set(cache_key, {'scopes': oauth_scopes}, timeout=600)
+        # Also store in session as fallback
         request.session['google_oauth_state'] = state
-        request.session['google_oauth_purpose'] = 'login'  # Mark as login (not calendar)
-        request.session['google_oauth_scopes'] = oauth_scopes  # Store scopes to ensure exact match
+        request.session['google_oauth_purpose'] = 'login'
+        request.session['google_oauth_scopes'] = oauth_scopes
         
         # Return authorization URL for frontend to redirect
         return Response({
@@ -375,13 +379,25 @@ def google_oauth_callback_view(request):
     if not code:
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
         return redirect(f"{frontend_url}/login?error=no_code")
-    
-    # Verify state
-    session_state = request.session.get('google_oauth_state')
-    if not session_state or session_state != state:
-        logger.warning("Google OAuth state mismatch")
+    if not state:
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
         return redirect(f"{frontend_url}/login?error=invalid_state")
+    
+    # Verify state from cache (primary) or session (fallback) so callback works when session cookie is not sent
+    from django.core.cache import cache
+    cache_key = f'google_oauth_login_state_{state}'
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        cache.delete(cache_key)  # one-time use
+        oauth_scopes = cached_data.get('scopes', ['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'])
+    else:
+        session_state = request.session.get('google_oauth_state')
+        if not session_state or session_state != state:
+            logger.warning("Google OAuth state mismatch or expired (cache and session)")
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            return redirect(f"{frontend_url}/login?error=invalid_state")
+        oauth_scopes = request.session.get('google_oauth_scopes',
+                                          ['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'])
     
     try:
         client_id = getattr(settings, 'GOOGLE_CLIENT_ID', None)
@@ -400,11 +416,7 @@ def google_oauth_callback_view(request):
             redirect_uri = actual_callback
             logger.info(f"Using actual callback URL for token exchange: {redirect_uri}")
         
-        # CRITICAL: Use the EXACT same scopes that were used in authorization_url()
-        # Get scopes from session (stored during authorization) or use default
-        oauth_scopes = request.session.get('google_oauth_scopes', 
-                                          ['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'])
-        
+        # oauth_scopes already set from cache or session above
         logger.info(f"Using scopes for token exchange: {oauth_scopes}")
         
         # Relax oauthlib scope check: Google may return scopes in different order or with
