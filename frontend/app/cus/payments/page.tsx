@@ -199,7 +199,7 @@ export default function CustomerPayments() {
                   No payment history found
                 </div>
               ) : (
-                <div className="bg-card border rounded-lg overflow-hidden">
+                <div className="bg-card border rounded-lg overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-muted">
                       <tr>

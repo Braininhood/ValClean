@@ -135,7 +135,7 @@ export default function StaffJobDetail() {
     return (
       <ProtectedRoute requiredRole="staff">
         <DashboardLayout>
-          <div className="container mx-auto p-8">
+          <div className="container mx-auto p-4 sm:p-6 md:p-8">
             <div className="text-center py-12">
               <p className="text-muted-foreground">Loading job details...</p>
             </div>
@@ -149,7 +149,7 @@ export default function StaffJobDetail() {
     return (
       <ProtectedRoute requiredRole="staff">
         <DashboardLayout>
-          <div className="container mx-auto p-8">
+          <div className="container mx-auto p-4 sm:p-6 md:p-8">
             <div className="bg-destructive/10 text-destructive p-4 rounded-lg">
               Job not found
             </div>
@@ -160,8 +160,9 @@ export default function StaffJobDetail() {
   }
 
   const { date, time } = formatDateTime(job.start_time)
-  const canCheckIn = job.status === 'pending' || job.status === 'confirmed'
-  const canComplete = job.status === 'in_progress' || job.status === 'confirmed' || job.status === 'pending'
+  // Staff can only see confirmed appointments, so check-in/complete only for confirmed/in_progress
+  const canCheckIn = job.status === 'confirmed'
+  const canComplete = job.status === 'in_progress' || job.status === 'confirmed'
 
   // Add to calendar (only when job is defined)
   const toGoogleDate = (iso: string) => {
@@ -198,7 +199,7 @@ export default function StaffJobDetail() {
   return (
     <ProtectedRoute requiredRole="staff">
       <DashboardLayout>
-        <div className="container mx-auto p-4 md:p-8">
+        <div className="container mx-auto p-4 sm:p-6 md:p-8">
           <div className="mb-8">
             <Button variant="outline" onClick={() => router.push('/st/jobs')} className="mb-4">
               ← Back to Jobs

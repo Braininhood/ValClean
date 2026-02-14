@@ -35,18 +35,20 @@ export default function AdminStaffDetail() {
     phone: '',
     bio: '',
     is_active: true,
+    user: null as number | null,
   })
 
   useEffect(() => {
-    if (staffId === 'new') {
-      // New staff - initialize empty form
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        bio: '',
-        is_active: true,
-      })
+      if (staffId === 'new') {
+        // New staff - initialize empty form
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          bio: '',
+          is_active: true,
+          user: null,
+        })
       setLoading(false)
     } else {
       fetchStaff()
@@ -65,12 +67,18 @@ export default function AdminStaffDetail() {
       if (response.data.success && response.data.data) {
         const staffData = response.data.data
         setStaff(staffData)
+        const userId = staffData.user != null
+          ? (typeof staffData.user === 'object' && staffData.user !== null && 'id' in staffData.user
+            ? (staffData.user as { id: number }).id
+            : staffData.user)
+          : null
         setFormData({
           name: staffData.name,
           email: staffData.email,
           phone: staffData.phone || '',
           bio: staffData.bio || '',
           is_active: staffData.is_active,
+          user: userId ?? null,
         })
       } else {
         setError('Failed to load staff member')
@@ -102,8 +110,15 @@ export default function AdminStaffDetail() {
           router.push(`/ad/staff/${response.data.data.id}`)
         }
       } else {
-        // Update existing staff
-        const updateData: StaffUpdateRequest = formData
+        // Update existing staff (include user for link/unlink)
+        const updateData: StaffUpdateRequest = {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || undefined,
+          bio: formData.bio || undefined,
+          is_active: formData.is_active,
+          user: formData.user ?? undefined,
+        }
         await apiClient.patch(ADMIN_ENDPOINTS.STAFF.UPDATE(parseInt(staffId)), updateData)
         fetchStaff() // Refresh data
       }
@@ -133,7 +148,7 @@ export default function AdminStaffDetail() {
     return (
       <ProtectedRoute requiredRole="admin">
         <DashboardLayout>
-          <div className="container mx-auto p-8">
+          <div className="container mx-auto p-4 sm:p-6 md:p-8">
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
               <p className="mt-4 text-muted-foreground">Loading staff member...</p>
@@ -147,7 +162,7 @@ export default function AdminStaffDetail() {
   return (
     <ProtectedRoute requiredRole="admin">
       <DashboardLayout>
-        <div className="container mx-auto p-8">
+        <div className="container mx-auto p-4 sm:p-6 md:p-8">
           <div className="flex justify-between items-center mb-8">
             <div>
               <h1 className="text-3xl font-bold mb-2">
@@ -306,6 +321,43 @@ export default function AdminStaffDetail() {
                     Active (available for booking)
                   </label>
                 </div>
+
+                {/* Link user account (for staff portal login & calendar sync) */}
+                {staffId !== 'new' && staff && (
+                  <div className="border-t pt-6 mt-6">
+                    <h3 className="text-sm font-semibold mb-2">User account (portal login &amp; calendar)</h3>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Linking a user lets this staff member log in to the staff portal and connect Google/Outlook calendar. Create the user first (e.g. staff register or Django admin) then link by User ID.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="text-sm">
+                        Current: <strong>{staff.user_email || 'Not linked'}</strong>
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          placeholder="User ID"
+                          value={formData.user ?? ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, user: e.target.value ? parseInt(e.target.value, 10) : null }))}
+                          className="w-24 px-2 py-1 border rounded text-sm"
+                        />
+                        <span className="text-xs text-muted-foreground">Enter User ID and click Save below to link.</span>
+                        {(staff.user != null || formData.user != null) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => setFormData(prev => ({ ...prev, user: null }))}
+                          >
+                            Unlink (then click Save)
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-2 pt-4">
                   <Button type="submit" disabled={saving}>

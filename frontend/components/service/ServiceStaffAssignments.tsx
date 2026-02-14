@@ -28,7 +28,7 @@ export function ServiceStaffAssignments({ serviceId }: ServiceStaffAssignmentsPr
       setError(null)
       
       const response = await apiClient.get(
-        `${ADMIN_ENDPOINTS.STAFF.SERVICES.LIST(serviceId)}`
+        `${ADMIN_ENDPOINTS.STAFF.SERVICES.LIST()}?service_id=${serviceId}`
       )
       
       if (response.data.success && response.data.data) {
@@ -61,7 +61,7 @@ export function ServiceStaffAssignments({ serviceId }: ServiceStaffAssignmentsPr
       
       await apiClient.post(ADMIN_ENDPOINTS.STAFF.SERVICES.CREATE, {
         staff: selectedStaffId,
-        service: serviceId,
+        service_id: serviceId,
         is_active: true,
       })
       
@@ -140,7 +140,7 @@ export function ServiceStaffAssignments({ serviceId }: ServiceStaffAssignmentsPr
       <div>
         <h3 className="text-lg font-semibold mb-4">Assigned Staff</h3>
         {staffServices.length > 0 ? (
-          <div className="bg-card border rounded-lg overflow-hidden">
+          <div className="bg-card border rounded-lg overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>

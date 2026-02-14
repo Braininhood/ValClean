@@ -1,23 +1,29 @@
 'use client'
 
 /**
- * Calendar Sync Settings (all roles).
+ * Calendar Sync Settings (admin, manager, customer – staff redirect to /st/calendar/settings).
  * Route: /settings/calendar
- * Staff are redirected to /st/calendar/settings for role-specific URL.
- * OAuth callbacks redirect here with ?connected=google|outlook or ?error=...
+ * Same layout and style as role-specific calendar settings pages.
  */
 import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { useAuthContext } from '@/components/auth/AuthProvider'
+import { DashboardLayout } from '@/components/layouts/DashboardLayout'
 import { CalendarSettingsContent } from '@/components/calendar/CalendarSettingsContent'
+
+function getBackForRole(role: string): { backHref: string; backLabel: string } {
+  if (role === 'admin') return { backHref: '/ad/dashboard', backLabel: 'Back to Dashboard' }
+  if (role === 'manager') return { backHref: '/man/dashboard', backLabel: 'Back to Dashboard' }
+  if (role === 'customer') return { backHref: '/cus/calendar', backLabel: 'Back to Calendar' }
+  return { backHref: '/dashboard', backLabel: 'Back' }
+}
 
 function CalendarSettingsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuthContext()
 
-  // Staff use role-specific URL /st/calendar/settings (same API, scoped by backend)
   useEffect(() => {
     if (user?.role === 'staff') {
       const q = searchParams?.toString()
@@ -26,12 +32,20 @@ function CalendarSettingsPageContent() {
   }, [user?.role, router, searchParams])
 
   if (user?.role === 'staff') {
-    return null // redirecting to /st/calendar/settings
+    return null
   }
+
+  const { backHref, backLabel } = getBackForRole(user?.role ?? '')
 
   return (
     <ProtectedRoute requiredRole={['admin', 'manager', 'staff', 'customer']}>
-      <CalendarSettingsContent />
+      <DashboardLayout>
+        <CalendarSettingsContent
+          settingsPath="/settings/calendar"
+          backHref={backHref}
+          backLabel={backLabel}
+        />
+      </DashboardLayout>
     </ProtectedRoute>
   )
 }

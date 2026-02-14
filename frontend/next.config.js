@@ -27,15 +27,17 @@ const nextConfig = {
   ],
 
   // Content-Security-Policy and other security headers
+  // In development we skip CSP to avoid blocking Next.js inline scripts and HMR
   async headers() {
     const isProd = process.env.NODE_ENV === 'production';
     const cspParts = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      // Allow nonce-based inline scripts (Next.js uses nonces)
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://*.googleapis.com 'nonce-*'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com",
-      `connect-src 'self' ${apiOrigin} https://*.supabase.co wss://*.supabase.co https://accounts.google.com https://*.googleapis.com`,
+      `connect-src 'self' ${apiOrigin} https://*.supabase.co wss://*.supabase.co https://accounts.google.com https://*.googleapis.com blob:`,
       "frame-src 'self' https://accounts.google.com https://*.supabase.co",
       "frame-ancestors 'self'",
       "base-uri 'self'",
@@ -47,17 +49,23 @@ const nextConfig = {
     }
     const csp = cspParts.join('; ');
 
+    const securityHeaders = [
+      { key: 'X-DNS-Prefetch-Control', value: 'on' },
+      { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+    ];
+    // Only set CSP in production; in dev it blocks Next.js inline scripts and causes "Connection closed"
+    // Note: CSP warnings in dev are expected and harmless - Next.js uses nonces that may not match
+    if (isProd) {
+      securityHeaders.push({ key: 'Content-Security-Policy', value: csp });
+    }
+
     return [
       {
         source: '/:path*',
-        headers: [
-          { key: 'X-DNS-Prefetch-Control', value: 'on' },
-          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
-          { key: 'Content-Security-Policy', value: csp },
-        ],
+        headers: securityHeaders,
       },
     ];
   },
@@ -70,6 +78,13 @@ const nextConfig = {
         poll: 1000,
         aggregateTimeout: 300,
         ignored: /node_modules/,
+      };
+      // Optimize for faster rebuilds in development
+      config.optimization = {
+        ...config.optimization,
+        removeAvailableModules: false,
+        removeEmptyChunks: false,
+        splitChunks: false,
       };
       // Do not override devtool: Next.js warns and reverts to eval-source-map in dev
     }

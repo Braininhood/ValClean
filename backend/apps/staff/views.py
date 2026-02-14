@@ -10,8 +10,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from apps.core.permissions import IsAdmin, IsAdminOrManager, IsStaff, IsStaffOrManager
 from .models import Staff, StaffSchedule, StaffService, StaffArea
 from .serializers import (
-    StaffSerializer, StaffListSerializer, StaffScheduleSerializer,
-    StaffServiceSerializer, StaffAreaSerializer
+    StaffSerializer, StaffListSerializer, AdminStaffListSerializer,
+    StaffScheduleSerializer, StaffServiceSerializer, StaffAreaSerializer
 )
 from apps.services.models import Service, Category
 from apps.services.serializers import ServiceListSerializer, StaffServiceCreateUpdateSerializer, CategorySerializer
@@ -113,15 +113,17 @@ class StaffViewSet(viewsets.ModelViewSet):
     GET, POST, PUT, PATCH, DELETE /api/ad/staff/ or /api/man/staff/
     """
     queryset = Staff.objects.select_related('user').prefetch_related(
-        'schedules', 'staff_services', 'service_areas'
+        'schedules', 
+        'staff_services__service__category',
+        'service_areas__service'
     ).all()
     serializer_class = StaffSerializer
     permission_classes = [IsAdminOrManager]
     
     def get_serializer_class(self):
-        """Use simplified serializer for list views."""
+        """Use admin list serializer (includes user id for bulk sync) for list."""
         if self.action == 'list':
-            return StaffListSerializer
+            return AdminStaffListSerializer
         return StaffSerializer
     
     def list(self, request, *args, **kwargs):
@@ -142,115 +144,188 @@ class StaffViewSet(viewsets.ModelViewSet):
             }
         }, status=status.HTTP_200_OK)
     
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve staff member detail."""
+        try:
+            instance = self.get_object()
+            # Re-fetch with proper prefetching to avoid N+1 queries
+            instance = Staff.objects.select_related('user').prefetch_related(
+                'schedules',
+                'staff_services__service__category',
+                'service_areas__service'
+            ).get(pk=instance.pk)
+            serializer = self.get_serializer(instance)
+            return Response({
+                'success': True,
+                'data': serializer.data,
+                'meta': {}
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            import traceback
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error retrieving staff: {str(e)}")
+            logger.error(traceback.format_exc())
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'SERVER_ERROR',
+                    'message': f'Failed to retrieve staff: {str(e)}'
+                }
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def create(self, request, *args, **kwargs):
+        """Create a new staff member."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'message': 'Staff member created successfully'}
+        }, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        """Update a staff member."""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'message': 'Staff member updated successfully'}
+        }, status=status.HTTP_200_OK)
+    
     @action(detail=True, methods=['get'], url_path='performance')
     def performance(self, request, pk=None):
         """
         Get performance metrics for a staff member.
         GET /api/ad/staff/{id}/performance/ or /api/man/staff/{id}/performance/
         """
-        from django.db.models import Count, Sum, Avg, Q
-        from django.utils import timezone
-        from datetime import timedelta
-        from apps.appointments.models import Appointment
-        from apps.orders.models import Order, OrderItem
-        
-        staff = self.get_object()
-        
-        # Date range filters (default: last 30 days)
-        days = int(request.query_params.get('days', 30))
-        start_date = timezone.now() - timedelta(days=days)
-        
-        # Jobs completed
-        completed_appointments = Appointment.objects.filter(
-            staff=staff,
-            status='completed',
-            end_time__gte=start_date
-        )
-        jobs_completed = completed_appointments.count()
-        
-        # Total appointments (all statuses)
-        total_appointments = Appointment.objects.filter(
-            staff=staff,
-            start_time__gte=start_date
-        ).count()
-        
-        # Revenue (from completed appointments with customer bookings)
-        from apps.appointments.models import CustomerAppointment
-        completed_with_bookings = completed_appointments.filter(
-            customer_booking__isnull=False
-        )
-        revenue = completed_with_bookings.aggregate(
-            total=Sum('customer_booking__total_price')
-        )['total'] or 0
-        
-        # Average response time (time from appointment creation to confirmation)
-        response_times = []
-        confirmed_appointments = Appointment.objects.filter(
-            staff=staff,
-            status__in=['confirmed', 'completed', 'in_progress'],
-            start_time__gte=start_date
-        ).select_related('customer_booking')
-        
-        for appointment in confirmed_appointments:
-            if appointment.customer_booking and appointment.created_at:
-                response_time = (appointment.customer_booking.created_at - appointment.created_at).total_seconds() / 3600  # hours
-                if response_time >= 0:
-                    response_times.append(response_time)
-        
-        avg_response_time_hours = sum(response_times) / len(response_times) if response_times else None
-        
-        # Completion rate
-        completion_rate = (jobs_completed / total_appointments * 100) if total_appointments > 0 else 0
-        
-        # Upcoming appointments
-        upcoming_appointments = Appointment.objects.filter(
-            staff=staff,
-            status__in=['pending', 'confirmed'],
-            start_time__gte=timezone.now()
-        ).count()
-        
-        # Cancelled appointments
-        cancelled_appointments = Appointment.objects.filter(
-            staff=staff,
-            status='cancelled',
-            start_time__gte=start_date
-        ).count()
-        
-        # No-show rate
-        no_shows = Appointment.objects.filter(
-            staff=staff,
-            status='no_show',
-            start_time__gte=start_date
-        ).count()
-        no_show_rate = (no_shows / total_appointments * 100) if total_appointments > 0 else 0
-        
-        # Services breakdown
-        services_breakdown = completed_with_bookings.values('service__name').annotate(
-            count=Count('id'),
-            revenue=Sum('customer_booking__total_price')
-        ).order_by('-count')
-        
-        return Response({
-            'success': True,
-            'data': {
-                'staff_id': staff.id,
-                'staff_name': staff.name,
-                'period_days': days,
-                'period_start': start_date.isoformat(),
-                'metrics': {
-                    'jobs_completed': jobs_completed,
-                    'total_appointments': total_appointments,
-                    'upcoming_appointments': upcoming_appointments,
-                    'cancelled_appointments': cancelled_appointments,
-                    'no_shows': no_shows,
-                    'completion_rate': round(completion_rate, 2),
-                    'no_show_rate': round(no_show_rate, 2),
-                    'revenue': float(revenue),
-                    'avg_response_time_hours': round(avg_response_time_hours, 2) if avg_response_time_hours else None,
-                },
-                'services_breakdown': list(services_breakdown),
-            }
-        }, status=status.HTTP_200_OK)
+        try:
+            from django.db.models import Count, Sum, Avg, Q
+            from django.utils import timezone
+            from datetime import timedelta
+            from apps.appointments.models import Appointment
+            from apps.orders.models import Order, OrderItem
+            
+            staff = self.get_object()
+            
+            # Date range filters (default: last 30 days)
+            days = int(request.query_params.get('days', 30))
+            start_date = timezone.now() - timedelta(days=days)
+            
+            # Jobs completed
+            completed_appointments = Appointment.objects.filter(
+                staff=staff,
+                status='completed',
+                end_time__gte=start_date
+            )
+            jobs_completed = completed_appointments.count()
+            
+            # Total appointments (all statuses)
+            total_appointments = Appointment.objects.filter(
+                staff=staff,
+                start_time__gte=start_date
+            ).count()
+            
+            # Revenue (from completed appointments with customer bookings)
+            from apps.appointments.models import CustomerAppointment
+            completed_with_bookings = completed_appointments.filter(
+                customer_booking__isnull=False
+            )
+            revenue = completed_with_bookings.aggregate(
+                total=Sum('customer_booking__total_price')
+            )['total'] or 0
+            
+            # Average response time (time from appointment creation to confirmation)
+            response_times = []
+            confirmed_appointments = Appointment.objects.filter(
+                staff=staff,
+                status__in=['confirmed', 'completed', 'in_progress'],
+                start_time__gte=start_date
+            ).select_related('customer_booking')
+            
+            for appointment in confirmed_appointments:
+                try:
+                    if appointment.customer_booking and hasattr(appointment, 'created_at') and appointment.created_at:
+                        if hasattr(appointment.customer_booking, 'created_at') and appointment.customer_booking.created_at:
+                            response_time = (appointment.customer_booking.created_at - appointment.created_at).total_seconds() / 3600  # hours
+                            if response_time >= 0:
+                                response_times.append(response_time)
+                except Exception:
+                    # Skip appointments with missing or invalid dates
+                    continue
+            
+            avg_response_time_hours = sum(response_times) / len(response_times) if response_times else None
+            
+            # Completion rate
+            completion_rate = (jobs_completed / total_appointments * 100) if total_appointments > 0 else 0
+            
+            # Upcoming appointments
+            upcoming_appointments = Appointment.objects.filter(
+                staff=staff,
+                status__in=['pending', 'confirmed'],
+                start_time__gte=timezone.now()
+            ).count()
+            
+            # Cancelled appointments
+            cancelled_appointments = Appointment.objects.filter(
+                staff=staff,
+                status='cancelled',
+                start_time__gte=start_date
+            ).count()
+            
+            # No-show rate
+            no_shows = Appointment.objects.filter(
+                staff=staff,
+                status='no_show',
+                start_time__gte=start_date
+            ).count()
+            no_show_rate = (no_shows / total_appointments * 100) if total_appointments > 0 else 0
+            
+            # Services breakdown
+            services_breakdown = completed_with_bookings.values('service__name').annotate(
+                count=Count('id'),
+                revenue=Sum('customer_booking__total_price')
+            ).order_by('-count')
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'staff_id': staff.id,
+                    'staff_name': staff.name,
+                    'period_days': days,
+                    'period_start': start_date.isoformat(),
+                    'metrics': {
+                        'jobs_completed': jobs_completed,
+                        'total_appointments': total_appointments,
+                        'upcoming_appointments': upcoming_appointments,
+                        'cancelled_appointments': cancelled_appointments,
+                        'no_shows': no_shows,
+                        'completion_rate': round(completion_rate, 2),
+                        'no_show_rate': round(no_show_rate, 2),
+                        'revenue': float(revenue),
+                        'avg_response_time_hours': round(avg_response_time_hours, 2) if avg_response_time_hours else None,
+                    },
+                    'services_breakdown': list(services_breakdown),
+                }
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            import traceback
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in performance endpoint: {str(e)}")
+            logger.error(traceback.format_exc())
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'SERVER_ERROR',
+                    'message': f'Failed to retrieve performance metrics: {str(e)}'
+                }
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class StaffScheduleViewSet(viewsets.ModelViewSet):
@@ -285,6 +360,11 @@ class StaffScheduleViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Override permissions for write operations."""
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Admin can always update schedules
+            # Staff can update their own schedules
+            # Managers can update schedules for staff they manage
+            if self.request.user.role == 'admin':
+                return [IsAdminOrManager()]
             return [IsStaffOrManager()]
         return [IsAuthenticated()]
 
@@ -310,19 +390,58 @@ class StaffAreaViewSet(viewsets.ModelViewSet):
 class StaffServiceViewSet(viewsets.ModelViewSet):
     """
     Staff-Service relationship ViewSet (protected - admin/manager).
-    GET, POST, PUT, PATCH, DELETE /api/ad/staff/{id}/services/ or /api/man/staff/{id}/services/
+    GET, POST, PUT, PATCH, DELETE /api/ad/staff-services/ or /api/ad/staff/{id}/services/
     """
     queryset = StaffService.objects.select_related('staff', 'service').all()
     serializer_class = StaffServiceSerializer
     permission_classes = [IsAdminOrManager]
     
     def get_queryset(self):
-        """Filter by staff_id if provided."""
+        """Filter by staff_id or service_id if provided."""
         queryset = super().get_queryset()
         staff_id = self.request.query_params.get('staff_id')
+        service_id = self.request.query_params.get('service_id')
         if staff_id:
             queryset = queryset.filter(staff_id=staff_id)
+        if service_id:
+            queryset = queryset.filter(service_id=service_id)
         return queryset
+    
+    def list(self, request, *args, **kwargs):
+        """List staff-service relationships."""
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {
+                'count': queryset.count(),
+            }
+        }, status=status.HTTP_200_OK)
+    
+    def create(self, request, *args, **kwargs):
+        """Create a staff-service relationship."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'message': 'Staff assigned to service successfully'}
+        }, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        """Update a staff-service relationship."""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'message': 'Staff-service relationship updated successfully'}
+        }, status=status.HTTP_200_OK)
 
 
 def _get_staff_from_request(request):

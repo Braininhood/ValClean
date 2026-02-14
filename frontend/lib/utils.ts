@@ -55,6 +55,28 @@ export function formatUKPhone(phone: string): string {
 }
 
 /**
+ * Format status for display (e.g. in_progress -> "In Progress")
+ */
+export function formatStatus(status: string): string {
+  if (!status) return ''
+  const map: Record<string, string> = {
+    pending: 'Pending',
+    confirmed: 'Confirmed',
+    in_progress: 'In Progress',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+    no_show: 'No Show',
+    partial: 'Partial Payment',
+    paid: 'Paid',
+    refunded: 'Refunded',
+    pending_approval: 'Pending Approval',
+    approved: 'Approved',
+    rejected: 'Rejected',
+  }
+  return map[status.toLowerCase()] ?? status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+/**
  * Format currency (GBP)
  */
 export function formatCurrency(amount: number): string {

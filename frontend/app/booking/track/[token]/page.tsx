@@ -94,7 +94,7 @@ export default function TrackOrderPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-8">
+      <div className="container mx-auto p-4 sm:p-6 md:p-8">
         <div className="max-w-2xl mx-auto text-center min-h-[300px] flex items-center justify-center">
           <p className="text-muted-foreground">Loading...</p>
         </div>
@@ -104,7 +104,7 @@ export default function TrackOrderPage() {
 
   if (error || (!order && !subscription)) {
     return (
-      <div className="container mx-auto p-8">
+      <div className="container mx-auto p-4 sm:p-6 md:p-8">
         <div className="max-w-2xl mx-auto text-center">
           <div className="p-6 bg-destructive/10 text-destructive rounded-lg mb-6">
             {error || 'Order or subscription not found'}
@@ -120,7 +120,7 @@ export default function TrackOrderPage() {
   if (subscription) {
     const freqLabel = subscription.frequency === 'weekly' ? 'Every week' : subscription.frequency === 'biweekly' ? 'Every 2 weeks' : 'Every month'
     return (
-      <div className="container mx-auto p-8">
+      <div className="container mx-auto p-4 sm:p-6 md:p-8">
         <div className="max-w-2xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">Your subscription status</h1>
           <div className="mb-6 p-6 border border-border rounded-lg">
@@ -191,7 +191,7 @@ export default function TrackOrderPage() {
             : order.status
 
   return (
-    <div className="container mx-auto p-8">
+    <div className="container mx-auto p-4 sm:p-6 md:p-8">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Your order status</h1>
 

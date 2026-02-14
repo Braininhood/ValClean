@@ -71,6 +71,8 @@ export const PUBLIC_ENDPOINTS = {
   AUTH: {
     LOGIN: '/aut/login/',
     GOOGLE: '/aut/google/',
+    GOOGLE_START: '/aut/google/start/',
+    GOOGLE_CALLBACK: '/aut/google/callback/',
     REGISTER: '/aut/register/',
     LOGOUT: '/aut/logout/',
     REFRESH: '/aut/refresh/',
@@ -224,6 +226,7 @@ export const ADMIN_ENDPOINTS = {
   APPOINTMENTS: {
     LIST: '/ad/appointments/',
     CREATE: '/ad/appointments/',
+    DETAIL: (id: string | number) => `/ad/appointments/${id}/`,
     UPDATE: (id: string | number) => `/ad/appointments/${id}/`,
     DELETE: (id: string | number) => `/ad/appointments/${id}/`,
   },
@@ -261,6 +264,12 @@ export const ADMIN_ENDPOINTS = {
     BOOKINGS: (id: string | number) => `/ad/customers/${id}/bookings/`,
     PAYMENTS: (id: string | number) => `/ad/customers/${id}/payments/`,
   },
+  USERS: {
+    LIST: '/ad/users/',
+    DETAIL: (id: string | number) => `/ad/users/${id}/`,
+    UPDATE: (id: string | number) => `/ad/users/${id}/`,
+    DELETE: (id: string | number) => `/ad/users/${id}/`,
+  },
   MANAGERS: {
     LIST: '/ad/managers/',
     CREATE: '/ad/managers/',
@@ -294,6 +303,7 @@ export const ADMIN_ENDPOINTS = {
     LIST: '/ad/orders/',
     DETAIL: (id: string | number) => `/ad/orders/${id}/`,
     UPDATE: (id: string | number) => `/ad/orders/${id}/`,
+    SEND_REMINDER: (id: string | number) => `/ad/orders/${id}/send-reminder/`,
     APPROVE_CHANGE: (id: string | number) => `/ad/orders/${id}/approve-change/`,
     CANCEL: (id: string | number) => `/ad/orders/${id}/cancel/`,
     ITEMS: (id: string | number) => `/ad/orders/${id}/items/`,
@@ -334,4 +344,9 @@ export const CALENDAR_ENDPOINTS = {
   OUTLOOK_CONNECT: '/calendar/outlook/connect/',
   OUTLOOK_DISCONNECT: '/calendar/outlook/disconnect/',
   ICS: (appointmentId: number) => `/calendar/ics/${appointmentId}/`,
+};
+
+// Admin endpoints for staff appointments
+export const ADMIN_STAFF_ENDPOINTS = {
+  APPOINTMENTS: (staffId: number) => `/ad/appointments/?staff_id=${staffId}`,
 };

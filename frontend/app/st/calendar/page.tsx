@@ -2,12 +2,14 @@
 
 /**
  * Staff Calendar – week view with jobs (Outlook-style).
- * Route: /st/calendar (staff only, same header as other staff pages).
+ * Same layout and sync widget style as customer calendar.
+ * Route: /st/calendar (staff only).
  */
 import { Fragment, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { DashboardLayout } from '@/components/layouts/DashboardLayout'
+import { CalendarSyncWidget } from '@/components/calendar/CalendarSyncWidget'
 import { apiClient } from '@/lib/api/client'
 import { STAFF_ENDPOINTS } from '@/lib/api/endpoints'
 import type { Appointment } from '@/types/appointment'
@@ -68,49 +70,56 @@ export default function StaffCalendarPage() {
   return (
     <ProtectedRoute requiredRole="staff">
       <DashboardLayout>
-        <div className="flex flex-col h-[calc(100vh-4rem)] min-h-[500px] p-4 md:p-6">
-          <div className="flex items-center justify-between mb-4 flex-shrink-0">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold">Calendar</h1>
-              <nav className="flex items-center gap-1 text-sm">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const prev = new Date(weekStart)
-                    prev.setDate(prev.getDate() - 7)
-                    setWeekStart(prev)
-                  }}
-                  className="p-2 rounded hover:bg-muted"
-                  aria-label="Previous week"
-                >
-                  ←
-                </button>
-                <span className="min-w-[200px] text-center font-medium">
-                  {weekDays[0].toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} – {weekDays[6].toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = new Date(weekStart)
-                    next.setDate(next.getDate() + 7)
-                    setWeekStart(next)
-                  }}
-                  className="p-2 rounded hover:bg-muted"
-                  aria-label="Next week"
-                >
-                  →
-                </button>
-              </nav>
+        <div className="container mx-auto p-4 md:p-8">
+          <div className="mb-8">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">Calendar</h1>
+                <p className="text-muted-foreground">
+                  View and manage your jobs
+                </p>
+              </div>
+              <Link href="/st/jobs" className="text-sm text-primary hover:underline">
+                View All Jobs →
+              </Link>
             </div>
-            <Link
-              href="/st/calendar/settings"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              Calendar settings (Google, Outlook, Apple)
-            </Link>
           </div>
 
-          <div className="flex-1 min-h-0 rounded-lg border bg-card overflow-hidden flex flex-col">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 flex flex-col min-h-[500px]">
+              <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                <nav className="flex items-center gap-1 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prev = new Date(weekStart)
+                      prev.setDate(prev.getDate() - 7)
+                      setWeekStart(prev)
+                    }}
+                    className="p-2 rounded hover:bg-muted"
+                    aria-label="Previous week"
+                  >
+                    ←
+                  </button>
+                  <span className="min-w-[200px] text-center font-medium">
+                    {weekDays[0].toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} – {weekDays[6].toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = new Date(weekStart)
+                      next.setDate(next.getDate() + 7)
+                      setWeekStart(next)
+                    }}
+                    className="p-2 rounded hover:bg-muted"
+                    aria-label="Next week"
+                  >
+                    →
+                  </button>
+                </nav>
+              </div>
+
+              <div className="flex-1 min-h-[300px] max-h-[80vh] rounded-lg border bg-card overflow-x-auto flex flex-col">
             {loading ? (
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
                 Loading…
@@ -176,10 +185,15 @@ export default function StaffCalendarPage() {
                 </div>
               </div>
             )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 flex-shrink-0">
+                Click a job to open it. Red line = current time.
+              </p>
+            </div>
+            <div>
+              <CalendarSyncWidget settingsHref="/st/calendar/settings" subtitle="Sync your jobs with your calendar" />
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-2 flex-shrink-0">
-            Click a job to open it. Red line = current time. Connect Google or Outlook in Calendar settings.
-          </p>
         </div>
       </DashboardLayout>
     </ProtectedRoute>

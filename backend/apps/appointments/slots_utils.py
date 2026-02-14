@@ -2,7 +2,7 @@
 Available slots calculation utilities.
 """
 from datetime import datetime, timedelta, date, time
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from django.utils import timezone
 from django.db.models import Q
 from apps.staff.models import Staff, StaffSchedule, StaffService
@@ -192,6 +192,60 @@ def get_available_slots(
             break
     
     return slots
+
+
+def is_staff_available_for_slot(
+    staff_id: int,
+    start_dt: datetime,
+    end_dt: datetime,
+    exclude_appointment_id: Optional[int] = None
+) -> Tuple[bool, Optional[str]]:
+    """
+    Check if a staff member is available for a given datetime range (for admin/manager edit validation).
+    Returns (True, None) if available, (False, reason_string) if not.
+    Excludes the appointment with exclude_appointment_id from conflict check (for editing existing).
+    """
+    from django.utils import timezone as tz
+    if start_dt.tzinfo is None:
+        start_dt = tz.make_aware(start_dt)
+    if end_dt.tzinfo is None:
+        end_dt = tz.make_aware(end_dt)
+    target_date = start_dt.date()
+    day_of_week = target_date.weekday()
+    start_time = start_dt.time()
+    end_time = end_dt.time()
+
+    try:
+        staff = Staff.objects.get(id=staff_id, is_active=True)
+    except Staff.DoesNotExist:
+        return False, 'Staff not found or inactive'
+
+    schedule = StaffSchedule.objects.filter(
+        staff=staff,
+        day_of_week=day_of_week,
+        is_active=True
+    ).first()
+    if not schedule:
+        return False, 'Staff has no schedule for this day'
+    if start_time < schedule.start_time or end_time > schedule.end_time:
+        return False, 'Outside staff working hours'
+    for break_period in (schedule.breaks or []):
+        break_start = datetime.strptime(break_period.get('start', '00:00'), '%H:%M').time()
+        break_end = datetime.strptime(break_period.get('end', '00:00'), '%H:%M').time()
+        if (start_time < break_end and end_time > break_start):
+            return False, 'Overlaps staff break'
+
+    conflicting = Appointment.objects.filter(
+        staff_id=staff_id,
+        start_time__lt=end_dt,
+        end_time__gt=start_dt,
+        status__in=['pending', 'confirmed', 'in_progress']
+    )
+    if exclude_appointment_id:
+        conflicting = conflicting.exclude(id=exclude_appointment_id)
+    if conflicting.exists():
+        return False, 'Staff has another appointment at this time'
+    return True, None
 
 
 def format_time_slot(time_str: str) -> str:

@@ -91,7 +91,7 @@ export function CustomerPaymentsHistory({ customerId }: CustomerPaymentsHistoryP
 
       {/* Payments Table */}
       {payments.length > 0 ? (
-        <div className="bg-card border rounded-lg overflow-hidden">
+        <div className="bg-card border rounded-lg overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted">
               <tr>

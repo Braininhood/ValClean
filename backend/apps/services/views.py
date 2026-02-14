@@ -208,6 +208,30 @@ class ServiceViewSet(viewsets.ModelViewSet):
             'meta': {}
         }, status=status.HTTP_200_OK)
     
+    def create(self, request, *args, **kwargs):
+        """Create a new service (admin/manager)."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'message': 'Service created successfully'}
+        }, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        """Update a service (admin/manager)."""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'message': 'Service updated successfully'}
+        }, status=status.HTTP_200_OK)
+    
     def retrieve(self, request, *args, **kwargs):
         """Retrieve service detail (public)."""
         instance = self.get_object()
@@ -257,7 +281,7 @@ class ServiceViewSet(viewsets.ModelViewSet):
                 }
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Validate UK postcode (format + country check)
+        # Validate UK postcode (format + country check) - ONCE
         from apps.core.address import validate_postcode_with_google
         validation_result = validate_postcode_with_google(postcode)
         
@@ -274,26 +298,63 @@ class ServiceViewSet(viewsets.ModelViewSet):
         # Use validated/formatted postcode
         validated_postcode = validation_result.get('formatted', postcode)
         
-        # Get services available in this postcode area
-        # A service is available if at least one staff member who provides that service can service the postcode
-        from apps.core.postcode_utils import get_services_for_postcode, get_staff_for_postcode
-        queryset = get_services_for_postcode(validated_postcode)
+        # OPTIMIZED: Pre-build area coordinates cache to avoid redundant geocoding
+        from apps.staff.models import StaffArea, StaffService
+        from apps.core.postcode_utils import get_staff_for_postcode, _geocode_postcode_cached
+        from django.db.models import Count
         
-        # Get available staff for this postcode
-        available_staff = get_staff_for_postcode(validated_postcode)
+        # Get all unique postcodes from active areas (geocode once with caching)
+        all_areas = StaffArea.objects.filter(
+            is_active=True,
+            staff__is_active=True
+        ).values_list('postcode', flat=True).distinct()
         
-        # Add available staff count to each service
+        # Geocode all unique postcodes once (with caching - 24h cache)
+        area_coords_cache = {}
+        for area_postcode in all_areas:
+            normalized = area_postcode.upper().replace(' ', '').strip()
+            if normalized not in area_coords_cache:
+                geocode_result = _geocode_postcode_cached(area_postcode)
+                if geocode_result and geocode_result.get('lat') and geocode_result.get('lng'):
+                    area_coords_cache[normalized] = {
+                        'lat': geocode_result['lat'],
+                        'lng': geocode_result['lng']
+                    }
+                else:
+                    area_coords_cache[normalized] = None
+        
+        # Get available staff ONCE (reused for service filtering and counting)
+        available_staff = get_staff_for_postcode(
+            validated_postcode,
+            validation_result=validation_result,
+            area_coords_cache=area_coords_cache
+        )
+        
+        # Get services that have available staff (optimized single query)
+        queryset = Service.objects.filter(
+            is_active=True,
+            approval_status='approved',
+            staff_services__staff__in=available_staff,
+            staff_services__is_active=True
+        ).select_related('category').distinct()
+        
+        # Pre-calculate staff counts per service (single aggregated query instead of N queries)
+        staff_counts = StaffService.objects.filter(
+            staff__in=available_staff,
+            is_active=True,
+            service__in=queryset
+        ).values('service_id').annotate(
+            staff_count=Count('staff', distinct=True)
+        )
+        
+        # Build staff count lookup map
+        staff_count_map = {item['service_id']: item['staff_count'] for item in staff_counts}
+        
+        # Serialize services with pre-calculated staff counts
         services_data = []
         for service in queryset:
             service_dict = ServiceListSerializer(service).data
-            
-            # Count staff who provide this service in this area
-            staff_count = available_staff.filter(
-                staff_services__service_id=service.id,
-                staff_services__is_active=True
-            ).distinct().count()
-            
-            service_dict['available_staff_count'] = staff_count
+            service_dict['available_staff_count'] = staff_count_map.get(service.id, 0)
             services_data.append(service_dict)
         
         return Response({

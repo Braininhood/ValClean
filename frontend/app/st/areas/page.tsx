@@ -217,7 +217,7 @@ export default function StaffAreasPage() {
               No service areas yet. Add a postcode and radius to define where you can provide services. Customers in that area will see you as available.
             </div>
           ) : (
-            <div className="border border-border rounded-lg overflow-hidden">
+            <div className="border border-border rounded-lg overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted">
                   <tr>

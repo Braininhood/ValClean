@@ -5,6 +5,7 @@ import { DashboardLayout } from '@/components/layouts/DashboardLayout'
 import { Button } from '@/components/ui/button'
 import { apiClient } from '@/lib/api/client'
 import { ADMIN_ENDPOINTS } from '@/lib/api/endpoints'
+import { formatStatus } from '@/lib/utils'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -48,7 +49,7 @@ export default function AdminOrdersPage() {
   return (
     <ProtectedRoute requiredRole="admin">
       <DashboardLayout>
-        <div className="container mx-auto p-8">
+        <div className="container mx-auto p-4 sm:p-6 md:p-8">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold">Orders</h1>
             <Button asChild variant="outline">
@@ -61,7 +62,7 @@ export default function AdminOrdersPage() {
           {loading ? (
             <div className="animate-pulse space-y-2">Loading…</div>
           ) : (
-            <div className="rounded-lg border border-border overflow-hidden">
+            <div className="rounded-lg border border-border overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-muted">
                   <tr>
@@ -70,7 +71,7 @@ export default function AdminOrdersPage() {
                     <th className="p-3 font-medium">Date</th>
                     <th className="p-3 font-medium">Total</th>
                     <th className="p-3 font-medium">Status</th>
-                    <th className="p-3 font-medium"></th>
+                    <th className="p-3 font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -86,15 +87,12 @@ export default function AdminOrdersPage() {
                       </td>
                       <td className="p-3">£{parseFloat(o.total_price).toFixed(2)}</td>
                       <td className="p-3">
-                        <span className="capitalize">{o.status}</span>
+                        <span className="px-2 py-0.5 rounded bg-muted text-sm">{formatStatus(o.status)}</span>
                       </td>
                       <td className="p-3">
-                        <Link
-                          href={`/ad/orders/${o.id}`}
-                          className="text-primary hover:underline text-sm"
-                        >
-                          View
-                        </Link>
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/ad/orders/${o.id}`}>Manage</Link>
+                        </Button>
                       </td>
                     </tr>
                   ))}

@@ -107,7 +107,7 @@ export default function AdminDashboardPage() {
     return (
       <ProtectedRoute requiredRole="admin">
         <DashboardLayout>
-          <div className="container mx-auto p-8">
+          <div className="container mx-auto p-4 sm:p-6 md:p-8">
             <div className="animate-pulse space-y-6">
               <div className="h-10 w-64 bg-muted rounded" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -127,7 +127,7 @@ export default function AdminDashboardPage() {
     return (
       <ProtectedRoute requiredRole="admin">
         <DashboardLayout>
-          <div className="container mx-auto p-8">
+          <div className="container mx-auto p-4 sm:p-6 md:p-8">
             <div className="rounded-lg bg-destructive/10 text-destructive p-4">{error}</div>
             <Button className="mt-4" onClick={() => { setLoading(true); fetchDashboard() }}>
               Retry
@@ -145,7 +145,7 @@ export default function AdminDashboardPage() {
   return (
     <ProtectedRoute requiredRole="admin">
       <DashboardLayout>
-        <div className="container mx-auto p-8">
+        <div className="container mx-auto p-4 sm:p-6 md:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <h1 className="text-3xl font-bold">Admin Dashboard</h1>
             <div className="flex items-center gap-2">
@@ -229,7 +229,7 @@ export default function AdminDashboardPage() {
 
           {/* Recent activity */}
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="rounded-lg border border-border bg-card overflow-hidden">
+            <div className="rounded-lg border border-border bg-card overflow-x-auto">
               <div className="p-4 border-b border-border flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Recent orders</h2>
                 <Button variant="ghost" size="sm" asChild>
@@ -266,7 +266,7 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-border bg-card overflow-hidden">
+            <div className="rounded-lg border border-border bg-card overflow-x-auto">
               <div className="p-4 border-b border-border">
                 <h2 className="text-lg font-semibold">Upcoming appointments</h2>
               </div>

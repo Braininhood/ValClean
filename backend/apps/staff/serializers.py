@@ -12,13 +12,17 @@ class StaffAreaSerializer(serializers.ModelSerializer):
     Staff service area serializer (postcode + radius; optional service for per-service area).
     """
     service_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
-    service_name = serializers.CharField(source='service.name', read_only=True, allow_null=True)
+    service_name = serializers.SerializerMethodField()
 
     class Meta:
         model = StaffArea
         fields = ['id', 'staff', 'service', 'service_id', 'service_name', 'postcode', 'radius_miles', 'is_active',
                   'created_at', 'updated_at']
         read_only_fields = ['id', 'staff', 'created_at', 'updated_at']
+    
+    def get_service_name(self, obj):
+        """Safely get service name, returning None if service is None."""
+        return obj.service.name if obj.service else None
 
     def create(self, validated_data):
         service_id = validated_data.pop('service_id', None)
@@ -38,22 +42,29 @@ class StaffScheduleSerializer(serializers.ModelSerializer):
     """
     Staff schedule serializer.
     """
-    day_name = serializers.CharField(source='get_day_of_week_display', read_only=True)
+    day_name = serializers.SerializerMethodField()
     
     class Meta:
         model = StaffSchedule
         fields = ['id', 'staff', 'day_of_week', 'day_name', 'start_time', 'end_time',
                   'breaks', 'is_active', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_day_name(self, obj):
+        """Safely get day name."""
+        try:
+            return obj.get_day_of_week_display()
+        except Exception:
+            return None
 
 
 class StaffServiceSerializer(serializers.ModelSerializer):
     """
     Staff-Service relationship serializer with price/duration overrides.
     """
-    service = ServiceListSerializer(read_only=True)
+    service = serializers.SerializerMethodField()
     service_id = serializers.IntegerField(write_only=True, required=True)
-    service_name = serializers.CharField(source='service.name', read_only=True)
+    service_name = serializers.SerializerMethodField()
     
     class Meta:
         model = StaffService
@@ -61,6 +72,20 @@ class StaffServiceSerializer(serializers.ModelSerializer):
                   'price_override', 'duration_override', 'is_active',
                   'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_service(self, obj):
+        """Safely serialize service, returning None if service is missing."""
+        try:
+            if obj.service:
+                return ServiceListSerializer(obj.service).data
+        except Exception:
+            # If serialization fails, return None to prevent 500 errors
+            pass
+        return None
+    
+    def get_service_name(self, obj):
+        """Safely get service name, returning None if service is None."""
+        return obj.service.name if obj.service else None
 
 
 class StaffSerializer(serializers.ModelSerializer):
@@ -69,8 +94,8 @@ class StaffSerializer(serializers.ModelSerializer):
     """
     schedules = StaffScheduleSerializer(many=True, read_only=True)
     services = StaffServiceSerializer(many=True, read_only=True, source='staff_services')
-    service_areas = StaffAreaSerializer(many=True, read_only=True, source='service_areas')
-    user_email = serializers.EmailField(source='user.email', read_only=True, allow_null=True)
+    service_areas = StaffAreaSerializer(many=True, read_only=True)
+    user_email = serializers.SerializerMethodField()
     
     class Meta:
         model = Staff
@@ -78,6 +103,13 @@ class StaffSerializer(serializers.ModelSerializer):
                   'services', 'schedules', 'service_areas', 'is_active',
                   'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_user_email(self, obj):
+        """Safely get user email, returning None if user is None."""
+        try:
+            return obj.user.email if obj.user else None
+        except Exception:
+            return None
 
 
 class StaffListSerializer(serializers.ModelSerializer):
@@ -95,3 +127,12 @@ class StaffListSerializer(serializers.ModelSerializer):
         areas = obj.service_areas.filter(is_active=True)
         return [{'postcode': area.postcode, 'radius_miles': float(area.radius_miles)} 
                 for area in areas]
+
+
+class AdminStaffListSerializer(StaffListSerializer):
+    """
+    Staff list for admin/manager: same as StaffListSerializer but includes user (FK id)
+    for bulk calendar sync and other admin tools. Not used on public API.
+    """
+    class Meta(StaffListSerializer.Meta):
+        fields = ['id', 'user', 'name', 'email', 'phone', 'photo', 'bio', 'service_areas', 'is_active']

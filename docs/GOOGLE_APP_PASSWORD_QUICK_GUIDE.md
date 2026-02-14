@@ -15,10 +15,10 @@ You may need to sign in to your Google account.
 
 Once on the App Passwords page:
 
-1. **Select app:** Choose **"Mail"** (or **"Почта"** in Russian)
-2. **Select device:** Choose **"Other (Custom name)"** (or **"Другое"**)
+1. **Select app:** Choose **"Mail"**
+2. **Select device:** Choose **"Other (Custom name)"**
 3. **Enter name:** Type **"VALClean Email Service"**
-4. **Click "Generate"** (or **"Создать"**)
+4. **Click "Generate"**
 
 ### Step 3: Copy the Password
 

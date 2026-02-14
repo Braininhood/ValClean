@@ -1,26 +1,33 @@
 /**
  * SEO config and helpers (Phase 5).
  * Used for metadata, Open Graph, JSON-LD.
+ * All values are safe strings (no empty or unterminated literals in serialized output).
  */
 const siteName = 'VALClean'
 const siteTagline = 'Professional booking system for cleaning services'
-const defaultTitle = `${siteName} Booking System`
-const defaultDescription = `${siteTagline}. Book cleaning services online.`
+const defaultTitle = siteName + ' Booking System'
+const defaultDescription = siteTagline + '. Book cleaning services online.'
+
+function getBaseUrl(): string {
+  if (typeof process === 'undefined') return 'http://localhost:3000'
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+    const u = envUrl.replace(/\/+$/, '').trim()
+    if (/^https?:\/\/[^\s"']+$/i.test(u)) return u
+  }
+  const vercel = process.env.VERCEL_URL
+  if (vercel && typeof vercel === 'string' && /^[a-z0-9.-]+$/i.test(vercel)) return 'https://' + vercel
+  return 'http://localhost:3000'
+}
 
 export const siteConfig = {
   name: siteName,
   tagline: siteTagline,
   title: defaultTitle,
   description: defaultDescription,
-  /** Base URL for canonical and Open Graph (set NEXT_PUBLIC_APP_URL in production). */
-  url:
-    typeof process !== 'undefined' && process.env.NEXT_PUBLIC_APP_URL
-      ? process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')
-      : typeof process !== 'undefined' && process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : 'http://localhost:3000',
+  url: getBaseUrl(),
   locale: 'en_GB',
-  twitterHandle: '',
+  twitterHandle: 'VALClean',
 }
 
 export function getAbsoluteUrl(path: string): string {

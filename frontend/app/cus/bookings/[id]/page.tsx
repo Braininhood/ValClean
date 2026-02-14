@@ -214,7 +214,7 @@ export default function CustomerAppointmentDetail() {
     return (
       <ProtectedRoute requiredRole="customer">
         <DashboardLayout>
-          <div className="container mx-auto p-8">
+          <div className="container mx-auto p-4 sm:p-6 md:p-8">
             <div className="text-center py-12">
               <p className="text-muted-foreground">Loading appointment details...</p>
             </div>
@@ -228,7 +228,7 @@ export default function CustomerAppointmentDetail() {
     return (
       <ProtectedRoute requiredRole="customer">
         <DashboardLayout>
-          <div className="container mx-auto p-8">
+          <div className="container mx-auto p-4 sm:p-6 md:p-8">
             <div className="bg-destructive/10 text-destructive p-4 rounded-lg">
               {error || 'Appointment not found'}
             </div>
@@ -248,7 +248,7 @@ export default function CustomerAppointmentDetail() {
   return (
     <ProtectedRoute requiredRole="customer">
       <DashboardLayout>
-        <div className="container mx-auto p-4 md:p-8">
+        <div className="container mx-auto p-4 sm:p-6 md:p-8">
           <div className="mb-8">
             <Button variant="outline" onClick={() => router.push('/cus/bookings')} className="mb-4">
               ← Back to Bookings

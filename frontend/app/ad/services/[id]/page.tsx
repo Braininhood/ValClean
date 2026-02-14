@@ -92,7 +92,12 @@ export default function AdminServiceDetail() {
         setError('Failed to load service')
       }
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Failed to load service')
+      const status = err.response?.status
+      if (status === 404) {
+        setError(`Service with ID ${serviceId} not found`)
+      } else {
+        setError(err.response?.data?.error?.message || 'Failed to load service')
+      }
       console.error('Error fetching service:', err)
     } finally {
       setLoading(false)
@@ -168,7 +173,7 @@ export default function AdminServiceDetail() {
     return (
       <ProtectedRoute requiredRole="admin">
         <DashboardLayout>
-          <div className="container mx-auto p-8">
+          <div className="container mx-auto p-4 sm:p-6 md:p-8">
             <div className="text-center py-12">
               <p className="text-muted-foreground">Loading service...</p>
             </div>
@@ -181,7 +186,7 @@ export default function AdminServiceDetail() {
   return (
     <ProtectedRoute requiredRole="admin">
       <DashboardLayout>
-        <div className="container mx-auto p-8">
+        <div className="container mx-auto p-4 sm:p-6 md:p-8">
           <div className="flex justify-between items-center mb-8">
             <div>
               <h1 className="text-3xl font-bold mb-2">
@@ -234,7 +239,12 @@ export default function AdminServiceDetail() {
           {/* Error Message */}
           {error && (
             <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-md">
-              {error}
+              <div className="flex items-center justify-between">
+                <p>{error}</p>
+                <Button variant="outline" size="sm" onClick={() => router.push('/ad/services')}>
+                  Back to List
+                </Button>
+              </div>
             </div>
           )}
 

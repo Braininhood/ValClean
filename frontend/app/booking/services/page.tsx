@@ -89,7 +89,7 @@ export default function ServicesPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-8">
+      <div className="container mx-auto p-4 sm:p-6 md:p-8">
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-muted-foreground">Loading services...</p>
         </div>
@@ -99,7 +99,7 @@ export default function ServicesPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto p-8">
+      <div className="container mx-auto p-4 sm:p-6 md:p-8">
         <div className="max-w-2xl mx-auto">
           <div className="p-4 bg-destructive/10 text-destructive rounded-lg mb-4">
             {error}
@@ -116,7 +116,7 @@ export default function ServicesPage() {
   }
 
   return (
-    <div className="container mx-auto p-8">
+    <div className="container mx-auto p-4 sm:p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Select a Service</h1>

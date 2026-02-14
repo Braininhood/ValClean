@@ -169,6 +169,11 @@ export default function CustomerDashboard() {
               <div className="font-semibold">My Bookings</div>
               <div className="text-sm text-muted-foreground mt-1">View all appointments</div>
             </Link>
+            <Link href="/cus/calendar" className="bg-card border rounded-lg p-6 hover:shadow-md transition-shadow">
+              <div className="text-2xl mb-2">📆</div>
+              <div className="font-semibold">Calendar</div>
+              <div className="text-sm text-muted-foreground mt-1">View calendar & sync</div>
+            </Link>
             <Link href="/cus/subscriptions" className="bg-card border rounded-lg p-6 hover:shadow-md transition-shadow">
               <div className="text-2xl mb-2">🔄</div>
               <div className="font-semibold">Subscriptions</div>

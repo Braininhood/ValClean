@@ -7,8 +7,6 @@
  * This is the first step of the booking flow.
  * No login/registration required.
  */
-'use client'
-
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useBookingStore } from '@/store/booking-store'

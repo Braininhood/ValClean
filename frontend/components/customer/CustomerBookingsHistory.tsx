@@ -82,7 +82,7 @@ export function CustomerBookingsHistory({ customerId }: CustomerBookingsHistoryP
       {data && data.appointments.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-4">Appointments</h3>
-          <div className="bg-card border rounded-lg overflow-hidden">
+          <div className="bg-card border rounded-lg overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
@@ -119,7 +119,7 @@ export function CustomerBookingsHistory({ customerId }: CustomerBookingsHistoryP
       {data && data.orders.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-4">Orders</h3>
-          <div className="bg-card border rounded-lg overflow-hidden">
+          <div className="bg-card border rounded-lg overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
@@ -156,7 +156,7 @@ export function CustomerBookingsHistory({ customerId }: CustomerBookingsHistoryP
       {data && data.subscriptions.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-4">Subscriptions</h3>
-          <div className="bg-card border rounded-lg overflow-hidden">
+          <div className="bg-card border rounded-lg overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>

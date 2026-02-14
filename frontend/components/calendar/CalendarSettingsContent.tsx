@@ -99,7 +99,19 @@ export function CalendarSettingsContent({
       if (typeof window !== 'undefined') window.history.replaceState({}, '', replacePath)
     }
     if (err) {
-      setMessage({ type: 'error', text: err === 'google_oauth_error' ? 'Google connection failed. Try again.' : err === 'outlook_oauth_error' ? 'Outlook connection failed.' : 'Connection failed.' })
+      let errorText = 'Connection failed.'
+      if (err === 'google_oauth_error' || err === 'token_exchange_failed') {
+        errorText = 'Google connection failed. Please check that the redirect URI matches Google Cloud Console settings.'
+      } else if (err === 'redirect_uri_mismatch') {
+        errorText = 'Redirect URI mismatch. Please verify the callback URL is configured correctly in Google Cloud Console.'
+      } else if (err === 'invalid_grant') {
+        errorText = 'Authorization code expired or invalid. Please try connecting again.'
+      } else if (err === 'invalid_client') {
+        errorText = 'Invalid OAuth credentials. Please check server configuration.'
+      } else if (err === 'outlook_oauth_error') {
+        errorText = 'Outlook connection failed.'
+      }
+      setMessage({ type: 'error', text: errorText })
       if (typeof window !== 'undefined') window.history.replaceState({}, '', replacePath)
     }
   }, [searchParams, replacePath])
@@ -273,18 +285,25 @@ export function CalendarSettingsContent({
   })
 
   return (
-    <div className="min-h-screen bg-muted/30 p-4 md:p-8">
-      <div className="flex items-start justify-between mb-6">
-        <h1 className="text-2xl font-bold">Calendar sync</h1>
-        {backHref ? (
-          <Link href={backHref}>
-            <Button variant="outline">{backLabel}</Button>
-          </Link>
-        ) : (
-          <Button variant="outline" onClick={() => router.back()}>
-            {backLabel}
-          </Button>
-        )}
+    <div className="container mx-auto p-4 md:p-8">
+      <div className="mb-8">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Calendar sync</h1>
+            <p className="text-muted-foreground">
+              Connect Google Calendar, Outlook, or Apple Calendar
+            </p>
+          </div>
+          {backHref ? (
+            <Link href={backHref}>
+              <Button variant="outline">{backLabel}</Button>
+            </Link>
+          ) : (
+            <Button variant="outline" onClick={() => router.back()}>
+              {backLabel}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
@@ -320,7 +339,8 @@ export function CalendarSettingsContent({
             <div className="text-[10px] text-muted-foreground mb-1">
               {typeof Intl !== 'undefined' && Intl.DateTimeFormat().resolvedOptions().timeZone?.replace(/^.*\//, '') || 'Local'}
             </div>
-            <div className="grid gap-0 border border-border rounded overflow-hidden" style={{ gridTemplateColumns: '28px repeat(7, 1fr)' }}>
+            <div className="overflow-x-auto rounded border border-border">
+              <div className="grid gap-0 min-w-0" style={{ gridTemplateColumns: '28px repeat(7, 1fr)' }}>
               <div className="bg-muted/50" />
               {weekDays.map((d, col) => {
                 const isToday = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` === todayStr
@@ -379,6 +399,7 @@ export function CalendarSettingsContent({
                   })}
                 </Fragment>
               ))}
+            </div>
             </div>
             <p className="text-[10px] text-muted-foreground mt-2">
               {isStaff ? 'Your jobs are shown; click to open. ' : ''}

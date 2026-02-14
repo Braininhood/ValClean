@@ -92,6 +92,7 @@ export function Navbar() {
       return [
         { href: '/cus/dashboard', label: 'Dashboard' },
         { href: '/cus/bookings', label: 'Bookings' },
+        { href: '/cus/calendar', label: 'Calendar' },
         { href: '/cus/subscriptions', label: 'Subscriptions' },
         { href: '/cus/orders', label: 'Orders' },
         { href: '/cus/payments', label: 'Payments' },
@@ -112,10 +113,12 @@ export function Navbar() {
         { href: '/man/appointments', label: 'Appointments' },
         { href: '/man/staff', label: 'Staff' },
         { href: '/man/customers', label: 'Customers' },
+        { href: '/settings/calendar', label: 'Calendar' },
       ]
     } else if (user.role === 'admin') {
       return [
         { href: '/ad/dashboard', label: 'Dashboard' },
+        { href: '/ad/users', label: 'Users' },
         { href: '/ad/orders', label: 'Orders' },
         { href: '/ad/appointments', label: 'Appointments' },
         { href: '/ad/staff', label: 'Staff' },
@@ -123,6 +126,7 @@ export function Navbar() {
         { href: '/ad/managers', label: 'Managers' },
         { href: '/ad/services', label: 'Services' },
         { href: '/ad/reports/revenue', label: 'Reports' },
+        { href: '/ad/calendar', label: 'Calendar' },
       ]
     }
     return []

@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthContext } from '@/components/auth/AuthProvider'
-import { supabase } from '@/lib/supabase/client'
+import { apiClient } from '@/lib/api/client'
 
 const ROLE_PREFIX: Record<string, string> = {
   admin: 'ad',
@@ -22,7 +22,6 @@ function LoginPageContent() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const googleAuthAvailable = !!supabase
   const showGoogleAuth = true
 
   // If already authenticated, redirect to role dashboard (e.g. after Google callback or refresh on /login)
@@ -33,18 +32,31 @@ function LoginPageContent() {
     }
   }, [isLoading, isAuthenticated, user, router])
 
-  // Read URL params once on mount (safely handle searchParams)
+  // Read URL params once on mount (safely handle search params)
   useEffect(() => {
     try {
       if (searchParams) {
         const emailParam = searchParams.get('email')
         const messageParam = searchParams.get('message')
+        const errorParam = searchParams.get('error')
         
         if (emailParam) {
           setEmail(emailParam)
         }
         if (messageParam) {
           setMessage(messageParam)
+        }
+        // Show user-friendly message for OAuth errors
+        if (errorParam === 'oauth_failed') {
+          setError('Google sign-in failed. Please try again or use email and password.')
+        } else if (errorParam === 'invalid_state') {
+          setError('Session expired. Please try signing in with Google again.')
+        } else if (errorParam === 'no_code') {
+          setError('Google sign-in was cancelled or failed to complete.')
+        } else if (errorParam === 'access_denied') {
+          setError('Google sign-in was denied. Please try again.')
+        } else if (errorParam && !messageParam && !emailParam) {
+          setError('Sign-in failed. Please try again.')
         }
       }
     } catch (err) {
@@ -82,7 +94,7 @@ function LoginPageContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-md space-y-8">
         <div>
           <h2 className="text-3xl font-bold text-center">Login</h2>
@@ -160,21 +172,19 @@ function LoginPageContent() {
               </div>
               <button
                 type="button"
-                title={!googleAuthAvailable ? 'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local to enable' : undefined}
-                disabled={googleLoading || !googleAuthAvailable}
+                disabled={googleLoading}
                 onClick={async () => {
-                  if (!supabase) return
                   setGoogleLoading(true)
                   setError(null)
                   try {
-                    const { error: err } = await supabase.auth.signInWithOAuth({
-                      provider: 'google',
-                      options: { redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined },
-                    })
-                    if (err) setError(err.message)
-                  } catch (_e) {
-                    setError('Google sign-in failed')
-                  } finally {
+                    // Get Google OAuth authorization URL from backend
+                    const authorizationUrl = await apiClient.googleOAuthStart()
+                    // Redirect to Google OAuth
+                    if (typeof window !== 'undefined' && authorizationUrl) {
+                      window.location.href = authorizationUrl
+                    }
+                  } catch (err: any) {
+                    setError(err?.message || 'Failed to start Google sign-in')
                     setGoogleLoading(false)
                   }
                 }}
@@ -186,7 +196,7 @@ function LoginPageContent() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                {googleLoading ? 'Redirecting...' : !googleAuthAvailable ? 'Sign in with Google (configure Supabase)' : 'Sign in with Google'}
+                {googleLoading ? 'Redirecting...' : 'Sign in with Google'}
               </button>
             </>
           )}
@@ -212,7 +222,7 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center p-4"><p className="text-muted-foreground">Loading...</p></div>}>
       <LoginPageContent />
     </Suspense>
   )

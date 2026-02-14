@@ -243,14 +243,292 @@ def logout_view(request):
     }, status=status.HTTP_200_OK)
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def google_oauth_start_view(request):
+    """
+    Start Google OAuth flow (Google Cloud OAuth, not Supabase).
+    GET /api/aut/google/start/
+    Redirects user to Google OAuth consent screen.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Check if Google OAuth libraries are available
+    try:
+        from google_auth_oauthlib.flow import Flow
+        GOOGLE_OAUTH_AVAILABLE = True
+    except ImportError:
+        GOOGLE_OAUTH_AVAILABLE = False
+        logger.warning("Google OAuth libraries not installed. Install with: pip install google-auth-oauthlib")
+    
+    if not GOOGLE_OAUTH_AVAILABLE:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'LIBRARY_NOT_INSTALLED',
+                'message': 'Google OAuth libraries not installed. Install with: pip install google-auth-oauthlib'
+            }
+        }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    
+    try:
+        # Get Google OAuth credentials from settings
+        client_id = getattr(settings, 'GOOGLE_CLIENT_ID', None)
+        client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', None)
+        redirect_uri = getattr(settings, 'GOOGLE_OAUTH_REDIRECT_URI', 
+                              getattr(settings, 'GOOGLE_REDIRECT_URI', 
+                                     'http://localhost:8000/api/aut/google/callback/'))
+        
+        if not client_id or not client_secret:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'MISSING_CONFIG',
+                    'message': 'Google OAuth credentials not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in settings.'
+                }
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
+        # Define scopes (must match exactly in callback)
+        oauth_scopes = ['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
+        
+        # Create OAuth flow
+        flow = Flow.from_client_config(
+            {
+                'web': {
+                    'client_id': client_id,
+                    'client_secret': client_secret,
+                    'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
+                    'token_uri': 'https://oauth2.googleapis.com/token',
+                    'redirect_uris': [redirect_uri]
+                }
+            },
+            scopes=oauth_scopes,  # Use the defined scopes variable
+            redirect_uri=redirect_uri
+        )
+        
+        # Get authorization URL
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            prompt='consent'
+        )
+        
+        # Store state and scopes in session for verification in callback
+        request.session['google_oauth_state'] = state
+        request.session['google_oauth_purpose'] = 'login'  # Mark as login (not calendar)
+        request.session['google_oauth_scopes'] = oauth_scopes  # Store scopes to ensure exact match
+        
+        # Return authorization URL for frontend to redirect
+        return Response({
+            'success': True,
+            'data': {
+                'authorization_url': authorization_url
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error starting Google OAuth flow: {e}")
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'OAUTH_ERROR',
+                'message': f'Failed to start OAuth flow: {str(e)}'
+            }
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def google_oauth_callback_view(request):
+    """
+    Handle Google OAuth callback (Google Cloud OAuth, not Supabase).
+    GET /api/aut/google/callback/
+    Exchanges authorization code for user info and creates/logs in user.
+    """
+    import logging
+    from django.db import IntegrityError
+    from django.shortcuts import redirect
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        from google_auth_oauthlib.flow import Flow
+        from google.oauth2.credentials import Credentials
+        from googleapiclient.discovery import build
+        GOOGLE_OAUTH_AVAILABLE = True
+    except ImportError:
+        GOOGLE_OAUTH_AVAILABLE = False
+    
+    if not GOOGLE_OAUTH_AVAILABLE:
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        return redirect(f"{frontend_url}/login?error=oauth_library_not_installed")
+    
+    code = request.GET.get('code')
+    state = request.GET.get('state')
+    error = request.GET.get('error')
+    
+    if error:
+        logger.error(f"Google OAuth error: {error}")
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        return redirect(f"{frontend_url}/login?error={error}")
+    
+    if not code:
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        return redirect(f"{frontend_url}/login?error=no_code")
+    
+    # Verify state
+    session_state = request.session.get('google_oauth_state')
+    if not session_state or session_state != state:
+        logger.warning("Google OAuth state mismatch")
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        return redirect(f"{frontend_url}/login?error=invalid_state")
+    
+    try:
+        client_id = getattr(settings, 'GOOGLE_CLIENT_ID', None)
+        client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', None)
+        redirect_uri = getattr(settings, 'GOOGLE_OAUTH_REDIRECT_URI',
+                              getattr(settings, 'GOOGLE_REDIRECT_URI',
+                                     'http://localhost:8000/api/aut/google/callback/'))
+        
+        if not client_id or not client_secret:
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            return redirect(f"{frontend_url}/login?error=missing_config")
+        
+        # Use actual callback URL so it matches exactly what Google redirected to
+        actual_callback = request.build_absolute_uri().split('?')[0]
+        if actual_callback and actual_callback.startswith('http'):
+            redirect_uri = actual_callback
+            logger.info(f"Using actual callback URL for token exchange: {redirect_uri}")
+        
+        # CRITICAL: Use the EXACT same scopes that were used in authorization_url()
+        # Get scopes from session (stored during authorization) or use default
+        oauth_scopes = request.session.get('google_oauth_scopes', 
+                                          ['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'])
+        
+        logger.info(f"Using scopes for token exchange: {oauth_scopes}")
+        
+        # Relax oauthlib scope check: Google may return scopes in different order or with
+        # include_granted_scopes; without this we get "Scope has changed" error.
+        import os
+        os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+        
+        # Create flow and exchange code for tokens (MUST use same scopes as authorization)
+        flow = Flow.from_client_config(
+            {
+                'web': {
+                    'client_id': client_id,
+                    'client_secret': client_secret,
+                    'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
+                    'token_uri': 'https://oauth2.googleapis.com/token',
+                    'redirect_uris': [redirect_uri]
+                }
+            },
+            scopes=oauth_scopes,  # Use exact same scopes from authorization
+            redirect_uri=redirect_uri
+        )
+        
+        flow.fetch_token(code=code)
+        credentials = flow.credentials
+        
+        # Get user info from Google
+        service = build('oauth2', 'v2', credentials=credentials)
+        user_info = service.userinfo().get().execute()
+        
+        email = (user_info.get('email') or '').lower().strip()
+        name = user_info.get('name', '').strip()
+        given_name = user_info.get('given_name', '').strip()
+        family_name = user_info.get('family_name', '').strip()
+        
+        if not name and (given_name or family_name):
+            name = f"{given_name} {family_name}".strip()
+        
+        if not email:
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            return redirect(f"{frontend_url}/login?error=no_email")
+        
+        # Create or get user
+        from apps.customers.models import Customer
+        
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            # Create new user (customer) and Customer record
+            base_username = email.split('@')[0]
+            username = base_username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f'{base_username}{counter}'
+                counter += 1
+            
+            name_parts = (name or 'User').split(None, 1)
+            first_name = name_parts[0] if name_parts else 'User'
+            last_name = name_parts[1] if len(name_parts) > 1 else ''
+            
+            try:
+                user = User.objects.create(
+                    username=username,
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    role='customer',
+                )
+                user.set_unusable_password()
+                user.save()
+                Customer.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        'name': name or f'{first_name} {last_name}'.strip() or email,
+                        'email': email,
+                    },
+                )
+            except IntegrityError:
+                # Race condition: user was created by another request
+                user = User.objects.get(email__iexact=email)
+        
+        if not user.is_active:
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            return redirect(f"{frontend_url}/login?error=account_disabled")
+        
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        
+        # Clear session
+        request.session.pop('google_oauth_state', None)
+        request.session.pop('google_oauth_purpose', None)
+        request.session.pop('google_oauth_scopes', None)
+        
+        # Redirect to frontend with tokens in URL (frontend will extract and store)
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        role = user.role or 'customer'
+        role_prefix = {'admin': 'ad', 'customer': 'cus', 'staff': 'st', 'manager': 'man'}.get(role, 'cus')
+        
+        # Redirect with tokens in URL parameters (must be strings and URL-safe)
+        from urllib.parse import quote
+        access_str = str(refresh.access_token)
+        refresh_str = str(refresh)
+        token_param = quote(access_str, safe='')
+        refresh_param = quote(refresh_str, safe='')
+        return redirect(f"{frontend_url}/auth/google-callback?token={token_param}&refresh={refresh_param}")
+        
+    except Exception as e:
+        logger.exception(f"Error in Google OAuth callback: {e}")
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        # Pass through specific error for debugging (frontend can show generic message)
+        err_msg = str(e).replace(' ', '_')[:50] if e else 'oauth_failed'
+        return redirect(f"{frontend_url}/login?error=oauth_failed&detail={err_msg}")
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def google_login_view(request):
     """
-    Exchange Google (Supabase) OAuth for Django user and JWT.
+    Legacy endpoint: Exchange Google (Supabase) OAuth for Django user and JWT.
     POST /api/aut/google/
     Body: { "access_token": "<supabase_jwt>" } or (dev) { "email": "...", "name": "..." }
     Creates or finds User in Django DB and returns Django JWT + user (role) for dashboard redirect.
+    
+    NOTE: This endpoint is kept for backward compatibility with Supabase OAuth.
+    New implementations should use /api/aut/google/start/ and /api/aut/google/callback/
     """
     import logging
     from django.db import IntegrityError
@@ -264,7 +542,7 @@ def google_login_view(request):
     email = (data.get('email') or '').lower().strip()
     name = (data.get('name') or '').strip()
 
-    # Option 1: Verify Supabase JWT and extract email/name
+    # Option 1: Verify Supabase JWT and extract email/name (legacy support)
     supabase_jwt_secret = getattr(settings, 'SUPABASE_JWT_SECRET', None)
     if access_token and supabase_jwt_secret:
         try:
@@ -385,6 +663,160 @@ def user_profile_view(request):
 
 
 from rest_framework import viewsets
+from .models import Manager
+from django.db.models import Q
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    """
+    User ViewSet (admin only).
+    GET, PUT, PATCH, DELETE /api/ad/users/
+    Manage all users (customers, staff, managers, admins).
+    """
+    queryset = User.objects.select_related('profile').all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAdmin]
+    
+    def list(self, request, *args, **kwargs):
+        """List all users with filters."""
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Filter by role
+        role = request.query_params.get('role')
+        if role:
+            queryset = queryset.filter(role=role)
+        
+        # Filter by active status
+        is_active = request.query_params.get('is_active')
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+        
+        # Filter by verified status
+        is_verified = request.query_params.get('is_verified')
+        if is_verified is not None:
+            queryset = queryset.filter(is_verified=is_verified.lower() == 'true')
+        
+        # Search by email or username
+        search = request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(email__icontains=search) | 
+                Q(username__icontains=search) |
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search)
+            )
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {
+                'count': queryset.count(),
+            }
+        }, status=status.HTTP_200_OK)
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve user detail."""
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {}
+        }, status=status.HTTP_200_OK)
+    
+    def update(self, request, *args, **kwargs):
+        """Update user (role, is_active, is_verified, etc.)."""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        # Prevent admin from deactivating themselves
+        if instance.id == request.user.id:
+            if request.data.get('is_active') is False:
+                return Response({
+                    'success': False,
+                    'error': {'code': 'CANNOT_DEACTIVATE_SELF', 'message': 'You cannot deactivate your own account.'},
+                }, status=status.HTTP_400_BAD_REQUEST)
+            if request.data.get('role') and request.data.get('role') != 'admin':
+                return Response({
+                    'success': False,
+                    'error': {'code': 'CANNOT_CHANGE_SELF_ROLE', 'message': 'You cannot change your own role.'},
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'message': 'User updated successfully'}
+        }, status=status.HTTP_200_OK)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Delete user (with safeguards)."""
+        instance = self.get_object()
+        
+        # Prevent admin from deleting themselves
+        if instance.id == request.user.id:
+            return Response({
+                'success': False,
+                'error': {'code': 'CANNOT_DELETE_SELF', 'message': 'You cannot delete your own account.'},
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Prevent deleting superuser accounts
+        if instance.is_superuser:
+            return Response({
+                'success': False,
+                'error': {'code': 'CANNOT_DELETE_SUPERUSER', 'message': 'Cannot delete superuser accounts.'},
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        self.perform_destroy(instance)
+        return Response({
+            'success': True,
+            'data': {},
+            'meta': {'message': 'User deleted successfully'}
+        }, status=status.HTTP_200_OK)
+
+
+class ManagerViewSet(viewsets.ModelViewSet):
+    """
+    Manager ViewSet (admin only).
+    GET, POST, PUT, PATCH, DELETE /api/ad/managers/
+    """
+    queryset = Manager.objects.select_related('user').prefetch_related(
+        'managed_staff', 'managed_customers'
+    ).all()
+    serializer_class = ManagerSerializer
+    permission_classes = [IsAdmin]
+    
+    def list(self, request, *args, **kwargs):
+        """List all managers."""
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Filter by active status if provided
+        is_active = request.query_params.get('is_active')
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {
+                'count': queryset.count(),
+            }
+        }, status=status.HTTP_200_OK)
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve manager detail."""
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {}
+        }, status=status.HTTP_200_OK)
 
 
 class InvitationViewSet(viewsets.ModelViewSet):

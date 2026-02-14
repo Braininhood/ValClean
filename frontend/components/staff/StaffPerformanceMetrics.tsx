@@ -191,7 +191,7 @@ export function StaffPerformanceMetrics({ staffId }: StaffPerformanceMetricsProp
       {data.services_breakdown.length > 0 && (
         <div>
           <h4 className="text-md font-semibold mb-3">Services Breakdown</h4>
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border rounded-lg overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>

@@ -2,46 +2,37 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/auth/AuthProvider'
-import { siteConfig, getAbsoluteUrl } from '@/lib/seo'
 
 const inter = Inter({ subsets: ['latin'], preload: false })
 
-const baseUrl = getAbsoluteUrl('')
+// Use only string literals in metadata so the serialized layout.js never contains
+// unescaped quotes or dynamic values (fixes "literal not terminated" when logged in).
+const METADATA_BASE = 'http://localhost:3000'
 
 export const metadata: Metadata = {
-  metadataBase: new URL(baseUrl),
+  metadataBase: new URL(METADATA_BASE),
   title: {
-    default: siteConfig.title,
-    template: `%s | ${siteConfig.name}`,
+    default: 'VALClean Booking System',
+    template: '%s | VALClean',
   },
-  description: siteConfig.description,
-  icons: {
-    icon: '/favicon.ico',
-  },
+  description: 'Professional booking system for cleaning services. Book cleaning services online.',
+  icons: { icon: '/favicon.ico' },
   manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: siteConfig.name,
-  },
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'VALClean' },
   openGraph: {
     type: 'website',
     locale: 'en_GB',
-    url: baseUrl,
-    siteName: siteConfig.name,
-    title: siteConfig.title,
-    description: siteConfig.description,
+    url: METADATA_BASE,
+    siteName: 'VALClean',
+    title: 'VALClean Booking System',
+    description: 'Professional booking system for cleaning services. Book cleaning services online.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: siteConfig.title,
-    description: siteConfig.description,
+    title: 'VALClean Booking System',
+    description: 'Professional booking system for cleaning services. Book cleaning services online.',
   },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: { index: true, follow: true },
-  },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
 }
 
 export const viewport: Viewport = {

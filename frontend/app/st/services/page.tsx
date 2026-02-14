@@ -285,7 +285,7 @@ export default function StaffServicesPage() {
               No services yet. Add a service (it will need admin approval before customers can book it) or ask a manager to assign you to existing services.
             </div>
           ) : (
-            <div className="border border-border rounded-lg overflow-hidden">
+            <div className="border border-border rounded-lg overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted">
                   <tr>

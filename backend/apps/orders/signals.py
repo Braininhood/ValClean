@@ -85,13 +85,13 @@ def create_appointments_for_order(order):
         duration_minutes = item.service.duration
         end_datetime = current_start + timedelta(minutes=duration_minutes)
         
-        # Create appointment
+        # Create appointment (pending - admin/manager will confirm later)
         appointment = Appointment.objects.create(
             staff=item.staff,
             service=item.service,
             start_time=current_start,
             end_time=end_datetime,
-            status='confirmed',
+            status='pending',
             appointment_type='order_item',
             order=order,  # Link to order
         )

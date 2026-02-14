@@ -78,7 +78,7 @@ export default function StaffDashboard() {
       const upcomingParams = new URLSearchParams({
         date_from: tomorrow.toISOString(),
         date_to: nextWeek.toISOString(),
-        status: 'confirmed,pending',
+        status: 'confirmed', // Staff only see confirmed appointments
       })
       
       const upcomingResponse = await apiClient.get<AppointmentListResponse & { results?: Appointment[] }>(
@@ -193,7 +193,7 @@ export default function StaffDashboard() {
             {loading ? (
               <div className="text-center py-8 text-muted-foreground">Loading...</div>
             ) : todayJobs.length > 0 ? (
-              <div className="bg-card border rounded-lg overflow-hidden">
+              <div className="bg-card border rounded-lg overflow-x-auto">
                 <div className="divide-y divide-border">
                   {todayJobs.map((job) => (
                     <div
@@ -244,7 +244,7 @@ export default function StaffDashboard() {
                   View All →
                 </Link>
               </div>
-              <div className="bg-card border rounded-lg overflow-hidden">
+              <div className="bg-card border rounded-lg overflow-x-auto">
                 <div className="divide-y divide-border">
                   {upcomingJobs.map((job) => (
                     <div

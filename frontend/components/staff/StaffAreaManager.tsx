@@ -346,7 +346,7 @@ export function StaffAreaManager({ staffId, areas, onUpdate }: StaffAreaManagerP
       {localAreas.length > 0 && (
         <div className="mt-6">
           <h4 className="text-md font-semibold mb-3">Service Area Coverage Map</h4>
-          <div className="border rounded-lg overflow-hidden" style={{ height: '500px' }}>
+          <div className="border rounded-lg overflow-hidden min-h-[280px] h-[50vh] max-h-[500px]">
             <ServiceAreaMap
               areas={localAreas}
               onAreaClick={(area) => {

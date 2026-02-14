@@ -148,7 +148,7 @@ export default function SubscriptionDetailPage() {
     return (
       <ProtectedRoute requiredRole="customer">
         <DashboardLayout>
-          <div className="container mx-auto p-8">
+          <div className="container mx-auto p-4 sm:p-6 md:p-8">
             <p className="text-muted-foreground">Loading subscription...</p>
           </div>
         </DashboardLayout>
@@ -160,7 +160,7 @@ export default function SubscriptionDetailPage() {
     return (
       <ProtectedRoute requiredRole="customer">
         <DashboardLayout>
-          <div className="container mx-auto p-8">
+          <div className="container mx-auto p-4 sm:p-6 md:p-8">
             <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-4">{error || 'Subscription not found'}</div>
             <Button variant="outline" asChild><Link href="/cus/subscriptions">Back to Subscriptions</Link></Button>
           </div>
@@ -174,7 +174,7 @@ export default function SubscriptionDetailPage() {
   return (
     <ProtectedRoute requiredRole="customer">
       <DashboardLayout>
-        <div className="container mx-auto p-4 md:p-8">
+        <div className="container mx-auto p-4 sm:p-6 md:p-8">
           <Button variant="outline" asChild className="mb-6">
             <Link href="/cus/subscriptions">← Back to Subscriptions</Link>
           </Button>

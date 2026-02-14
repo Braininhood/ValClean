@@ -161,21 +161,21 @@ class AppointmentPublicViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_201_CREATED)
 
 
-class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
+class AppointmentViewSet(viewsets.ModelViewSet):
     """
     Appointment ViewSet (protected - customer/staff/manager/admin).
     Customer: GET own appointments
-    Staff: GET assigned appointments
-    Manager: GET appointments within scope
-    Admin: GET all appointments
+    Staff: GET assigned appointments (confirmed+ only)
+    Manager/Admin: GET all, PATCH/PUT to update (e.g. status).
     GET /api/cus/appointments/ or /api/st/jobs/ or /api/ad/appointments/
-    Note: Write operations handled by AppointmentPublicViewSet or admin endpoints
+    PATCH /api/ad/appointments/{id}/ for admin/manager to change status.
     """
     queryset = Appointment.objects.select_related('staff', 'service', 'subscription', 'order').prefetch_related(
         'customer_booking'
     ).all()
     serializer_class = AppointmentSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
     
     def get_queryset(self):
         """Filter by user role."""
@@ -194,12 +194,16 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
             except Customer.DoesNotExist:
                 queryset = queryset.none()
         
-        # Staff can see their assigned appointments
+        # Staff can see their assigned appointments (only confirmed and beyond)
         elif self.request.user.role == 'staff':
             from apps.staff.models import Staff
             try:
                 staff = Staff.objects.get(user=self.request.user)
-                queryset = queryset.filter(staff=staff)
+                # Staff can only see confirmed, in_progress, completed appointments
+                queryset = queryset.filter(
+                    staff=staff,
+                    status__in=['confirmed', 'in_progress', 'completed']
+                )
             except Staff.DoesNotExist:
                 queryset = queryset.none()
         
@@ -210,6 +214,14 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
             pass
         
         # Admin can see all appointments
+        
+        # Filter by staff_id if provided (for admin viewing staff appointments)
+        staff_id = self.request.query_params.get('staff_id')
+        if staff_id:
+            try:
+                queryset = queryset.filter(staff_id=int(staff_id))
+            except (ValueError, TypeError):
+                pass
         
         # Apply filters (status can be comma-separated: pending,confirmed)
         status_filter = self.request.query_params.get('status')
@@ -227,7 +239,139 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(start_time__lte=date_to)
         
         return queryset
+    
+    def list(self, request, *args, **kwargs):
+        """List appointments with consistent response format."""
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {
+                'count': queryset.count(),
+            }
+        }, status=status.HTTP_200_OK)
 
+    def _manager_can_manage_appointments(self, request):
+        """Return True if admin or manager with can_manage_appointments."""
+        if getattr(request.user, 'role', None) == 'admin':
+            return True
+        if request.user.role == 'manager':
+            from apps.accounts.models import Manager
+            try:
+                manager = Manager.objects.get(user=request.user)
+                return manager.is_active and manager.can_manage_appointments
+            except Manager.DoesNotExist:
+                return False
+        return False
+
+    def update(self, request, *args, **kwargs):
+        """Update appointment (admin/manager with permissions). Date/time validated against staff availability."""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        if not self._manager_can_manage_appointments(request):
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'PERMISSION_DENIED',
+                    'message': 'You do not have permission to edit appointments.',
+                }
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # Validate new start_time/end_time/staff against staff availability
+        new_start = request.data.get('start_time')
+        new_end = request.data.get('end_time')
+        new_staff_id = request.data.get('staff_id')
+        if new_start is not None or new_end is not None or new_staff_id is not None:
+            from apps.appointments.slots_utils import is_staff_available_for_slot
+            from django.utils.dateparse import parse_datetime
+            start_dt = None
+            end_dt = None
+            staff_id = new_staff_id if new_staff_id is not None else (instance.staff_id if instance.staff_id else None)
+            if new_start is not None:
+                start_dt = parse_datetime(new_start) if isinstance(new_start, str) else new_start
+            else:
+                start_dt = instance.start_time
+            if new_end is not None:
+                end_dt = parse_datetime(new_end) if isinstance(new_end, str) else new_end
+            else:
+                end_dt = instance.end_time
+            if start_dt and end_dt and staff_id:
+                available, reason = is_staff_available_for_slot(
+                    staff_id, start_dt, end_dt, exclude_appointment_id=instance.pk
+                )
+                if not available:
+                    return Response({
+                        'success': False,
+                        'error': {
+                            'code': 'SLOT_UNAVAILABLE',
+                            'message': reason or 'Staff is not available at this time.',
+                        }
+                    }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if status is being changed - only admin/manager can change status
+        if 'status' in request.data:
+            new_status = request.data.get('status')
+            if new_status != instance.status:
+                # Admin can always change status
+                if request.user.role != 'admin':
+                    # Manager needs can_manage_appointments permission
+                    if request.user.role == 'manager':
+                        from apps.accounts.models import Manager
+                        try:
+                            manager = Manager.objects.get(user=request.user)
+                            if not (manager.is_active and manager.can_manage_appointments):
+                                return Response({
+                                    'success': False,
+                                    'error': {
+                                        'code': 'PERMISSION_DENIED',
+                                        'message': 'You do not have permission to change appointment status.',
+                                    }
+                                }, status=status.HTTP_403_FORBIDDEN)
+                        except Manager.DoesNotExist:
+                            return Response({
+                                'success': False,
+                                'error': {
+                                    'code': 'PERMISSION_DENIED',
+                                    'message': 'Manager profile not found.',
+                                }
+                            }, status=status.HTTP_403_FORBIDDEN)
+                    else:
+                        return Response({
+                            'success': False,
+                            'error': {
+                                'code': 'PERMISSION_DENIED',
+                                'message': 'Only admin or manager can change appointment status.',
+                            }
+                        }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'message': 'Appointment updated successfully'}
+        }, status=status.HTTP_200_OK)
+
+    def destroy(self, request, *args, **kwargs):
+        """Delete appointment (admin/manager with can_manage_appointments)."""
+        if not self._manager_can_manage_appointments(request):
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'PERMISSION_DENIED',
+                    'message': 'You do not have permission to delete appointments.',
+                }
+            }, status=status.HTTP_403_FORBIDDEN)
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(
+            {'success': True, 'data': {}, 'meta': {'message': 'Appointment deleted successfully'}},
+            status=status.HTTP_204_NO_CONTENT
+        )
+    
     def retrieve(self, request, *args, **kwargs):
         """Return appointment detail wrapped as { success, data } for staff/customer consistency."""
         instance = self.get_object()

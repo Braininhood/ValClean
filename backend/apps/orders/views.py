@@ -259,9 +259,10 @@ class OrderPublicViewSet(viewsets.ModelViewSet):
             order.cancellation_deadline = deadline
             order.save()
         
-        # Confirm order so appointments are created and confirmation email is sent
-        order.status = 'confirmed'
-        order.save(update_fields=['status'])
+        # Order remains 'pending' - admin/manager will confirm it later
+        # When order status changes to 'confirmed', the signal handler will:
+        # - Create appointments for order items
+        # - Send confirmation email
         
         # Track coupon usage if coupon was applied
         if coupon and discount_amount > 0:
@@ -278,18 +279,6 @@ class OrderPublicViewSet(viewsets.ModelViewSet):
             # Update coupon used count
             coupon.used_count += 1
             coupon.save(update_fields=['used_count'])
-        
-        # Send confirmation email (if order is immediately confirmed)
-        # Note: If order is created as 'pending', email will be sent when status changes to 'confirmed' via signal
-        if order.status == 'confirmed':
-            try:
-                from apps.notifications.email_service import send_booking_confirmation
-                send_booking_confirmation(order)
-            except Exception as e:
-                # Log error but don't fail order creation
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Error sending confirmation email for order {order.order_number}: {e}")
         
         # Serialize response
         order_serializer = OrderSerializer(order)
@@ -483,6 +472,9 @@ class OrderViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(customer=customer)
             except Customer.DoesNotExist:
                 queryset = queryset.none()
+        # Staff can only see confirmed orders (they don't see pending orders)
+        elif self.request.user.role == 'staff':
+            queryset = queryset.filter(status__in=['confirmed', 'in_progress', 'completed'])
         # Admin/Manager can see all orders
         elif self.request.user.role in ['admin', 'manager']:
             # Filter by customer_id if provided
@@ -528,6 +520,142 @@ class OrderViewSet(viewsets.ModelViewSet):
             },
         }, status=status.HTTP_200_OK)
 
+    def _manager_can_manage_orders(self, request):
+        """Return True if admin or manager with can_manage_appointments."""
+        if getattr(request.user, 'role', None) == 'admin':
+            return True
+        if request.user.role == 'manager':
+            from apps.accounts.models import Manager
+            try:
+                manager = Manager.objects.get(user=request.user)
+                return manager.is_active and manager.can_manage_appointments
+            except Manager.DoesNotExist:
+                return False
+        return False
+
+    def update(self, request, *args, **kwargs):
+        """Update order (admin/manager with permissions). Date/time validated against available staff slots."""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        if not self._manager_can_manage_orders(request):
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'PERMISSION_DENIED',
+                    'message': 'You do not have permission to edit orders.',
+                }
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Validate new date/time against available staff slots if date or time is being changed
+        new_date = request.data.get('scheduled_date')
+        new_time = request.data.get('scheduled_time')
+        if (new_date is not None or new_time is not None) and instance.items.exists():
+            from apps.appointments.slots_utils import get_available_slots
+            from datetime import date as date_type, time as time_type
+            use_date = new_date if new_date is not None else instance.scheduled_date
+            if isinstance(use_date, str):
+                try:
+                    use_date = date_type.fromisoformat(use_date)
+                except (ValueError, TypeError):
+                    use_date = instance.scheduled_date
+            elif not isinstance(use_date, date_type):
+                use_date = instance.scheduled_date
+            use_time = new_time if new_time is not None else (instance.scheduled_time or time_type(9, 0))
+            if hasattr(use_time, 'strftime'):
+                time_str = use_time.strftime('%H:%M') if use_time else '09:00'
+            else:
+                time_str = str(use_time)[:5] if use_time else '09:00'
+            postcode = (getattr(instance, 'postcode', None) or request.data.get('postcode') or '').strip()
+            if not postcode:
+                return Response({
+                    'success': False,
+                    'error': {
+                        'code': 'VALIDATION_ERROR',
+                        'message': 'Order postcode is required to validate availability.',
+                    }
+                }, status=status.HTTP_400_BAD_REQUEST)
+            for item in instance.items.select_related('service', 'staff').all():
+                if not item.staff_id or not item.service_id:
+                    continue
+                slots = get_available_slots(
+                    postcode, item.service_id, use_date, item.staff_id
+                )
+                slot_found = any(
+                    s.get('available') and s.get('time') == time_str and item.staff_id in (s.get('staff_ids') or [])
+                    for s in slots
+                )
+                if not slot_found:
+                    return Response({
+                        'success': False,
+                        'error': {
+                            'code': 'SLOT_UNAVAILABLE',
+                            'message': f'Staff is not available at {time_str} on {use_date} for service "{item.service.name}". Choose a time from available slots.',
+                        }
+                    }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if status is being changed - only admin/manager can change status
+        if 'status' in request.data:
+            new_status = request.data.get('status')
+            if new_status != instance.status:
+                # Admin can always change status
+                if request.user.role != 'admin':
+                    # Manager needs can_manage_appointments permission
+                    if request.user.role == 'manager':
+                        from apps.accounts.models import Manager
+                        try:
+                            manager = Manager.objects.get(user=request.user)
+                            if not (manager.is_active and manager.can_manage_appointments):
+                                return Response({
+                                    'success': False,
+                                    'error': {
+                                        'code': 'PERMISSION_DENIED',
+                                        'message': 'You do not have permission to change order status.',
+                                    }
+                                }, status=status.HTTP_403_FORBIDDEN)
+                        except Manager.DoesNotExist:
+                            return Response({
+                                'success': False,
+                                'error': {
+                                    'code': 'PERMISSION_DENIED',
+                                    'message': 'Manager profile not found.',
+                                }
+                            }, status=status.HTTP_403_FORBIDDEN)
+                    else:
+                        return Response({
+                            'success': False,
+                            'error': {
+                                'code': 'PERMISSION_DENIED',
+                                'message': 'Only admin or manager can change order status.',
+                            }
+                        }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'message': 'Order updated successfully'}
+        }, status=status.HTTP_200_OK)
+
+    def destroy(self, request, *args, **kwargs):
+        """Delete order (admin/manager with can_manage_appointments)."""
+        if not self._manager_can_manage_orders(request):
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'PERMISSION_DENIED',
+                    'message': 'You do not have permission to delete orders.',
+                }
+            }, status=status.HTTP_403_FORBIDDEN)
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(
+            {'success': True, 'data': {}, 'meta': {'message': 'Order deleted successfully'}},
+            status=status.HTTP_204_NO_CONTENT
+        )
+    
     def retrieve(self, request, *args, **kwargs):
         """Return order detail in shape { success, data } for frontend."""
         instance = self.get_object()
@@ -536,6 +664,34 @@ class OrderViewSet(viewsets.ModelViewSet):
             'success': True,
             'data': serializer.data,
         }, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'], url_path='send-reminder')
+    def send_reminder(self, request, pk=None):
+        """Send reminder email for order (admin/manager)."""
+        order = self.get_object()
+        
+        try:
+            from apps.notifications.email_service import send_booking_confirmation
+            # Reuse confirmation email template for reminders
+            send_booking_confirmation(order)
+            return Response({
+                'success': True,
+                'data': self.get_serializer(order).data,
+                'meta': {
+                    'message': 'Reminder email sent successfully'
+                }
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error sending reminder email for order {order.order_number}: {e}")
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'EMAIL_ERROR',
+                    'message': f'Failed to send reminder email: {str(e)}'
+                }
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['post'], url_path='cancel')
     def cancel(self, request, pk=None):

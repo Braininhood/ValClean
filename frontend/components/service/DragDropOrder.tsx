@@ -103,7 +103,7 @@ export function DragDropOrder({ items, onReorder, itemType }: DragDropOrderProps
         </div>
       </div>
 
-      <div className="bg-card border rounded-lg overflow-hidden">
+      <div className="bg-card border rounded-lg overflow-x-auto">
         <div className="divide-y divide-border">
           {reorderedItems.map((item, index) => (
             <div

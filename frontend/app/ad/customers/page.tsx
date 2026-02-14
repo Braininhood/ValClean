@@ -87,7 +87,7 @@ export default function AdminCustomerList() {
   return (
     <ProtectedRoute requiredRole="admin">
       <DashboardLayout>
-        <div className="container mx-auto p-8">
+        <div className="container mx-auto p-4 sm:p-6 md:p-8">
           <div className="flex justify-between items-center mb-8">
             <div>
               <h1 className="text-3xl font-bold mb-2">Customer Management</h1>
@@ -194,7 +194,7 @@ export default function AdminCustomerList() {
               <div className="mb-4 text-sm text-muted-foreground">
                 Showing {customers.length} customer{customers.length !== 1 ? 's' : ''}
               </div>
-              <div className="bg-card border rounded-lg overflow-hidden">
+              <div className="bg-card border rounded-lg overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-muted">
                     <tr>

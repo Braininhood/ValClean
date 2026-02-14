@@ -191,7 +191,7 @@ export default function RouteOptimizationPage() {
       return
     }
     const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&loading=async`
     script.async = true
     script.onload = drawMap
     document.head.appendChild(script)
@@ -204,7 +204,7 @@ export default function RouteOptimizationPage() {
   return (
     <ProtectedRoute requiredRole="admin">
       <DashboardLayout>
-        <div className="container mx-auto p-4 md:p-8">
+        <div className="container mx-auto p-4 sm:p-6 md:p-8">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold">Route Optimization</h1>

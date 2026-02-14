@@ -114,10 +114,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
         from apps.orders.models import Order
         from apps.subscriptions.models import Subscription
         
-        # Get appointments
+        # Get appointments (Appointment has OneToOne customer_booking -> CustomerAppointment, not customer_appointments)
         appointments = Appointment.objects.filter(
-            customer_appointments__customer=customer
-        ).select_related('staff', 'service').prefetch_related('customer_appointments').order_by('-start_time')
+            customer_booking__customer=customer
+        ).select_related('staff', 'service', 'customer_booking').order_by('-start_time')
         
         # Get orders
         orders = Order.objects.filter(customer=customer).prefetch_related('items').order_by('-created_at')

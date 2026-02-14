@@ -46,10 +46,11 @@ def _get_appointments_for_user(user):
     if user.role == 'staff':
         try:
             staff = Staff.objects.get(user=user)
+            # Staff can only sync confirmed appointments (not pending)
             qs = Appointment.objects.filter(
                 staff=staff,
                 start_time__gte=now,
-                status__in=['pending', 'confirmed'],
+                status__in=['confirmed'],
             )
         except Staff.DoesNotExist:
             return []
@@ -217,11 +218,15 @@ class GoogleCalendarService:
             if not profile.calendar_access_token:
                 return None
             
+            # Use calendar-specific credentials (separate from login OAuth)
+            client_id = getattr(settings, 'GOOGLE_CALENDAR_CLIENT_ID', None) or getattr(settings, 'GOOGLE_CLIENT_ID', None)
+            client_secret = getattr(settings, 'GOOGLE_CALENDAR_CLIENT_SECRET', None) or getattr(settings, 'GOOGLE_CLIENT_SECRET', None)
+            
             credentials = GoogleCredentials(
                 token=profile.calendar_access_token,
                 refresh_token=profile.calendar_refresh_token,
-                client_id=getattr(settings, 'GOOGLE_CLIENT_ID', None),
-                client_secret=getattr(settings, 'GOOGLE_CLIENT_SECRET', None),
+                client_id=client_id,
+                client_secret=client_secret,
                 token_uri='https://oauth2.googleapis.com/token'
             )
             

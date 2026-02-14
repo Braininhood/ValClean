@@ -29,8 +29,12 @@ paypalrestsdk>=1.13
 twilio>=8.10
 sendgrid>=6.11
 
-# Calendar Integration (if pip fails on one of these, install the other first)
+# Calendar Integration
+# Google Calendar OAuth (required for Google Calendar sync)
 google-api-python-client>=2.100
+google-auth-httplib2>=0.1.1
+google-auth-oauthlib>=1.1.0
+# Microsoft Outlook Calendar
 msal>=1.25
 
 # Utilities

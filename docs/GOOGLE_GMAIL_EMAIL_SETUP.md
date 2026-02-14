@@ -52,9 +52,9 @@ This guide shows how to set up Google Gmail (Gmail SMTP) to send emails from you
 #### Method 2: Via 2-Step Verification Page
 
 1. Go to [Google Account Security](https://myaccount.google.com/security)
-2. Click **"2-Step Verification"** (Двухэтапная аутентификация)
+2. Click **"2-Step Verification"**
 3. **Scroll to the very bottom** of the page
-4. Look for **"App passwords"** or **"Пароли приложений"** (Russian)
+4. Look for **"App passwords"**
    - It may be below all the verification methods
    - It might be in a separate section at the bottom
 5. If still not visible, use **Method 3** below
@@ -63,7 +63,7 @@ This guide shows how to set up Google Gmail (Gmail SMTP) to send emails from you
 
 1. Go to [Google Account Security](https://myaccount.google.com/security)
 2. Look for **"How you sign in to Google"** section (not "2-Step Verification")
-3. Click **"App passwords"** or **"Пароли приложений"** if visible
+3. Click **"App passwords"** if visible
 4. If not found, use **Method 1** (direct link) above
 
 #### Method 4: If "App passwords" Option Doesn't Appear
@@ -79,10 +79,10 @@ This guide shows how to set up Google Gmail (Gmail SMTP) to send emails from you
 
 ### Once You Find "App Passwords" Page:
 
-1. Select app: **"Mail"** (Почта)
-2. Select device: **"Other (Custom name)"** (Другое (Введите название))
+1. Select app: **"Mail"**
+2. Select device: **"Other (Custom name)"**
 3. Enter name: **"VALClean Email Service"**
-4. Click **"Generate"** (Создать)
+4. Click **"Generate"**
 5. **Copy the 16-character password** (you'll see it only once!)
    - Format: `abcd efgh ijkl mnop` (may have spaces)
    - Remove spaces if needed: `abcdefghijklmnop`

@@ -3,6 +3,11 @@
 /**
  * Admin: Bulk calendar sync.
  * Route: /ad/settings/calendar
+ *
+ * Purpose: Trigger a one-time sync of appointments to the connected calendar
+ * (Google/Outlook) for selected staff. Each staff member must have a linked
+ * login account and have connected a calendar in their own settings; this page
+ * only runs "sync now" for them in bulk (e.g. after a data fix or to refresh calendars).
  */
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -46,7 +51,7 @@ export default function AdminCalendarBulkSyncPage() {
       const raw = Array.isArray(data) ? data : (data?.staff ?? data?.list ?? [])
       const list = raw.map((s: any) => ({
         id: s.id,
-        user: typeof s.user === 'object' && s.user != null ? s.user.id : s.user ?? s.user_id,
+        user: s.user != null ? (typeof s.user === 'object' ? s.user?.id : s.user) : (s.user_id ?? null),
         name: s.name ?? s.user_email ?? '',
         email: s.email ?? s.user_email ?? '',
       }))
@@ -100,7 +105,7 @@ export default function AdminCalendarBulkSyncPage() {
   return (
     <ProtectedRoute requiredRole="admin">
       <DashboardLayout>
-        <div className="container mx-auto p-8 space-y-6">
+        <div className="container mx-auto p-4 sm:p-6 md:p-8 space-y-6">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Bulk calendar sync</h1>
             <Link href="/settings/calendar">
@@ -119,7 +124,7 @@ export default function AdminCalendarBulkSyncPage() {
           )}
 
           <p className="text-muted-foreground">
-            Sync appointments to calendar for staff (and customers) who have a calendar connected. Select users and run bulk sync.
+            Run a one-time sync of appointments into the connected calendar (Google/Outlook) for selected staff. Only staff with a linked login account can be synced; they must connect a calendar in Settings → Calendar first. Select rows below and click &quot;Sync selected&quot; to run sync for them.
           </p>
 
           {loading ? (
@@ -137,7 +142,7 @@ export default function AdminCalendarBulkSyncPage() {
                 </Button>
               </div>
 
-              <div className="rounded-lg border overflow-hidden">
+              <div className="rounded-lg border overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/50">
@@ -149,7 +154,7 @@ export default function AdminCalendarBulkSyncPage() {
                         />
                       </th>
                       <th className="text-left p-3">Staff</th>
-                      <th className="text-left p-3">User ID</th>
+                      <th className="text-left p-3">Account (ID)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -165,7 +170,7 @@ export default function AdminCalendarBulkSyncPage() {
                           )}
                         </td>
                         <td className="p-3">{s.name ?? s.email ?? `Staff #${s.id}`}</td>
-                        <td className="p-3">{s.user ?? '—'}</td>
+                        <td className="p-3">{s.user != null ? String(s.user) : '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -173,6 +178,11 @@ export default function AdminCalendarBulkSyncPage() {
               </div>
 
               {staffList.length === 0 && <p className="text-muted-foreground">No staff found.</p>}
+              {staffList.length > 0 && userIds.length === 0 && (
+                <p className="text-muted-foreground text-sm">
+                  No staff have a linked login account (Account column shows —). Link staff to users in Staff management to enable bulk sync.
+                </p>
+              )}
 
               {results && (
                 <div className="rounded-lg border p-4">

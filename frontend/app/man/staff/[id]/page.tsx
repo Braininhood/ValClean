@@ -53,7 +53,7 @@ export default function ManagerStaffDetail() {
     return (
       <ProtectedRoute requiredRole={['admin', 'manager']}>
         <DashboardLayout>
-          <div className="container mx-auto p-8">
+          <div className="container mx-auto p-4 sm:p-6 md:p-8">
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
               <p className="mt-4 text-muted-foreground">Loading staff member...</p>
@@ -67,7 +67,7 @@ export default function ManagerStaffDetail() {
   return (
     <ProtectedRoute requiredRole={['admin', 'manager']}>
       <DashboardLayout>
-        <div className="container mx-auto p-8">
+        <div className="container mx-auto p-4 sm:p-6 md:p-8">
           <div className="flex justify-between items-center mb-8">
             <div>
               <h1 className="text-3xl font-bold mb-2">{staff?.name || 'Staff Member'}</h1>

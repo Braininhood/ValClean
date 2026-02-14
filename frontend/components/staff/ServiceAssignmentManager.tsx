@@ -62,9 +62,12 @@ export function ServiceAssignmentManager({ staffId, services, onUpdate }: Servic
       return
     }
 
-    // Check if service is already assigned
-    const existing = localServices.find(s => s.service_id === formData.service_id)
-    if (existing && existing.id && !editingService) {
+    // Check if service is already assigned (excluding the one being edited)
+    const existing = localServices.find(s => {
+      const sId = s.service_id || s.service?.id
+      return sId === formData.service_id && s.id !== editingService?.id
+    })
+    if (existing && !editingService) {
       setError('This service is already assigned to this staff member')
       return
     }
@@ -110,8 +113,10 @@ export function ServiceAssignmentManager({ staffId, services, onUpdate }: Servic
 
   const handleEdit = (service: StaffService) => {
     setEditingService(service)
+    // Get service_id from either service.service_id or service.service.id
+    const serviceId = service.service_id || service.service?.id || 0
     setFormData({
-      service_id: service.service_id,
+      service_id: serviceId,
       price_override: service.price_override || null,
       duration_override: service.duration_override || null,
       is_active: service.is_active,
@@ -140,7 +145,8 @@ export function ServiceAssignmentManager({ staffId, services, onUpdate }: Servic
     setError(null)
   }
 
-  const getServiceName = (serviceId: number) => {
+  const getServiceName = (serviceId: number | undefined) => {
+    if (!serviceId) return 'Unknown Service'
     const service = availableServices.find(s => s.id === serviceId)
     return service?.name || 'Unknown Service'
   }
@@ -284,12 +290,12 @@ export function ServiceAssignmentManager({ staffId, services, onUpdate }: Servic
             >
               <div>
                 <div className="font-medium">
-                  {service.service_name || getServiceName(service.service_id)}
+                  {service.service_name || getServiceName(service.service_id || service.service?.id)}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  Price: £{service.price_override ?? getServicePrice(service.service_id)}
+                  Price: £{service.price_override ?? getServicePrice(service.service_id || service.service?.id)}
                   {' | '}
-                  Duration: {service.duration_override ?? getServiceDuration(service.service_id)} min
+                  Duration: {service.duration_override ?? getServiceDuration(service.service_id || service.service?.id)} min
                   {!service.is_active && (
                     <span className="ml-2 text-destructive">(Inactive)</span>
                   )}

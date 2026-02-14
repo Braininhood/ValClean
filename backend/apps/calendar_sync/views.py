@@ -11,7 +11,7 @@ from django.shortcuts import redirect
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.accounts.models import Profile
@@ -56,11 +56,17 @@ class GoogleCalendarConnectView(APIView):
         try:
             profile, _ = Profile.objects.get_or_create(user=request.user)
             
-            # Google OAuth 2.0 configuration
-            # These should be in environment variables
-            client_id = getattr(settings, 'GOOGLE_CLIENT_ID', None)
-            client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', None)
+            # Google Calendar OAuth 2.0 configuration
+            # Use calendar-specific credentials (separate from login OAuth)
+            client_id = getattr(settings, 'GOOGLE_CALENDAR_CLIENT_ID', None)
+            client_secret = getattr(settings, 'GOOGLE_CALENDAR_CLIENT_SECRET', None)
             redirect_uri = getattr(settings, 'GOOGLE_REDIRECT_URI', 'http://localhost:8000/api/calendar/google/callback/')
+            
+            # Fallback to general Google OAuth credentials if calendar-specific not set
+            if not client_id:
+                client_id = getattr(settings, 'GOOGLE_CLIENT_ID', None)
+            if not client_secret:
+                client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', None)
             
             if not client_id or not client_secret:
                 return Response({
@@ -94,10 +100,18 @@ class GoogleCalendarConnectView(APIView):
                 prompt='consent'  # Force consent to get refresh token
             )
             
-            # Store state in session or profile for verification in callback
+            logger.info(f"Created authorization URL with redirect_uri: {redirect_uri}, state: {state[:20]}...")
+            
+            # Store state->user_id mapping in cache (more reliable than session for OAuth callbacks)
+            from django.core.cache import cache
+            cache_key = f"google_oauth_state_{state}"
+            cache.set(cache_key, request.user.id, timeout=600)  # 10 minutes expiry
+            
+            # Also store in session as fallback
             request.session['google_oauth_state'] = state
             request.session['google_oauth_user_id'] = request.user.id
             
+            # Return original authorization URL (don't modify state)
             return Response({
                 'success': True,
                 'data': {
@@ -118,43 +132,54 @@ class GoogleCalendarConnectView(APIView):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])  # Allow callback without authentication (Google redirects here)
 def google_calendar_callback(request):
     """Handle Google Calendar OAuth callback."""
     if not GOOGLE_CALENDAR_AVAILABLE:
-        return Response({
-            'success': False,
-            'error': {
-                'code': 'LIBRARY_NOT_INSTALLED',
-                'message': 'Google Calendar API libraries not installed.'
-            }
-        }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        return redirect(f"{frontend_url}/cus/calendar/settings?error=library_not_installed")
     
     try:
         # Get authorization code and state from callback
         code = request.GET.get('code')
         state = request.GET.get('state')
+        error = request.GET.get('error')
         
-        # Verify state matches session
-        session_state = request.session.get('google_oauth_state')
-        user_id = request.session.get('google_oauth_user_id')
+        logger.info(f"Google Calendar callback received - code: {'present' if code else 'missing'}, state: {'present' if state else 'missing'}, error: {error}")
         
-        if not code or state != session_state:
-            return Response({
-                'success': False,
-                'error': {
-                    'code': 'INVALID_STATE',
-                    'message': 'Invalid OAuth state or missing authorization code'
-                }
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if error:
+            logger.error(f"Google Calendar OAuth error: {error}")
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            return redirect(f"{frontend_url}/cus/calendar/settings?error={error}")
+        
+        if not code or not state:
+            logger.error(f"Missing code or state - code: {bool(code)}, state: {bool(state)}")
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            return redirect(f"{frontend_url}/cus/calendar/settings?error=missing_code_or_state")
+        
+        # Get user_id from cache (primary method)
+        from django.core.cache import cache
+        cache_key = f"google_oauth_state_{state}"
+        user_id = cache.get(cache_key)
+        
+        logger.info(f"Retrieved user_id from cache: {user_id}")
+        
+        # Fallback to session if cache miss
+        if not user_id:
+            session_state = request.session.get('google_oauth_state')
+            user_id = request.session.get('google_oauth_user_id')
+            
+            logger.info(f"Fallback to session - session_state: {'present' if session_state else 'missing'}, user_id: {user_id}")
+            
+            if not user_id or (state and session_state and session_state != state):
+                logger.warning(f"Could not extract user_id from cache or session - state: {state}, session_state: {session_state}")
+                frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+                return redirect(f"{frontend_url}/cus/calendar/settings?error=session_expired")
         
         if not user_id:
-            return Response({
-                'success': False,
-                'error': {
-                    'code': 'SESSION_EXPIRED',
-                    'message': 'OAuth session expired. Please try again.'
-                }
-            }, status=status.HTTP_400_BAD_REQUEST)
+            logger.error("No user_id found after all attempts")
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            return redirect(f"{frontend_url}/cus/calendar/settings?error=user_not_found")
         
         # Get user and ensure profile exists
         from django.contrib.auth import get_user_model
@@ -163,10 +188,39 @@ def google_calendar_callback(request):
         profile, _ = Profile.objects.get_or_create(user=user)
         
         # Exchange code for tokens
-        client_id = getattr(settings, 'GOOGLE_CLIENT_ID', None)
-        client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', None)
+        # Use calendar-specific credentials (separate from login OAuth)
+        client_id = getattr(settings, 'GOOGLE_CALENDAR_CLIENT_ID', None)
+        client_secret = getattr(settings, 'GOOGLE_CALENDAR_CLIENT_SECRET', None)
+        
+        # Fallback to general Google OAuth credentials if calendar-specific not set
+        if not client_id:
+            client_id = getattr(settings, 'GOOGLE_CLIENT_ID', None)
+        if not client_secret:
+            client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', None)
+        
+        if not client_id or not client_secret:
+            logger.error(f"Missing OAuth credentials - client_id: {bool(client_id)}, client_secret: {bool(client_secret)}")
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            return redirect(f"{frontend_url}/cus/calendar/settings?error=missing_credentials")
+        
+        # Use redirect_uri from settings (same as login callback approach)
+        # This MUST match exactly what's registered in Google Cloud Console
         redirect_uri = getattr(settings, 'GOOGLE_REDIRECT_URI', 'http://localhost:8000/api/calendar/google/callback/')
         
+        # Get actual callback URL for logging/comparison
+        actual_callback_url = request.build_absolute_uri().split('?')[0]  # Remove query params
+        
+        logger.info(f"Using redirect_uri from settings: {redirect_uri}")
+        logger.info(f"Actual callback URL from request: {actual_callback_url}")
+        logger.info(f"Client ID: {client_id[:30]}...")
+        logger.info(f"Code length: {len(code) if code else 0}, State: {state[:50] if state else 'None'}...")
+        
+        # Verify they match (normalize for comparison - remove trailing slashes)
+        if redirect_uri.rstrip('/') != actual_callback_url.rstrip('/'):
+            logger.warning(f"Redirect URI mismatch! Settings: {redirect_uri}, Actual: {actual_callback_url}")
+            logger.warning("This might cause token exchange to fail. Ensure Google Cloud Console has the correct redirect URI.")
+        
+        # Create flow with redirect_uri from settings (same as login callback)
         flow = Flow.from_client_config(
             {
                 'web': {
@@ -181,29 +235,143 @@ def google_calendar_callback(request):
             redirect_uri=redirect_uri
         )
         
-        flow.fetch_token(code=code)
+        try:
+            # Match the login callback approach - just pass code, Flow uses the redirect_uri from config
+            logger.info(f"Calling fetch_token with code, redirect_uri: {redirect_uri}")
+            logger.info(f"Flow redirect_uri: {flow.redirect_uri}")
+            logger.info(f"Flow client_id: {flow.client_config.get('web', {}).get('client_id', 'N/A')[:30]}...")
+            
+            flow.fetch_token(code=code)
+            
+        except Exception as token_error:
+            error_type = type(token_error).__name__
+            error_msg = str(token_error)
+            error_module = type(token_error).__module__
+            
+            logger.error(f"Token exchange failed - Type: {error_type}, Module: {error_module}, Message: {error_msg}", exc_info=True)
+            
+            # Log all available error attributes
+            error_attrs = dir(token_error)
+            logger.error(f"Error attributes: {[attr for attr in error_attrs if not attr.startswith('_')]}")
+            
+            # Try to extract OAuth error details
+            oauth_error = None
+            oauth_error_description = None
+            
+            if hasattr(token_error, 'error'):
+                oauth_error = token_error.error
+                logger.error(f"OAuth error: {oauth_error}")
+            if hasattr(token_error, 'error_description'):
+                oauth_error_description = token_error.error_description
+                logger.error(f"OAuth error_description: {oauth_error_description}")
+            if hasattr(token_error, 'status_code'):
+                logger.error(f"HTTP status code: {token_error.status_code}")
+            if hasattr(token_error, 'response'):
+                try:
+                    logger.error(f"Response content: {token_error.response}")
+                except:
+                    pass
+            
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            
+            # Provide more specific error messages based on OAuth error code
+            error_lower = error_msg.lower()
+            if oauth_error:
+                oauth_error_lower = str(oauth_error).lower()
+                if 'redirect_uri_mismatch' in oauth_error_lower or 'redirect_uri' in oauth_error_lower:
+                    logger.error(f"REDIRECT URI MISMATCH - Expected: {redirect_uri}, Actual callback: {actual_callback_url}")
+                    return redirect(f"{frontend_url}/cus/calendar/settings?error=redirect_uri_mismatch")
+                elif 'invalid_grant' in oauth_error_lower:
+                    return redirect(f"{frontend_url}/cus/calendar/settings?error=invalid_grant")
+                elif 'invalid_client' in oauth_error_lower:
+                    return redirect(f"{frontend_url}/cus/calendar/settings?error=invalid_client")
+            
+            if 'redirect_uri_mismatch' in error_lower or 'redirect_uri' in error_lower:
+                logger.error(f"REDIRECT URI MISMATCH (from message) - Expected: {redirect_uri}, Actual callback: {actual_callback_url}")
+                return redirect(f"{frontend_url}/cus/calendar/settings?error=redirect_uri_mismatch")
+            elif 'invalid_grant' in error_lower:
+                return redirect(f"{frontend_url}/cus/calendar/settings?error=invalid_grant")
+            elif 'invalid_client' in error_lower:
+                return redirect(f"{frontend_url}/cus/calendar/settings?error=invalid_client")
+            else:
+                # Include error details in URL for debugging
+                error_detail = oauth_error if oauth_error else error_type
+                return redirect(f"{frontend_url}/cus/calendar/settings?error=token_exchange_failed&type={error_type}&detail={error_detail}")
         
         # Store tokens in profile
         credentials = flow.credentials
+        if not credentials.token:
+            logger.error("No access token received from Google")
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            return redirect(f"{frontend_url}/cus/calendar/settings?error=no_token_received")
+        
+        logger.info(f"Successfully obtained tokens for user_id: {user_id}")
         profile.calendar_sync_enabled = True
         profile.calendar_provider = 'google'
         profile.calendar_access_token = credentials.token
         profile.calendar_refresh_token = credentials.refresh_token
         profile.calendar_calendar_id = 'primary'  # Default to primary calendar
         profile.save()
+        logger.info(f"Calendar sync enabled for user_id: {user_id}")
         
-        # Clear session
-        request.session.pop('google_oauth_state', None)
-        request.session.pop('google_oauth_user_id', None)
+        # Clear cache and session
+        from django.core.cache import cache
+        cache_key = f"google_oauth_state_{state}"
+        cache.delete(cache_key)
         
-        # Redirect to frontend success page
+        if 'google_oauth_state' in request.session:
+            request.session.pop('google_oauth_state', None)
+        if 'google_oauth_user_id' in request.session:
+            request.session.pop('google_oauth_user_id', None)
+        
+        # Redirect to frontend success page (role-agnostic - frontend will route correctly)
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-        return redirect(f"{frontend_url}/settings/calendar?connected=google")
+        # Try to determine role and redirect to appropriate settings page
+        try:
+            if user.role == 'customer':
+                return redirect(f"{frontend_url}/cus/calendar/settings?connected=google")
+            elif user.role == 'staff':
+                return redirect(f"{frontend_url}/st/calendar/settings?connected=google")
+            elif user.role == 'admin' or user.role == 'manager':
+                return redirect(f"{frontend_url}/settings/calendar?connected=google")
+        except:
+            pass
+        # Fallback
+        return redirect(f"{frontend_url}/cus/calendar/settings?connected=google")
         
     except Exception as e:
-        logger.error(f"Error in Google Calendar OAuth callback: {e}")
+        logger.error(f"Error in Google Calendar OAuth callback: {e}", exc_info=True)
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-        return redirect(f"{frontend_url}/settings/calendar?error=google_oauth_error")
+        error_msg = str(e)
+        # Try to redirect to appropriate settings page based on user role if available
+        try:
+            user_id = None
+            state = request.GET.get('state', '')
+            
+            # Try cache first
+            if state:
+                from django.core.cache import cache
+                cache_key = f"google_oauth_state_{state}"
+                user_id = cache.get(cache_key)
+            
+            # Fallback to session
+            if not user_id:
+                user_id = request.session.get('google_oauth_user_id')
+            
+            if user_id:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                try:
+                    user = User.objects.get(id=user_id)
+                    if user.role == 'customer':
+                        return redirect(f"{frontend_url}/cus/calendar/settings?error=google_oauth_error")
+                    elif user.role == 'staff':
+                        return redirect(f"{frontend_url}/st/calendar/settings?error=google_oauth_error")
+                except:
+                    pass
+        except:
+            pass
+        return redirect(f"{frontend_url}/cus/calendar/settings?error=google_oauth_error")
 
 
 class GoogleCalendarDisconnectView(APIView):
@@ -694,16 +862,14 @@ class ICalendarDownloadView(APIView):
                     from apps.calendar_sync.services import build_staff_event_data_from_appointment
                     event_data = build_staff_event_data_from_appointment(appointment)
             else:
+                # Admin/Manager: use staff event data if no order, otherwise manager event data
                 if not order:
-                    return Response({
-                        'success': False,
-                        'error': {
-                            'code': 'NO_ORDER',
-                            'message': 'Appointment is not linked to an order'
-                        }
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                from apps.calendar_sync.services import build_manager_event_data
-                event_data = build_manager_event_data(order, appointment)
+                    # For appointments without orders (subscriptions), use staff event data
+                    from apps.calendar_sync.services import build_staff_event_data_from_appointment
+                    event_data = build_staff_event_data_from_appointment(appointment)
+                else:
+                    from apps.calendar_sync.services import build_manager_event_data
+                    event_data = build_manager_event_data(order, appointment)
             
             # Generate .ics content
             ics_content = AppleCalendarService._generate_ics_content(event_data)

@@ -16,6 +16,10 @@ urlpatterns = [
     # Authentication endpoints (public)
     path('register/', views.RegisterView.as_view(), name='register'),
     path('login/', views.LoginView.as_view(), name='login'),
+    # Google OAuth (Google Cloud - new)
+    path('google/start/', views.google_oauth_start_view, name='google-oauth-start'),
+    path('google/callback/', views.google_oauth_callback_view, name='google-oauth-callback'),
+    # Google login (legacy - Supabase OAuth support)
     path('google/', views.google_login_view, name='google-login'),
     path('logout/', views.logout_view, name='logout'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),

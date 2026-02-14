@@ -430,7 +430,7 @@ export default function GuestDetailsPage() {
   }
 
   return (
-    <div className="container mx-auto p-8">
+    <div className="container mx-auto p-4 sm:p-6 md:p-8">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Your Details</h1>
@@ -446,7 +446,14 @@ export default function GuestDetailsPage() {
               The selected service is not available for <strong>{formData.postcode.trim()}</strong>. Please change your address/postcode to an area we cover, or{' '}
               <button
                 type="button"
-                onClick={() => router.push('/booking/services')}
+                onClick={() => {
+                  // Use the postcode from this page so /booking/services shows services for THIS address, not the old one
+                  const pc = formData.postcode.trim()
+                  if (pc && validateUKPostcode(pc)) {
+                    setStorePostcode(normalizeUKPostcode(pc))
+                  }
+                  router.push('/booking/services')
+                }}
                 className="underline font-medium hover:no-underline"
               >
                 go back to choose a different service

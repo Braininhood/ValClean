@@ -24,6 +24,10 @@ env = environ.Env(
 # Read .env file
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
+# Relax oauthlib scope check for Google OAuth (avoids "Scope has changed" when Google
+# returns scopes in different order or with include_granted_scopes)
+os.environ.setdefault('OAUTHLIB_RELAX_TOKEN_SCOPE', '1')
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY', default='django-insecure-change-me-in-production')
 
@@ -302,8 +306,20 @@ if not GOOGLE_PLACES_API_KEY and GOOGLE_MAPS_API_KEY:
 if not GOOGLE_MAPS_API_KEY and GOOGLE_PLACES_API_KEY:
     GOOGLE_MAPS_API_KEY = GOOGLE_PLACES_API_KEY
 
-GOOGLE_CALENDAR_CLIENT_ID = env('GOOGLE_CALENDAR_CLIENT_ID', default='')
-GOOGLE_CALENDAR_CLIENT_SECRET = env('GOOGLE_CALENDAR_CLIENT_SECRET', default='')
+# Google OAuth (separate credentials for login and calendar)
+# Login/Authentication credentials (from first OAuth client)
+GOOGLE_CLIENT_ID = env('GOOGLE_CLIENT_ID', default='')
+GOOGLE_CLIENT_SECRET = env('GOOGLE_CLIENT_SECRET', default='')
+
+# Google Calendar OAuth credentials (from Calendar API OAuth client - separate)
+GOOGLE_CALENDAR_CLIENT_ID = env('GOOGLE_CALENDAR_CLIENT_ID', default=env('GOOGLE_CLIENT_ID', default=''))
+GOOGLE_CALENDAR_CLIENT_SECRET = env('GOOGLE_CALENDAR_CLIENT_SECRET', default=env('GOOGLE_CLIENT_SECRET', default=''))
+
+# Google OAuth Redirect URIs
+# For login/authentication
+GOOGLE_OAUTH_REDIRECT_URI = env('GOOGLE_OAUTH_REDIRECT_URI', default='http://localhost:8000/api/aut/google/callback/')
+# For calendar sync
+GOOGLE_REDIRECT_URI = env('GOOGLE_REDIRECT_URI', default='http://localhost:8000/api/calendar/google/callback/')
 
 # Microsoft Services (Outlook Calendar)
 MICROSOFT_CLIENT_ID = env('MICROSOFT_CLIENT_ID', default='')

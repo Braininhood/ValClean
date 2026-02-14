@@ -11,7 +11,7 @@
  */
 export default function BookingTypePage() {
   return (
-    <div className="container mx-auto p-8">
+    <div className="container mx-auto p-4 sm:p-6 md:p-8">
       <h1 className="text-3xl font-bold mb-8">Choose Booking Type</h1>
       <div className="space-y-4">
         <div className="p-6 border rounded-lg">

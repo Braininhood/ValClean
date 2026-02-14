@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
 import { apiClient } from '@/lib/api/client'
 import { ADMIN_ENDPOINTS, CALENDAR_ENDPOINTS } from '@/lib/api/endpoints'
 
@@ -17,9 +18,21 @@ interface CalendarStatus {
   has_refresh_token: boolean
 }
 
-export function StaffCalendarIntegration({ staffId: _staffId, staffUserId }: StaffCalendarIntegrationProps) {
+interface Appointment {
+  id: number
+  service: {
+    name: string
+  }
+  start_time: string
+  end_time: string
+  status: string
+}
+
+export function StaffCalendarIntegration({ staffId, staffUserId }: StaffCalendarIntegrationProps) {
   const [status, setStatus] = useState<CalendarStatus | null>(null)
+  const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingAppointments, setLoadingAppointments] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [_connecting, setConnecting] = useState(false)
 
@@ -29,7 +42,8 @@ export function StaffCalendarIntegration({ staffId: _staffId, staffUserId }: Sta
     } else {
       setLoading(false)
     }
-  }, [staffUserId])
+    fetchAppointments()
+  }, [staffUserId, staffId])
 
   const fetchStatus = async () => {
     if (!staffUserId) return
@@ -53,6 +67,68 @@ export function StaffCalendarIntegration({ staffId: _staffId, staffUserId }: Sta
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchAppointments = async () => {
+    try {
+      setLoadingAppointments(true)
+      // Get upcoming appointments for this staff member
+      const today = new Date().toISOString().split('T')[0]
+      const response = await apiClient.get(
+        `${ADMIN_ENDPOINTS.APPOINTMENTS.LIST}?staff_id=${staffId}&date_from=${today}`
+      )
+      
+      if (response.data.success && response.data.data) {
+        setAppointments(response.data.data)
+      }
+    } catch (err: any) {
+      console.error('Error fetching appointments:', err)
+    } finally {
+      setLoadingAppointments(false)
+    }
+  }
+
+  const handleDownloadICS = async (appointmentId: number) => {
+    try {
+      // Download ICS file
+      const response = await apiClient.get(
+        CALENDAR_ENDPOINTS.ICS(appointmentId),
+        { responseType: 'blob' }
+      )
+      
+      // Create blob and download
+      const blob = new Blob([response.data], { type: 'text/calendar' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `appointment-${appointmentId}.ics`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to download ICS file')
+      console.error('Error downloading ICS:', err)
+    }
+  }
+
+  const handleDownloadAllICS = async () => {
+    if (appointments.length === 0) {
+      alert('No appointments to download')
+      return
+    }
+
+    try {
+      // Download ICS files one by one (or create a combined file)
+      for (const appointment of appointments) {
+        await handleDownloadICS(appointment.id)
+        // Small delay between downloads
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+    } catch (err: any) {
+      alert('Failed to download some ICS files')
+      console.error('Error downloading ICS files:', err)
     }
   }
 
@@ -97,15 +173,83 @@ export function StaffCalendarIntegration({ staffId: _staffId, staffUserId }: Sta
     }
   }
 
+  // Appointments list + ICS downloads (admin can always see this for any staff)
+  const appointmentsSection = (
+    <div className="border rounded-lg p-6 space-y-4">
+      <div className="flex justify-between items-center">
+        <div>
+          <h4 className="font-semibold">Upcoming appointments</h4>
+          <p className="text-sm text-muted-foreground">
+            View and download .ics for Apple Calendar (or import into other calendars)
+          </p>
+        </div>
+        {appointments.length > 0 && (
+          <Button onClick={handleDownloadAllICS} variant="outline" size="sm">
+            Download All ({appointments.length})
+          </Button>
+        )}
+      </div>
+      {loadingAppointments ? (
+        <div className="text-center py-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto" />
+          <p className="mt-2 text-xs text-muted-foreground">Loading appointments...</p>
+        </div>
+      ) : appointments.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-4">
+          No upcoming appointments found for this staff member.
+        </p>
+      ) : (
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {appointments.map((appointment) => (
+            <div
+              key={appointment.id}
+              className="flex items-center justify-between border rounded-lg p-3 hover:bg-muted/50"
+            >
+              <div className="flex-1">
+                <div className="font-medium text-sm">{appointment.service.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {new Date(appointment.start_time).toLocaleString('en-GB', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                  {' • '}
+                  <span className={`px-1.5 py-0.5 rounded text-xs ${
+                    appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    appointment.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                    appointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {appointment.status}
+                  </span>
+                </div>
+              </div>
+              <Button onClick={() => handleDownloadICS(appointment.id)} variant="outline" size="sm">
+                Download .ics
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+
   if (!staffUserId) {
     return (
-      <div className="border rounded-lg p-6 text-center">
-        <p className="text-muted-foreground">
-          Staff member needs a user account to connect calendar.
-        </p>
-        <p className="text-sm text-muted-foreground mt-2">
-          Link a user account in the Basic Info tab to enable calendar integration.
-        </p>
+      <div className="space-y-4">
+        <div className="border rounded-lg p-6">
+          <h3 className="text-lg font-semibold mb-2">Calendar sync</h3>
+          <p className="text-muted-foreground">
+            Google/Outlook/Apple calendar sync is tied to a <strong>user account</strong>. This staff record has no linked user yet.
+          </p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Link a user account in the <strong>Basic Info</strong> tab so the staff can log in and connect their calendar. You can still view their appointments and download .ics below.
+          </p>
+        </div>
+        {appointmentsSection}
       </div>
     )
   }
@@ -220,6 +364,8 @@ export function StaffCalendarIntegration({ staffId: _staffId, staffUserId }: Sta
           </p>
         </div>
       )}
+
+      {appointmentsSection}
     </div>
   )
 }

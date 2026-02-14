@@ -40,13 +40,17 @@ class ServiceListSerializer(serializers.ModelSerializer):
     """
     Simplified service serializer for list views (public endpoints).
     """
-    category_name = serializers.CharField(source='category.name', read_only=True)
+    category_name = serializers.SerializerMethodField()
     extras = serializers.JSONField(required=False, default=list)
 
     class Meta:
         model = Service
         fields = ['id', 'category_name', 'name', 'slug', 'description', 'duration', 'price',
                   'currency', 'image', 'color', 'is_active', 'capacity', 'padding_time', 'extras']
+    
+    def get_category_name(self, obj):
+        """Safely get category name, returning None if category is None."""
+        return obj.category.name if obj.category else None
 
 
 class StaffServiceCreateUpdateSerializer(serializers.ModelSerializer):

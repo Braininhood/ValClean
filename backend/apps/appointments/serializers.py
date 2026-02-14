@@ -10,14 +10,22 @@ from apps.customers.serializers import CustomerSerializer, CustomerListSerialize
 
 
 class CustomerBookingSummarySerializer(serializers.ModelSerializer):
-    """Minimal customer booking info for inclusion in Appointment (can_cancel, can_reschedule, price)."""
+    """Minimal customer booking info for inclusion in Appointment (can_cancel, can_reschedule, price, customer name)."""
+    customer = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = CustomerAppointment
         fields = [
-            'id', 'total_price', 'deposit_paid', 'payment_status',
+            'id', 'customer', 'total_price', 'deposit_paid', 'payment_status',
             'can_cancel', 'can_reschedule', 'cancellation_deadline', 'cancellation_policy_hours',
         ]
-        read_only_fields = fields
+        read_only_fields = ['id', 'total_price', 'deposit_paid', 'payment_status',
+            'can_cancel', 'can_reschedule', 'cancellation_deadline', 'cancellation_policy_hours']
+
+    def get_customer(self, obj):
+        if not obj.customer_id:
+            return None
+        return {'id': obj.customer.id, 'name': obj.customer.name, 'email': getattr(obj.customer, 'email', '') or ''}
 
 
 class AppointmentSerializer(serializers.ModelSerializer):

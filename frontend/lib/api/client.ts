@@ -148,6 +148,14 @@ class ApiClient {
     throw new Error('Invalid login response');
   }
 
+  async googleOAuthStart() {
+    const response = await this.get('/aut/google/start/');
+    if (response.data.success && response.data.data) {
+      return response.data.data.authorization_url;
+    }
+    throw new Error(response.data?.error?.message || 'Failed to start Google OAuth');
+  }
+
   async googleLogin(accessToken: string, email?: string, name?: string) {
     const body: { access_token: string; email?: string; name?: string } = { access_token: accessToken };
     if (email) body.email = email;
