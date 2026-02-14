@@ -4,7 +4,8 @@ import type { NextRequest } from 'next/server'
 /**
  * Redirect traffic from raw EC2 IP to canonical hostname so OAuth and cookies
  * use a single origin (avoids invalid_state / session issues).
- * Set CANONICAL_ORIGIN in .env to e.g. https://ec2-13-135-109-229.eu-west-2.compute.amazonaws.com
+ * Set CANONICAL_ORIGIN in .env to the canonical URL (use hyphens in hostname, not dots):
+ * e.g. https://ec2-13-135-109-229.eu-west-2.compute.amazonaws.com
  */
 const RAW_IP_HOSTS = ['13.135.109.229']
 
