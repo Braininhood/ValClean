@@ -32,8 +32,7 @@ const nextConfig = {
     const isProd = process.env.NODE_ENV === 'production';
     const cspParts = [
       "default-src 'self'",
-      // Allow nonce-based inline scripts (Next.js uses nonces)
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://*.googleapis.com 'nonce-*'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://*.googleapis.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com",
