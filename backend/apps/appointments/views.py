@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils import timezone
 from django.db.models import Q
+from django.core.cache import cache
 from datetime import datetime, timedelta
 from apps.core.permissions import (
     IsCustomer, IsAdminOrManager, IsStaff, IsStaffOrManager, IsOwnerOrAdmin
@@ -795,19 +796,22 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
 
+# Slots response cached 2 min so new bookings appear quickly while reducing DB load
+CACHE_TTL_SLOTS = 120
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def available_slots_view(request):
     """
-    Get available time slots by postcode/service/staff (public).
+    Get available time slots by postcode/service/staff (public). Cached 2 min per (postcode, service, date, staff).
     GET /api/slots/?postcode=SW1A1AA&service_id=1&date=2024-01-15&staff_id=1
-    IMPORTANT: Only accepts UK postcodes - VALClean operates only in the UK.
     """
     postcode = request.query_params.get('postcode')
     service_id = request.query_params.get('service_id')
     date = request.query_params.get('date')
     staff_id = request.query_params.get('staff_id')
-    
+
     if not postcode or not service_id or not date:
         return Response({
             'success': False,
@@ -816,11 +820,9 @@ def available_slots_view(request):
                 'message': 'postcode, service_id, and date parameters are required',
             }
         }, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Validate UK postcode (format + country check)
+
     from apps.core.address import validate_postcode_with_google
     validation_result = validate_postcode_with_google(postcode)
-    
     if not validation_result.get('valid') or not validation_result.get('is_uk'):
         error_msg = validation_result.get('error', 'Invalid UK postcode. VALClean currently operates only in the UK.')
         return Response({
@@ -830,11 +832,8 @@ def available_slots_view(request):
                 'message': error_msg,
             }
         }, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Use validated/formatted postcode
+
     validated_postcode = validation_result.get('formatted', postcode)
-    
-    # Parse date
     try:
         target_date = datetime.strptime(date, '%Y-%m-%d').date()
     except ValueError:
@@ -845,8 +844,7 @@ def available_slots_view(request):
                 'message': 'Invalid date format. Use YYYY-MM-DD format.',
             }
         }, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Check if date is in the past
+
     today = timezone.now().date()
     if target_date < today:
         return Response({
@@ -856,16 +854,20 @@ def available_slots_view(request):
                 'message': 'Cannot book appointments in the past.',
             }
         }, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Parse staff_id if provided
+
     parsed_staff_id = None
     if staff_id:
         try:
             parsed_staff_id = int(staff_id)
         except ValueError:
             pass
-    
-    # Calculate available slots
+
+    norm_postcode = (validated_postcode or '').upper().replace(' ', '').strip()
+    cache_key = f'slots_{norm_postcode}_{service_id}_{date}_{parsed_staff_id or "any"}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached, status=status.HTTP_200_OK)
+
     try:
         from .slots_utils import get_available_slots
         slots = get_available_slots(
@@ -874,8 +876,7 @@ def available_slots_view(request):
             target_date=target_date,
             staff_id=parsed_staff_id
         )
-        
-        return Response({
+        payload = {
             'success': True,
             'data': {
                 'postcode': validated_postcode,
@@ -888,13 +889,13 @@ def available_slots_view(request):
                 'count': len(slots),
                 'available_count': sum(1 for slot in slots if slot['available']),
             }
-        }, status=status.HTTP_200_OK)
+        }
+        cache.set(cache_key, payload, CACHE_TTL_SLOTS)
+        return Response(payload, status=status.HTTP_200_OK)
     except Exception as e:
-        # Log the error for debugging
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Error calculating available slots: {str(e)}", exc_info=True)
-        
         return Response({
             'success': False,
             'error': {

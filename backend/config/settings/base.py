@@ -202,15 +202,13 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
-# Cache (Phase 5: optimization)
-# Development: local memory; production can use REDIS_URL (see production.py) or database
-if not env('REDIS_URL', default=None):
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'OPTIONS': {'MAX_ENTRIES': 1000},
-        }
+# Cache: default LocMem; production overrides with Redis when REDIS_URL is set
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'OPTIONS': {'MAX_ENTRIES': 2000},
     }
+}
 
 # CORS Settings (for Next.js frontend on localhost:3000 and EC2 test server)
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[

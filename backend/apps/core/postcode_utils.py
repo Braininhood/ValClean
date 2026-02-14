@@ -165,22 +165,19 @@ def get_staff_for_postcode(postcode: str, service_id: Optional[int] = None,
 
 def get_services_for_postcode(postcode: str):
     """
-    Get services available in a postcode area.
-    Only approved services are returned. A service is available if at least one staff
-    member who provides that service has an area (per-service or global) covering the postcode.
-    
-    OPTIMIZED: Validates postcode once, caches geocoding, and uses efficient queries.
-    
-    Args:
-        postcode: UK postcode string (e.g., 'SW1A 1AA')
-    
-    Returns:
-        QuerySet of Service objects available in this postcode area
+    Get services available in a postcode area (cached 10 min per postcode).
+    Only approved services are returned.
     """
     from apps.services.models import Service
     from apps.staff.models import StaffService
-    
-    # Validate postcode ONCE (not per service)
+
+    normalized = (postcode or '').upper().replace(' ', '').strip()
+    if not normalized:
+        return Service.objects.none()
+    cache_key = f'services_for_postcode_{normalized}'
+    cached_ids = cache.get(cache_key)
+    if cached_ids is not None:
+        return Service.objects.filter(id__in=cached_ids, is_active=True, approval_status='approved').select_related('category').order_by('position', 'id')
     validation_result = validate_postcode_with_google(postcode)
     
     if not validation_result.get('valid') or not validation_result.get('is_uk'):
@@ -286,12 +283,13 @@ def get_services_for_postcode(postcode: str):
                 ).values_list('service_id', flat=True)
                 service_ids_with_coverage.update(staff_services)
     
-    # Return approved, active services that have coverage
-    return Service.objects.filter(
+    qs = Service.objects.filter(
         id__in=service_ids_with_coverage,
         is_active=True,
         approval_status='approved'
     ).select_related('category').distinct()
+    cache.set(cache_key, list(qs.values_list('id', flat=True)), 600)  # 10 min
+    return qs
 
 
 def check_postcode_in_area(customer_postcode: str, staff_area: StaffArea) -> bool:

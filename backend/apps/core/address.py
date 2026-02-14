@@ -1,11 +1,13 @@
 """
 Address utilities and Google Places API integration.
+Uses Django cache to reduce latency and API calls (transparent for all users).
 """
 import requests
 from django.conf import settings
+from django.core.cache import cache
 
 
-def geocode_postcode(postcode):
+def _geocode_postcode_uncached(postcode):
     """
     Geocode a UK postcode to get latitude and longitude.
     Uses Google Geocoding API.
@@ -96,27 +98,42 @@ def geocode_postcode(postcode):
     return None
 
 
+def geocode_postcode(postcode):
+    """
+    Geocode a UK postcode (cached 24h). See _geocode_postcode_uncached for behaviour.
+    """
+    normalized = (postcode or '').upper().replace(' ', '').strip()
+    if not normalized:
+        return _geocode_postcode_uncached(postcode)
+    cache_key = f'geocode_postcode_{normalized}'
+    result = cache.get(cache_key)
+    if result is not None:
+        return result
+    result = _geocode_postcode_uncached(postcode)
+    if result is not None:
+        cache.set(cache_key, result, 86400)  # 24h
+    return result
+
+
 def get_address_autocomplete(query, api_key=None):
     """
-    Get address suggestions using Google Places API autocomplete.
-    
-    Args:
-        query: Search query string (postcode or address)
-        api_key: Google Places API key (from settings if not provided)
-    
-    Returns:
-        list: List of address suggestions with formatted addresses
-        Format: [
-            {
-                'place_id': str,
-                'description': str,
-                'structured_formatting': dict,
-                'types': list,
-            }
-        ]
+    Get address suggestions using Google Places API autocomplete (cached 1h by query).
     """
     api_key = api_key or getattr(settings, 'GOOGLE_PLACES_API_KEY', None) or getattr(settings, 'GOOGLE_MAPS_API_KEY', None)
-    
+    if not query or not query.strip():
+        return []
+    cache_key = f'addr_autocomplete_{query.strip()[:80]}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    result = _get_address_autocomplete_uncached(query, api_key)
+    if result is not None:
+        cache.set(cache_key, result, 3600)  # 1h
+    return result if result is not None else []
+
+
+def _get_address_autocomplete_uncached(query, api_key=None):
+    api_key = api_key or getattr(settings, 'GOOGLE_PLACES_API_KEY', None) or getattr(settings, 'GOOGLE_MAPS_API_KEY', None)
     if not api_key:
         import logging
         logger = logging.getLogger(__name__)
@@ -172,40 +189,32 @@ def get_address_autocomplete(query, api_key=None):
             logger.error(f"Response text: {response.text[:500]}")
             return []
     except Exception as e:
-        # Log error but don't break the flow
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Autocomplete error: {e}", exc_info=True)
-        pass
-    
     return []
 
 
 def get_place_details(place_id, api_key=None):
     """
-    Get full address details from Google Places API using place_id.
-    
-    Args:
-        place_id: Google Places place_id
-        api_key: Google Places API key (from settings if not provided)
-    
-    Returns:
-        dict: {
-            'address_line1': str,
-            'address_line2': str,
-            'city': str,
-            'postcode': str,
-            'country': str,
-            'lat': float,
-            'lng': float,
-            'formatted_address': str,
-        } or None
+    Get full address details from Google Places API (cached 24h by place_id).
     """
+    if not place_id:
+        return None
+    cache_key = f'place_details_{place_id}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    result = _get_place_details_uncached(place_id, api_key)
+    if result is not None:
+        cache.set(cache_key, result, 86400)  # 24h
+    return result
+
+
+def _get_place_details_uncached(place_id, api_key=None):
     api_key = api_key or getattr(settings, 'GOOGLE_PLACES_API_KEY', None) or getattr(settings, 'GOOGLE_MAPS_API_KEY', None)
-    
     if not api_key:
         return None
-    
     url = 'https://maps.googleapis.com/maps/api/place/details/json'
     params = {
         'place_id': place_id,
@@ -255,10 +264,8 @@ def get_place_details(place_id, api_key=None):
                     'lng': location.get('lng'),
                     'formatted_address': result.get('formatted_address', ''),
                 }
-    except Exception as e:
-        # Log error but don't break the flow
+    except Exception:
         pass
-    
     return None
 
 

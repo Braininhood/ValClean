@@ -1,14 +1,20 @@
 """
 Services app views.
 Service and Category viewsets.
+Caching is used for public list/by-postcode to keep responses fast for all users.
 """
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.core.cache import cache
 from apps.core.permissions import IsAdmin, IsAdminOrManager
 from .models import Category, Service
 from .serializers import CategorySerializer, ServiceSerializer, ServiceListSerializer
+
+# Cache TTLs (seconds)
+CACHE_TTL_SERVICE_LIST = 300   # 5 min
+CACHE_TTL_SERVICE_BY_POSTCODE = 600  # 10 min
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -127,44 +133,41 @@ class ServiceViewSet(viewsets.ModelViewSet):
         return [AllowAny()]
     
     def list(self, request, *args, **kwargs):
-        """List services (public: active only, admin: all)."""
+        """List services (public: active only, admin: all). Cached for public without postcode."""
+        postcode = request.query_params.get('postcode')
+        category_id = request.query_params.get('category')
+        is_admin_list = request.user.is_authenticated and request.user.role in ['admin', 'manager']
+        is_active_param = request.query_params.get('is_active') if is_admin_list else None
+
+        # Cache key for public list (no postcode): avoid repeated DB hits for same category
+        if not postcode and not is_admin_list:
+            cache_key = f'svc_list_public_cat_{category_id or "all"}'
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return Response(cached, status=status.HTTP_200_OK)
+
         queryset = self.filter_queryset(self.get_queryset())
-        
-        # Public endpoints only show active services
-        # Admin endpoints can see all services
-        if request.user.is_authenticated and request.user.role in ['admin', 'manager']:
-            # Admin can see all services (active and inactive)
+        if is_admin_list:
             pass
         else:
-            # Public: only active and approved services (staff-created pending are hidden)
             queryset = queryset.filter(is_active=True, approval_status='approved')
-        
-        # Filter by category if provided
-        category_id = request.query_params.get('category')
         if category_id:
             queryset = queryset.filter(category_id=category_id)
-        
-        # Filter by postcode if provided (for area-based filtering)
-        postcode = request.query_params.get('postcode')
         if postcode:
-            # Get services available in this postcode area
             from apps.core.postcode_utils import get_services_for_postcode
             queryset = get_services_for_postcode(postcode)
-        
-        # Admin can filter by is_active
-        if request.user.is_authenticated and request.user.role in ['admin', 'manager']:
-            is_active = request.query_params.get('is_active')
-            if is_active is not None:
-                queryset = queryset.filter(is_active=is_active.lower() == 'true')
-        
+        if is_admin_list and is_active_param is not None:
+            queryset = queryset.filter(is_active=is_active_param.lower() == 'true')
+
         serializer = self.get_serializer(queryset, many=True)
-        return Response({
+        payload = {
             'success': True,
             'data': serializer.data,
-            'meta': {
-                'count': queryset.count(),
-            }
-        }, status=status.HTTP_200_OK)
+            'meta': {'count': queryset.count()},
+        }
+        if not postcode and not is_admin_list:
+            cache.set(cache_key, payload, CACHE_TTL_SERVICE_LIST)
+        return Response(payload, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['post'], url_path='reorder', permission_classes=[IsAdminOrManager])
     def reorder(self, request):
@@ -267,9 +270,8 @@ class ServiceViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='by-postcode')
     def by_postcode(self, request):
         """
-        Get services available in a postcode area (public).
+        Get services available in a postcode area (public). Response cached 10 min per postcode.
         GET /api/svc/by-postcode/?postcode=SW1A1AA
-        IMPORTANT: Only accepts UK postcodes - VALClean operates only in the UK.
         """
         postcode = request.query_params.get('postcode')
         if not postcode:
@@ -280,11 +282,15 @@ class ServiceViewSet(viewsets.ModelViewSet):
                     'message': 'Postcode parameter is required',
                 }
             }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Validate UK postcode (format + country check) - ONCE
+
+        normalized = postcode.upper().replace(' ', '').strip()
+        cache_key = f'svc_by_postcode_{normalized}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached, status=status.HTTP_200_OK)
+
         from apps.core.address import validate_postcode_with_google
         validation_result = validate_postcode_with_google(postcode)
-        
         if not validation_result.get('valid') or not validation_result.get('is_uk'):
             error_msg = validation_result.get('error', 'Invalid UK postcode. VALClean currently operates only in the UK.')
             return Response({
@@ -294,74 +300,53 @@ class ServiceViewSet(viewsets.ModelViewSet):
                     'message': error_msg,
                 }
             }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Use validated/formatted postcode
+
         validated_postcode = validation_result.get('formatted', postcode)
-        
-        # OPTIMIZED: Pre-build area coordinates cache to avoid redundant geocoding
         from apps.staff.models import StaffArea, StaffService
         from apps.core.postcode_utils import get_staff_for_postcode, _geocode_postcode_cached
         from django.db.models import Count
-        
-        # Get all unique postcodes from active areas (geocode once with caching)
+
         all_areas = StaffArea.objects.filter(
             is_active=True,
             staff__is_active=True
         ).values_list('postcode', flat=True).distinct()
-        
-        # Geocode all unique postcodes once (with caching - 24h cache)
         area_coords_cache = {}
         for area_postcode in all_areas:
-            normalized = area_postcode.upper().replace(' ', '').strip()
-            if normalized not in area_coords_cache:
+            norm = area_postcode.upper().replace(' ', '').strip()
+            if norm not in area_coords_cache:
                 geocode_result = _geocode_postcode_cached(area_postcode)
                 if geocode_result and geocode_result.get('lat') and geocode_result.get('lng'):
-                    area_coords_cache[normalized] = {
-                        'lat': geocode_result['lat'],
-                        'lng': geocode_result['lng']
-                    }
+                    area_coords_cache[norm] = {'lat': geocode_result['lat'], 'lng': geocode_result['lng']}
                 else:
-                    area_coords_cache[normalized] = None
-        
-        # Get available staff ONCE (reused for service filtering and counting)
+                    area_coords_cache[norm] = None
+
         available_staff = get_staff_for_postcode(
             validated_postcode,
             validation_result=validation_result,
             area_coords_cache=area_coords_cache
         )
-        
-        # Get services that have available staff (optimized single query)
         queryset = Service.objects.filter(
             is_active=True,
             approval_status='approved',
             staff_services__staff__in=available_staff,
             staff_services__is_active=True
         ).select_related('category').distinct()
-        
-        # Pre-calculate staff counts per service (single aggregated query instead of N queries)
         staff_counts = StaffService.objects.filter(
             staff__in=available_staff,
             is_active=True,
             service__in=queryset
-        ).values('service_id').annotate(
-            staff_count=Count('staff', distinct=True)
-        )
-        
-        # Build staff count lookup map
+        ).values('service_id').annotate(staff_count=Count('staff', distinct=True))
         staff_count_map = {item['service_id']: item['staff_count'] for item in staff_counts}
-        
-        # Serialize services with pre-calculated staff counts
         services_data = []
         for service in queryset:
             service_dict = ServiceListSerializer(service).data
             service_dict['available_staff_count'] = staff_count_map.get(service.id, 0)
             services_data.append(service_dict)
-        
-        return Response({
+
+        payload = {
             'success': True,
             'data': services_data,
-            'meta': {
-                'postcode': validated_postcode,
-                'count': len(services_data),
-            }
-        }, status=status.HTTP_200_OK)
+            'meta': {'postcode': validated_postcode, 'count': len(services_data)},
+        }
+        cache.set(cache_key, payload, CACHE_TTL_SERVICE_BY_POSTCODE)
+        return Response(payload, status=status.HTTP_200_OK)
