@@ -37,6 +37,60 @@ class CouponViewSet(viewsets.ModelViewSet):
             return CouponListSerializer
         return CouponSerializer
     
+    def list(self, request, *args, **kwargs):
+        """Return list wrapped in { success, data } for app consistency."""
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'count': queryset.count()},
+        }, status=status.HTTP_200_OK)
+    
+    def create(self, request, *args, **kwargs):
+        """Create coupon; return wrapped in { success, data }."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'message': 'Coupon created successfully'},
+        }, status=status.HTTP_201_CREATED)
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Return single coupon wrapped in { success, data }."""
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {},
+        }, status=status.HTTP_200_OK)
+    
+    def update(self, request, *args, **kwargs):
+        """Update coupon; return wrapped in { success, data }."""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'meta': {'message': 'Coupon updated successfully'},
+        }, status=status.HTTP_200_OK)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Delete coupon; return wrapped { success }."""
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response({
+            'success': True,
+            'data': None,
+            'meta': {'message': 'Coupon deleted'},
+        }, status=status.HTTP_200_OK)
+    
     def get_queryset(self):
         """Filter active coupons for public, all for admin."""
         queryset = super().get_queryset()

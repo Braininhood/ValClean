@@ -321,6 +321,14 @@ export const ADMIN_ENDPOINTS = {
     OPTIMIZE: '/ad/routes/optimize/',
     STAFF_DAY: '/ad/routes/staff-day/',
   },
+  COUPONS: {
+    LIST: '/ad/coupons/',
+    CREATE: '/ad/coupons/',
+    DETAIL: (id: string | number) => `/ad/coupons/${id}/`,
+    UPDATE: (id: string | number) => `/ad/coupons/${id}/`,
+    DELETE: (id: string | number) => `/ad/coupons/${id}/`,
+    USAGES: '/ad/coupons/usages/',
+  },
   CALENDAR: {
     CONNECT: '/calendar/google/connect/',
     STATUS: '/calendar/status/',

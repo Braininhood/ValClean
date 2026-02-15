@@ -36,6 +36,7 @@ class OrderSerializer(serializers.ModelSerializer):
     customer_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     items = OrderItemSerializer(many=True, read_only=True)
     appointments = serializers.SerializerMethodField()
+    coupon_used = serializers.SerializerMethodField()
     
     class Meta:
         model = Order
@@ -45,7 +46,7 @@ class OrderSerializer(serializers.ModelSerializer):
                   'scheduled_date', 'scheduled_time', 'cancellation_policy_hours',
                   'can_cancel', 'can_reschedule', 'cancellation_deadline',
                   'address_line1', 'address_line2', 'city', 'postcode', 'country',
-                  'notes', 'items', 'appointments', 'created_at', 'updated_at']
+                  'notes', 'items', 'appointments', 'coupon_used', 'created_at', 'updated_at']
         read_only_fields = ['id', 'order_number', 'tracking_token', 'account_linked_at',
                              'can_cancel', 'can_reschedule', 'cancellation_deadline',
                              'created_at', 'updated_at']
@@ -59,6 +60,16 @@ class OrderSerializer(serializers.ModelSerializer):
         """Get all appointments for this order."""
         appointments = obj.appointments.all()
         return AppointmentSerializer(appointments, many=True).data
+    
+    def get_coupon_used(self, obj):
+        """Return coupon applied to this order (from CouponUsage) for display."""
+        usage = obj.coupon_usages.select_related('coupon').first()
+        if not usage:
+            return None
+        return {
+            'code': usage.coupon.code,
+            'discount_amount': str(usage.discount_amount),
+        }
 
 
 class OrderCreateSerializer(serializers.Serializer):

@@ -49,6 +49,16 @@ class User(AbstractUser):
         verbose_name = _('user')
         verbose_name_plural = _('users')
         db_table = 'accounts_user'
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(role__in=['admin', 'manager', 'staff', 'customer']),
+                name='user_valid_role'
+            ),
+            models.CheckConstraint(
+                check=models.Q(email__isnull=False) & ~models.Q(email=''),
+                name='user_email_not_empty'
+            ),
+        ]
     
     def save(self, *args, **kwargs):
         # Normalize email to lowercase before saving
@@ -128,6 +138,20 @@ class Invitation(TimeStampedModel):
         indexes = [
             models.Index(fields=['token', 'is_active']),
             models.Index(fields=['email', 'role']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(role__in=['staff', 'manager', 'admin']),
+                name='invitation_valid_role'
+            ),
+            models.CheckConstraint(
+                check=models.Q(expires_at__gt=models.F('created_at')),
+                name='invitation_expires_after_creation'
+            ),
+            models.CheckConstraint(
+                check=models.Q(email__isnull=False) & ~models.Q(email=''),
+                name='invitation_email_not_empty'
+            ),
         ]
     
     def __str__(self):

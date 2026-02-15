@@ -210,6 +210,60 @@ class Subscription(TimeStampedModel):
             models.Index(fields=['is_guest_subscription', 'guest_email']),
             models.Index(fields=['status', 'next_appointment_date']),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(frequency__in=['weekly', 'biweekly', 'monthly']),
+                name='subscription_valid_frequency'
+            ),
+            models.CheckConstraint(
+                check=models.Q(status__in=['active', 'paused', 'cancelled', 'completed']),
+                name='subscription_valid_status'
+            ),
+            models.CheckConstraint(
+                check=models.Q(payment_status__in=['pending', 'partial', 'paid', 'refunded']),
+                name='subscription_valid_payment_status'
+            ),
+            models.CheckConstraint(
+                check=models.Q(duration_months__gte=1),
+                name='subscription_valid_duration'
+            ),
+            models.CheckConstraint(
+                check=models.Q(total_appointments__gte=0),
+                name='subscription_valid_total_appointments'
+            ),
+            models.CheckConstraint(
+                check=models.Q(completed_appointments__gte=0),
+                name='subscription_valid_completed_appointments'
+            ),
+            models.CheckConstraint(
+                check=models.Q(completed_appointments__lte=models.F('total_appointments')),
+                name='subscription_completed_not_exceeds_total'
+            ),
+            models.CheckConstraint(
+                check=models.Q(price_per_appointment__gt=0),
+                name='subscription_valid_price_per_appointment'
+            ),
+            models.CheckConstraint(
+                check=models.Q(total_price__gte=0),
+                name='subscription_valid_total_price'
+            ),
+            models.CheckConstraint(
+                check=models.Q(end_date__gt=models.F('start_date')),
+                name='subscription_end_after_start'
+            ),
+            models.CheckConstraint(
+                check=models.Q(subscription_number__isnull=False) & ~models.Q(subscription_number=''),
+                name='subscription_number_not_empty'
+            ),
+            models.CheckConstraint(
+                check=models.Q(tracking_token__isnull=False) & ~models.Q(tracking_token=''),
+                name='subscription_tracking_token_not_empty'
+            ),
+            models.CheckConstraint(
+                check=models.Q(customer__isnull=False) | (models.Q(guest_email__isnull=False) & ~models.Q(guest_email='')),
+                name='subscription_has_customer_or_guest_email'
+            ),
+        ]
     
     def __str__(self):
         customer_name = self.customer.name if self.customer else (self.guest_name or self.guest_email)
@@ -290,6 +344,16 @@ class SubscriptionAppointment(TimeStampedModel):
         db_table = 'subscriptions_subscriptionappointment'
         unique_together = [['subscription', 'appointment']]
         ordering = ['subscription', 'sequence_number']
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(status__in=['scheduled', 'completed', 'cancelled', 'skipped']),
+                name='subscriptionappointment_valid_status'
+            ),
+            models.CheckConstraint(
+                check=models.Q(sequence_number__gte=1),
+                name='subscriptionappointment_valid_sequence'
+            ),
+        ]
     
     def __str__(self):
         return f"{self.subscription.subscription_number} - Appointment #{self.sequence_number} - {self.scheduled_date}"
@@ -346,6 +410,16 @@ class SubscriptionAppointmentChangeRequest(TimeStampedModel):
     class Meta:
         db_table = 'subscriptions_subscriptionappointmentchangerequest'
         ordering = ['-created_at']
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(status__in=['pending', 'approved', 'rejected']),
+                name='subscriptionappointmentchangerequest_valid_status'
+            ),
+            models.CheckConstraint(
+                check=models.Q(requested_date__isnull=False),
+                name='subscriptionappointmentchangerequest_has_date'
+            ),
+        ]
 
     def __str__(self):
         return f"Change request for subscription visit #{self.subscription_appointment.sequence_number} - {self.status}"

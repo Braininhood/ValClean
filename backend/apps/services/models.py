@@ -48,6 +48,16 @@ class Category(TimeStampedModel):
         verbose_name_plural = 'categories'
         db_table = 'services_category'
         ordering = ['position', 'name']
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(name__isnull=False) & ~models.Q(name=''),
+                name='category_name_not_empty'
+            ),
+            models.CheckConstraint(
+                check=models.Q(position__gte=0),
+                name='category_valid_position'
+            ),
+        ]
     
     def __str__(self):
         return self.name
@@ -166,6 +176,32 @@ class Service(TimeStampedModel):
         indexes = [
             models.Index(fields=['category', 'is_active']),
             models.Index(fields=['slug']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(name__isnull=False) & ~models.Q(name=''),
+                name='service_name_not_empty'
+            ),
+            models.CheckConstraint(
+                check=models.Q(duration__gt=0),
+                name='service_valid_duration'
+            ),
+            models.CheckConstraint(
+                check=models.Q(price__gt=0),
+                name='service_valid_price'
+            ),
+            models.CheckConstraint(
+                check=models.Q(capacity__gt=0),
+                name='service_valid_capacity'
+            ),
+            models.CheckConstraint(
+                check=models.Q(padding_time__gte=0),
+                name='service_valid_padding_time'
+            ),
+            models.CheckConstraint(
+                check=models.Q(approval_status__in=['approved', 'pending_approval']),
+                name='service_valid_approval_status'
+            ),
         ]
     
     def __str__(self):

@@ -74,6 +74,16 @@ class Staff(TimeStampedModel):
         indexes = [
             models.Index(fields=['is_active', 'email']),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(name__isnull=False) & ~models.Q(name=''),
+                name='staff_name_not_empty'
+            ),
+            models.CheckConstraint(
+                check=models.Q(email__isnull=False) & ~models.Q(email=''),
+                name='staff_email_not_empty'
+            ),
+        ]
     
     def __str__(self):
         return self.name
@@ -133,6 +143,16 @@ class StaffSchedule(TimeStampedModel):
         db_table = 'staff_staffschedule'
         unique_together = [['staff', 'day_of_week']]
         ordering = ['staff', 'day_of_week']
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(day_of_week__gte=0) & models.Q(day_of_week__lte=6),
+                name='staffschedule_valid_day'
+            ),
+            models.CheckConstraint(
+                check=models.Q(end_time__gt=models.F('start_time')),
+                name='staffschedule_end_after_start'
+            ),
+        ]
     
     def __str__(self):
         return f"{self.staff.name} - {self.get_day_of_week_display()} ({self.start_time} - {self.end_time})"
@@ -178,6 +198,16 @@ class StaffService(TimeStampedModel):
         db_table = 'staff_staffservice'
         unique_together = [['staff', 'service']]
         ordering = ['staff', 'service']
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(price_override__isnull=True) | models.Q(price_override__gt=0),
+                name='staffservice_valid_price_override'
+            ),
+            models.CheckConstraint(
+                check=models.Q(duration_override__isnull=True) | models.Q(duration_override__gt=0),
+                name='staffservice_valid_duration_override'
+            ),
+        ]
     
     def __str__(self):
         return f"{self.staff.name} - {self.service.name}"
@@ -227,6 +257,16 @@ class StaffArea(TimeStampedModel):
         indexes = [
             models.Index(fields=['postcode', 'is_active']),
             models.Index(fields=['staff', 'is_active']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(radius_miles__gt=0),
+                name='staffarea_valid_radius'
+            ),
+            models.CheckConstraint(
+                check=models.Q(postcode__isnull=False) & ~models.Q(postcode=''),
+                name='staffarea_postcode_not_empty'
+            ),
         ]
     
     def __str__(self):

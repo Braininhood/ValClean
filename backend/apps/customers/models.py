@@ -94,6 +94,16 @@ class Customer(TimeStampedModel):
             models.Index(fields=['postcode']),
             models.Index(fields=['user']),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(name__isnull=False) & ~models.Q(name=''),
+                name='customer_name_not_empty'
+            ),
+            models.CheckConstraint(
+                check=models.Q(email__isnull=False) & ~models.Q(email=''),
+                name='customer_email_not_empty'
+            ),
+        ]
     
     def __str__(self):
         return self.name
@@ -169,6 +179,24 @@ class Address(TimeStampedModel):
         verbose_name_plural = 'addresses'
         db_table = 'customers_address'
         ordering = ['customer', '-is_default', 'type']
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(type__in=['billing', 'service', 'other']),
+                name='address_valid_type'
+            ),
+            models.CheckConstraint(
+                check=models.Q(address_line1__isnull=False) & ~models.Q(address_line1=''),
+                name='address_line1_not_empty'
+            ),
+            models.CheckConstraint(
+                check=models.Q(city__isnull=False) & ~models.Q(city=''),
+                name='address_city_not_empty'
+            ),
+            models.CheckConstraint(
+                check=models.Q(postcode__isnull=False) & ~models.Q(postcode=''),
+                name='address_postcode_not_empty'
+            ),
+        ]
     
     def __str__(self):
         return f"{self.customer.name} - {self.address_line1}, {self.postcode}"

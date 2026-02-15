@@ -125,6 +125,7 @@ export function Navbar() {
         { href: '/ad/customers', label: 'Customers' },
         { href: '/ad/managers', label: 'Managers' },
         { href: '/ad/services', label: 'Services' },
+        { href: '/ad/coupons', label: 'Coupons' },
         { href: '/ad/reports/revenue', label: 'Reports' },
         { href: '/ad/calendar', label: 'Calendar' },
       ]

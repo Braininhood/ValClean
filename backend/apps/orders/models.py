@@ -185,6 +185,41 @@ class Order(TimeStampedModel):
             models.Index(fields=['status', 'scheduled_date']),
             models.Index(fields=['postcode']),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(status__in=['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']),
+                name='order_valid_status'
+            ),
+            models.CheckConstraint(
+                check=models.Q(payment_status__in=['pending', 'partial', 'paid', 'refunded']),
+                name='order_valid_payment_status'
+            ),
+            models.CheckConstraint(
+                check=models.Q(total_price__gte=0),
+                name='order_valid_total_price'
+            ),
+            models.CheckConstraint(
+                check=models.Q(deposit_paid__gte=0),
+                name='order_valid_deposit'
+            ),
+            models.CheckConstraint(
+                check=models.Q(cancellation_policy_hours__gt=0),
+                name='order_valid_policy_hours'
+            ),
+            models.CheckConstraint(
+                check=models.Q(order_number__isnull=False) & ~models.Q(order_number=''),
+                name='order_number_not_empty'
+            ),
+            models.CheckConstraint(
+                check=models.Q(tracking_token__isnull=False) & ~models.Q(tracking_token=''),
+                name='order_tracking_token_not_empty'
+            ),
+            # Guest orders require guest_email
+            models.CheckConstraint(
+                check=models.Q(customer__isnull=False) | (models.Q(guest_email__isnull=False) & ~models.Q(guest_email='')),
+                name='order_has_customer_or_guest_email'
+            ),
+        ]
     
     def __str__(self):
         customer_name = self.customer.name if self.customer else (self.guest_name or self.guest_email)
@@ -287,6 +322,16 @@ class ChangeRequest(TimeStampedModel):
         indexes = [
             models.Index(fields=['order', 'status']),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(status__in=['pending', 'approved', 'rejected']),
+                name='changerequest_valid_status'
+            ),
+            models.CheckConstraint(
+                check=models.Q(requested_date__isnull=False),
+                name='changerequest_has_date'
+            ),
+        ]
     
     def __str__(self):
         return f"Change request for {self.order.order_number} - {self.status}"
@@ -361,6 +406,24 @@ class OrderItem(TimeStampedModel):
             models.Index(fields=['order', 'status']),
             models.Index(fields=['service']),
             models.Index(fields=['staff']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(quantity__gte=1),
+                name='orderitem_valid_quantity'
+            ),
+            models.CheckConstraint(
+                check=models.Q(unit_price__gt=0),
+                name='orderitem_valid_unit_price'
+            ),
+            models.CheckConstraint(
+                check=models.Q(total_price__gte=0),
+                name='orderitem_valid_total_price'
+            ),
+            models.CheckConstraint(
+                check=models.Q(status__in=['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']),
+                name='orderitem_valid_status'
+            ),
         ]
     
     def __str__(self):

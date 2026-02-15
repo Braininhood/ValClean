@@ -127,6 +127,20 @@ class Appointment(TimeStampedModel):
             models.Index(fields=['subscription']),
             models.Index(fields=['order']),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(status__in=['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show']),
+                name='appointment_valid_status'
+            ),
+            models.CheckConstraint(
+                check=models.Q(appointment_type__in=['single', 'subscription', 'order_item']),
+                name='appointment_valid_type'
+            ),
+            models.CheckConstraint(
+                check=models.Q(end_time__gt=models.F('start_time')),
+                name='appointment_end_after_start'
+            ),
+        ]
     
     def __str__(self):
         return f"{self.service.name} - {self.staff.name} - {self.start_time.strftime('%Y-%m-%d %H:%M')}"
@@ -228,6 +242,28 @@ class CustomerAppointment(TimeStampedModel):
             models.Index(fields=['customer']),
             models.Index(fields=['cancellation_token']),
             models.Index(fields=['can_cancel', 'can_reschedule']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(number_of_persons__gte=1),
+                name='customerappointment_valid_persons'
+            ),
+            models.CheckConstraint(
+                check=models.Q(total_price__gte=0),
+                name='customerappointment_valid_total_price'
+            ),
+            models.CheckConstraint(
+                check=models.Q(deposit_paid__gte=0),
+                name='customerappointment_valid_deposit'
+            ),
+            models.CheckConstraint(
+                check=models.Q(payment_status__in=['pending', 'partial', 'paid', 'refunded']),
+                name='customerappointment_valid_payment_status'
+            ),
+            models.CheckConstraint(
+                check=models.Q(cancellation_policy_hours__gt=0),
+                name='customerappointment_valid_policy_hours'
+            ),
         ]
     
     def __str__(self):

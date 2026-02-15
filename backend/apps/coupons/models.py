@@ -126,6 +126,45 @@ class Coupon(TimeStampedModel):
             models.Index(fields=['code']),
             models.Index(fields=['status', 'valid_from', 'valid_until']),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(discount_type__in=['percentage', 'fixed']),
+                name='coupon_valid_discount_type'
+            ),
+            models.CheckConstraint(
+                check=models.Q(status__in=['active', 'inactive', 'expired']),
+                name='coupon_valid_status'
+            ),
+            models.CheckConstraint(
+                check=models.Q(discount_value__gt=0),
+                name='coupon_valid_discount_value'
+            ),
+            # Percentage discounts cannot exceed 100%
+            models.CheckConstraint(
+                check=models.Q(discount_type='fixed') | models.Q(discount_value__lte=100),
+                name='coupon_percentage_max_100'
+            ),
+            models.CheckConstraint(
+                check=models.Q(used_count__gte=0),
+                name='coupon_valid_used_count'
+            ),
+            models.CheckConstraint(
+                check=models.Q(max_uses__isnull=True) | models.Q(max_uses__gte=1),
+                name='coupon_valid_max_uses'
+            ),
+            models.CheckConstraint(
+                check=models.Q(max_uses_per_customer__isnull=True) | models.Q(max_uses_per_customer__gte=1),
+                name='coupon_valid_max_uses_per_customer'
+            ),
+            models.CheckConstraint(
+                check=models.Q(minimum_order_amount__gte=0),
+                name='coupon_valid_minimum_order_amount'
+            ),
+            models.CheckConstraint(
+                check=models.Q(code__isnull=False) & ~models.Q(code=''),
+                name='coupon_code_not_empty'
+            ),
+        ]
     
     def __str__(self):
         return f"{self.code} - {self.name}"
@@ -290,6 +329,29 @@ class CouponUsage(TimeStampedModel):
             models.Index(fields=['coupon', 'customer']),
             models.Index(fields=['order']),
             models.Index(fields=['subscription']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(discount_amount__gte=0),
+                name='couponusage_valid_discount_amount'
+            ),
+            models.CheckConstraint(
+                check=models.Q(order_amount__gt=0),
+                name='couponusage_valid_order_amount'
+            ),
+            models.CheckConstraint(
+                check=models.Q(final_amount__gte=0),
+                name='couponusage_valid_final_amount'
+            ),
+            models.CheckConstraint(
+                check=models.Q(final_amount__lte=models.F('order_amount')),
+                name='couponusage_final_not_exceeds_order'
+            ),
+            # Must have either customer or guest_email
+            models.CheckConstraint(
+                check=models.Q(customer__isnull=False) | (models.Q(guest_email__isnull=False) & ~models.Q(guest_email='')),
+                name='couponusage_has_customer_or_guest_email'
+            ),
         ]
     
     def __str__(self):

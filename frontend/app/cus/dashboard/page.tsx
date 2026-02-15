@@ -3,7 +3,7 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { DashboardLayout } from '@/components/layouts/DashboardLayout'
 import { apiClient } from '@/lib/api/client'
-import { CUSTOMER_ENDPOINTS } from '@/lib/api/endpoints'
+import { CUSTOMER_ENDPOINTS, PUBLIC_ENDPOINTS } from '@/lib/api/endpoints'
 import type { Appointment } from '@/types/appointment'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -18,6 +18,7 @@ export default function CustomerDashboard() {
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([])
   const [recentOrders, setRecentOrders] = useState<any[]>([])
   const [recentSubscriptions, setRecentSubscriptions] = useState<any[]>([])
+  const [activeCoupons, setActiveCoupons] = useState<{ code: string; name: string; discount_type: string; discount_value: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [stats, setStats] = useState({
@@ -83,6 +84,21 @@ export default function CustomerDashboard() {
         const subList = Array.isArray(subData) ? subData : []
         setRecentSubscriptions(subList.slice(0, 3))
         setStats(prev => ({ ...prev, subscriptionsCount: subList.length }))
+      } catch {
+        // ignore
+      }
+
+      // 4. Active coupons (offers) – public endpoint
+      try {
+        const couponRes = await apiClient.get(PUBLIC_ENDPOINTS.COUPONS.ACTIVE)
+        const couponData = (couponRes.data as { success?: boolean; data?: any[] }).data
+        const list = Array.isArray(couponData) ? couponData : []
+        setActiveCoupons(list.map((c: any) => ({
+          code: c.code,
+          name: c.name || c.code,
+          discount_type: c.discount_type,
+          discount_value: c.discount_value,
+        })))
       } catch {
         // ignore
       }
@@ -154,6 +170,40 @@ export default function CustomerDashboard() {
           {error && (
             <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-6">
               {error}
+            </div>
+          )}
+
+          {/* Current offers (active coupons) */}
+          {activeCoupons.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-2xl font-semibold mb-4">Current offers</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Use these codes at checkout when you book to get a discount.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeCoupons.map((c) => (
+                  <div
+                    key={c.code}
+                    className="bg-card border rounded-lg p-4 flex items-center justify-between gap-3"
+                  >
+                    <div>
+                      <div className="font-mono font-semibold text-primary">{c.code}</div>
+                      <div className="text-sm text-muted-foreground">{c.name}</div>
+                      <div className="text-xs mt-1">
+                        {c.discount_type === 'percentage'
+                          ? `${c.discount_value}% off`
+                          : `£${parseFloat(c.discount_value).toFixed(2)} off`}
+                      </div>
+                    </div>
+                    <Link
+                      href="/booking"
+                      className="shrink-0 text-sm font-medium text-primary hover:underline"
+                    >
+                      Book & use →
+                    </Link>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
