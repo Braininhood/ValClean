@@ -257,510 +257,499 @@ The Next.js frontend will be available at `http://localhost:3000`
 [Add your license here]
 
 
-*Status:** In Development - Core Features Implementation Phase
+# Customer Requirements Document
+
+**Purpose:** Information needed from customers/mentors to properly configure the G.Creators platform
 
 ---
 
-## 🎯 Current State vs Required Features
+## 👤 Information Needed from Each Mentor
 
-### ✅ What's Already Done:
-- Homepage and navigation
-- Mentor browsing and profiles
-- User authentication (Supabase)
-- Basic dashboard structure
-- AI avatar creation capability for mentors
-- Stripe payment system connected (needs configuration)
-- Responsive design
-
-### 🔴 What Needs Implementation:
-
-#### 1. **Stripe Payment System Configuration**
-**Status:** Connected but not properly configured  
-**Priority:** 🔴 Critical
-
-**Requirements:**
-- Configure payment acceptance for consultation bookings
-- Set up payment processing for digital product purchases
-- Implement proper payment flow (checkout → confirmation → delivery)
-- Configure webhooks for payment status updates
-- Handle refunds and disputes
-- Set up mentor payout system (Stripe Connect)
+### 1. **Profile & Expertise** (Already Collected)
+- [ ] Full name
+- [ ] Professional title
+- [ ] Areas of expertise
+- [ ] Biography
+- [ ] Profile photo
+- [ ] Social media links
 
 ---
 
-#### 2. **Consultation Booking with Calendar Integration**
-**Status:** Not implemented  
-**Priority:** 🔴 Critical
+### 2. **Payment & Payout Information** 🔴 CRITICAL
 
-**Requirements:**
-- User can select available time slots from mentor's calendar
-- Booking automatically added to mentor's calendar
-- Booking automatically added to user's calendar
-- Email notifications sent to both parties
-- Calendar sync with Google Calendar / Outlook
-- Booking confirmation and reminders
-- Cancellation and rescheduling functionality
-- Time zone handling
+#### Stripe Account Setup:
+- [ ] **Legal business name** (or personal name if sole proprietor)
+- [ ] **Business type:**
+  - [ ] Individual/Sole Proprietor
+  - [ ] Company/LLC
+  - [ ] Non-profit
+- [ ] **Tax ID:** (EIN for US, VAT for EU, etc.)
+- [ ] **Country of residence**
+- [ ] **Bank account information:**
+  - Bank name
+  - Account holder name
+  - Account number
+  - Routing number (US) or IBAN (International)
+  - SWIFT/BIC code (for international)
 
----
+#### Payment Preferences:
+- [ ] **Payout schedule:** Weekly / Bi-weekly / Monthly
+- [ ] **Minimum payout threshold:** (e.g., $50, $100)
+- [ ] **Currency preference:** USD / EUR / UAH / Other
 
-#### 3. **AI Avatar for Consultations**
-**Status:** Avatar creation done, consultation functionality missing  
-**Priority:** 🟡 High
+#### Platform Fees Agreement:
+- [ ] Accept platform commission rate (e.g., 15-20% per transaction)
+- [ ] Understand Stripe processing fees (2.9% + $0.30)
 
-**Requirements:**
-- AI avatar can answer questions about mentor's digital products
-- AI avatar can provide consultations on mentor's services
-- Avatar trained on mentor's knowledge base
-- Avatar can handle text-based conversations
-- Avatar can provide voice responses (optional)
-- Integration with chat system
-- Usage limits and token tracking
-
----
-
-#### 4. **Digital Products Scaling (Multi-language & Format Conversion)**
-**Status:** Not implemented  
-**Priority:** 🟡 High
-
-**Requirements:**
-- Automatic translation of digital products to multiple languages
-- Format conversion capabilities:
-  - Video → Text transcript
-  - Video → Presentation (slides)
-  - PDF → Text
-  - Audio → Text transcript
-  - Text → Multiple formats
-- Language support: English, Ukrainian, Spanish, French, German (minimum)
-- Quality control for translations
-- Preview before publishing scaled versions
+**Important Notes:**
+- Stripe will require ID verification (passport or driver's license)
+- Some countries require additional business documentation
+- Payouts may take 2-7 days depending on country
 
 ---
 
-## 📋 Step-by-Step Implementation Plan
+### 3. **Consultation Services** 🔴 CRITICAL
 
-### Phase 1: Critical Foundation (Weeks 1-2)
-**Goal:** Get core monetization working
+#### Consultation Types:
+For each consultation type offered:
 
-#### Week 1: Stripe Payment Configuration
-- [ ] **Day 1-2: Payment Flow Design**
-  - Design checkout flow for consultations
-  - Design checkout flow for digital products
-  - Create payment confirmation pages
-  
-- [ ] **Day 3-4: Stripe Integration**
-  - Configure Stripe Checkout for consultations
-  - Configure Stripe Checkout for digital products
-  - Set up Stripe webhooks endpoint
-  - Handle payment success/failure events
-  
-- [ ] **Day 5-7: Mentor Payouts**
-  - Set up Stripe Connect for mentor accounts
-  - Implement payout schedule (weekly/monthly)
-  - Create payout dashboard for mentors
-  - Handle platform fees (commission)
+**Type 1:** (e.g., "1-on-1 Strategy Session")
+- [ ] **Service name**
+- [ ] **Description** (what's included)
+- [ ] **Duration:** ___ minutes (e.g., 30, 60, 90)
+- [ ] **Price:** $___ USD (or other currency)
+- [ ] **Delivery method:**
+  - [ ] Video call (Zoom/Google Meet link)
+  - [ ] Phone call
+  - [ ] In-person (if applicable)
+  - [ ] Chat-based
+- [ ] **Preparation required:** (e.g., "Send questions 24h in advance")
+- [ ] **Booking lead time:** (e.g., "Must book at least 48h in advance")
 
-#### Week 2: Booking System
-- [ ] **Day 1-2: Database Schema**
-  - Create `bookings` table in Supabase
-  - Create `availability_slots` table
-  - Create `calendars` table
-  - Set up relationships and constraints
-  
-- [ ] **Day 3-4: Availability Management**
-  - Build mentor availability setting interface
-  - Create calendar view component
-  - Allow recurring availability rules
-  - Handle time zone conversion
-  
-- [ ] **Day 5-7: Booking Flow**
-  - Build user booking interface
-  - Implement time slot selection
-  - Connect to Stripe payment
-  - Create booking confirmation
-  - Send email notifications
+**Type 2:** (repeat for each service)
+- [ ] Same information as above
+
+**Type 3:** (e.g., "Group Workshop")
+- [ ] Same information as above
+- [ ] **Maximum participants:** ___ people
+- [ ] **Group pricing:** $___
+
+#### Cancellation Policy:
+- [ ] **Cancellation deadline:** ___ hours before session
+- [ ] **Refund policy:**
+  - Full refund if canceled ___+ hours before
+  - 50% refund if canceled ___-___ hours before
+  - No refund if canceled less than ___ hours before
+- [ ] **Rescheduling policy:** (allowed/not allowed, how many times)
 
 ---
 
-### Phase 2: Calendar Integration (Week 3)
-**Goal:** Automatic calendar sync
+### 4. **Availability & Calendar** 🔴 CRITICAL
 
-- [ ] **Day 1-2: Calendar API Integration**
-  - Integrate Google Calendar API
-  - Integrate Microsoft Outlook API
-  - Handle OAuth authentication
-  
-- [ ] **Day 3-4: Two-Way Sync**
-  - Add bookings to mentor's calendar
-  - Add bookings to user's calendar
-  - Handle calendar updates (cancellations)
-  - Sync external calendar blocks to availability
-  
-- [ ] **Day 5-7: Notifications & Reminders**
-  - Email notification system
-  - SMS reminders (optional - Twilio)
-  - In-app notifications
-  - Reminder schedule (24h, 1h before)
+#### General Availability:
+Mark available times (in mentor's local time zone):
 
----
+**Monday:**
+- [ ] Available: Yes / No
+- Times: __:__ AM/PM to __:__ AM/PM
 
-### Phase 3: AI Avatar Consultations (Weeks 4-5)
-**Goal:** AI avatar can answer questions and provide consultations
+**Tuesday:**
+- [ ] Available: Yes / No
+- Times: __:__ AM/PM to __:__ AM/PM
 
-#### Week 4: AI Avatar Backend
-- [ ] **Day 1-2: Knowledge Base System**
-  - Create `mentor_knowledge_base` table
-  - Build upload interface for mentor content
-  - Implement content processing pipeline
-  - Store embeddings for RAG (Retrieval Augmented Generation)
-  
-- [ ] **Day 3-4: AI Integration**
-  - Choose AI provider (see recommendations below)
-  - Set up vector database (Supabase pgvector or Pinecone)
-  - Implement RAG query system
-  - Create AI response generation
-  
-- [ ] **Day 5-7: Chat Interface**
-  - Build chat UI for AI avatar
-  - Real-time message streaming
-  - Handle conversation context
-  - Implement usage tracking
+**Wednesday:**
+- [ ] Available: Yes / No
+- Times: __:__ AM/PM to __:__ AM/PM
 
-#### Week 5: AI Avatar Features
-- [ ] **Day 1-3: Product & Service Consultation**
-  - Train avatar on digital product details
-  - Train avatar on service offerings
-  - Implement product recommendations
-  - Handle purchase assistance
-  
-- [ ] **Day 4-5: Voice Integration (Optional)**
-  - Text-to-speech for avatar responses
-  - Voice selection for mentor avatar
-  
-- [ ] **Day 6-7: Limits & Monitoring**
-  - Set conversation limits per user
-  - Track token usage per mentor
-  - Cost monitoring dashboard
-  - Quality assurance logging
+**Thursday:**
+- [ ] Available: Yes / No
+- Times: __:__ AM/PM to __:__ AM/PM
+
+**Friday:**
+- [ ] Available: Yes / No
+- Times: __:__ AM/PM to __:__ AM/PM
+
+**Saturday:**
+- [ ] Available: Yes / No
+- Times: __:__ AM/PM to __:__ AM/PM
+
+**Sunday:**
+- [ ] Available: Yes / No
+- Times: __:__ AM/PM to __:__ AM/PM
+
+#### Calendar Integration:
+- [ ] **Primary calendar:** Google Calendar / Outlook / Apple Calendar / Other
+- [ ] **Google Calendar email:** ________________@gmail.com
+- [ ] **Microsoft account email:** ________________@outlook.com
+- [ ] **Grant calendar access:** (mentor must authorize during setup)
+
+#### Booking Settings:
+- [ ] **Time zone:** (e.g., "Europe/Kyiv", "America/New_York")
+- [ ] **Buffer time between bookings:** ___ minutes
+- [ ] **Advance booking limit:** ___ days ahead
+- [ ] **Same-day bookings allowed:** Yes / No
 
 ---
 
-### Phase 4: Content Scaling (Weeks 6-7)
-**Goal:** Multi-language and format conversion
+### 5. **Digital Products** 🟡 HIGH PRIORITY
 
-#### Week 6: Translation System
-- [ ] **Day 1-2: Translation Infrastructure**
-  - Choose translation service (see recommendations)
-  - Set up API integration
-  - Create translation queue system
-  
-- [ ] **Day 3-5: Content Translation**
-  - Implement text translation
-  - Translate product titles/descriptions
-  - Translate course content
-  - Handle technical terms dictionary
-  
-- [ ] **Day 6-7: Quality Control**
-  - Manual review interface
-  - Edit translated content
-  - Approval workflow
-  - Preview translations
+For each digital product:
 
-#### Week 7: Format Conversion
-- [ ] **Day 1-2: Video Processing**
-  - Video transcription (Speech-to-Text)
-  - Generate subtitles
-  - Extract key frames
-  
-- [ ] **Day 3-4: Document Conversion**
-  - Video → Text document
-  - Video → Presentation (slide extraction)
-  - PDF → Text
-  - Audio → Text
-  
-- [ ] **Day 5-7: Format Generation**
-  - Generate multiple formats per product
-  - Create product bundles (all formats)
-  - Pricing for different formats
-  - Download management
+**Product 1:**
+- [ ] **Product name**
+- [ ] **Category:** Course / eBook / Template / Video / Other: _______
+- [ ] **Description:** (detailed, what customer will get)
+- [ ] **Price:** $___ USD
+- [ ] **File(s) to upload:**
+  - File name: ____________
+  - File type: PDF / Video (MP4) / Audio / ZIP / Other
+  - File size: ___ MB/GB
+- [ ] **Preview/sample:** (optional, for customers to see before buying)
+- [ ] **Delivery method:** 
+  - [ ] Instant download after purchase
+  - [ ] Email delivery
+  - [ ] Access to online portal
+
+**Product 2:** (repeat for each product)
+- Same information as above
+
+#### Product Settings:
+- [ ] **Allow refunds:** Yes / No
+  - If yes, within ___ days
+  - Conditions: _________________
+- [ ] **Product updates:** Will you provide updates? Yes / No
+- [ ] **Support included:** Email support / No support / Community forum
 
 ---
 
-### Phase 5: Integration & Testing (Week 8)
-**Goal:** Everything works together
+### 6. **AI Avatar Configuration** 🟡 HIGH PRIORITY
 
-- [ ] **Day 1-3: Integration Testing**
-  - Test complete booking flow with payment
-  - Test AI avatar with real knowledge base
-  - Test translation and conversion pipelines
-  - Fix integration bugs
-  
-- [ ] **Day 4-5: User Testing**
-  - Internal team testing
-  - Beta user testing
-  - Collect feedback
-  - Prioritize fixes
-  
-- [ ] **Day 6-7: Performance Optimization**
-  - Optimize database queries
-  - Implement caching
-  - Optimize API calls
-  - Load testing
+#### Knowledge Base Content:
+Upload materials for AI avatar training:
 
----
+- [ ] **About you:** Biography, credentials, experience (200-500 words)
+- [ ] **Teaching philosophy:** Your approach and methods
+- [ ] **Frequently asked questions:** List of common questions + answers
+- [ ] **Product knowledge:** Detailed info about each digital product/service
+- [ ] **Sample conversations:** Examples of how you'd answer questions
+- [ ] **Additional resources:**
+  - [ ] Blog posts / articles you've written
+  - [ ] Transcripts from previous consultations (anonymized)
+  - [ ] Course outlines or curricula
+  - [ ] Presentation slides
 
-### Phase 6: Launch Preparation (Week 9-10)
-**Goal:** Production-ready platform
+#### Avatar Personality Settings:
+- [ ] **Tone:** Professional / Friendly / Casual / Formal / Mix
+- [ ] **Communication style:**
+  - [ ] Direct and concise
+  - [ ] Detailed and thorough
+  - [ ] Conversational
+  - [ ] Academic/Technical
+- [ ] **Language(s) avatar should support:**
+  - [ ] English
+  - [ ] Ukrainian
+  - [ ] Russian
+  - [ ] Spanish
+  - [ ] Other: __________
 
-#### Week 9: Polish & Documentation
-- [ ] Create user onboarding flow
-- [ ] Write help documentation
-- [ ] Create video tutorials
-- [ ] Set up customer support system
-- [ ] Prepare marketing materials
+#### Avatar Limitations:
+- [ ] **Topics avatar should NOT discuss:** _________________
+- [ ] **Disclaimer text:** (e.g., "This is an AI assistant. For detailed advice, book a consultation.")
+- [ ] **Conversation limits:**
+  - [ ] Max ___ messages per user per day
+  - [ ] Max ___ characters per response
+- [ ] **When to refer to human mentor:** (e.g., "Complex technical questions", "Pricing negotiations")
 
-#### Week 10: Final Testing & Launch
-- [ ] Security audit
-- [ ] Performance testing
-- [ ] Payment testing (test mode → live mode)
-- [ ] Backup systems in place
-- [ ] Monitoring and alerts set up
-- [ ] **🚀 LAUNCH**
-
----
-
-## 🛠️ Technical Stack Recommendations
-
-### Required Services:
-
-#### 1. **Backend & Database**
-- ✅ **Supabase** (Already in use)
-  - PostgreSQL database
-  - Authentication
-  - Real-time subscriptions
-  - Storage for files
-  - Edge Functions for serverless logic
-
-#### 2. **Payment Processing**
-- ✅ **Stripe** (Already connected)
-  - Stripe Checkout for payments
-  - Stripe Connect for mentor payouts
-  - Webhooks for event handling
-  - Cost: 2.9% + $0.30 per transaction
-
-#### 3. **AI Services** (Price/Quality Recommendations)
-
-**Option A: OpenAI (Best Quality, Higher Cost)**
-- **GPT-4o**: $2.50 per 1M input tokens, $10.00 per 1M output tokens
-- **Best for:** Complex consultations, high-quality responses
-- **Embeddings:** $0.13 per 1M tokens
-- **Estimated monthly cost:** $200-500 for 50-100 active mentors
-
-**Option B: Anthropic Claude (Balanced)**
-- **Claude 3.5 Sonnet**: $3.00 per 1M input tokens, $15.00 per 1M output tokens
-- **Best for:** Detailed explanations, safer responses
-- **Estimated monthly cost:** $250-600 for 50-100 active mentors
-
-**Option C: Google Gemini (Budget-Friendly)**
-- **Gemini 1.5 Flash**: $0.075 per 1M input tokens, $0.30 per 1M output tokens
-- **Best for:** Fast responses, cost optimization
-- **Estimated monthly cost:** $50-150 for 50-100 active mentors
-
-**Recommendation: Start with Gemini Flash (cheapest), upgrade to GPT-4o for premium mentors**
-
-#### 4. **Vector Database for AI**
-
-**Option A: Supabase pgvector (Recommended)**
-- **Pros:** Already using Supabase, no extra cost, easy integration
-- **Cons:** Limited to PostgreSQL performance
-- **Cost:** Included in Supabase plan
-
-**Option B: Pinecone**
-- **Pros:** Purpose-built for vectors, very fast
-- **Cons:** Additional service to manage
-- **Cost:** $70/month for 5M vectors
-
-**Recommendation: Use Supabase pgvector initially**
-
-#### 5. **Translation Services**
-
-**Option A: Google Cloud Translation API (Recommended)**
-- **Cost:** $20 per 1M characters
-- **Supports:** 100+ languages
-- **Quality:** Very good
-- **Estimated monthly:** $50-100
-
-**Option B: DeepL API**
-- **Cost:** $5.49 per 1M characters (Free plan: 500k/month)
-- **Supports:** 30+ languages
-- **Quality:** Excellent (better than Google for European languages)
-- **Estimated monthly:** $30-60
-
-**Recommendation: DeepL for European languages, Google for others**
-
-#### 6. **Speech-to-Text (Video Transcription)**
-
-**Option A: OpenAI Whisper API (Recommended)**
-- **Cost:** $0.006 per minute of audio
-- **Quality:** Excellent, very accurate
-- **Supports:** 50+ languages
-- **Estimated monthly:** $50-100 for 100-200 hours
-
-**Option B: Google Cloud Speech-to-Text**
-- **Cost:** $0.006 per 15 seconds ($0.024/minute)
-- **Quality:** Very good
-- **Estimated monthly:** $200-400 for 100-200 hours
-
-**Recommendation: OpenAI Whisper (best price/quality)**
-
-#### 7. **Text-to-Speech (AI Avatar Voice)**
-
-**Option A: ElevenLabs (Best Quality)**
-- **Cost:** $99/month for 100k characters
-- **Quality:** Most natural, can clone voices
-- **Best for:** Premium avatar experience
-
-**Option B: Google Cloud Text-to-Speech**
-- **Cost:** $16 per 1M characters
-- **Quality:** Good
-- **Estimated monthly:** $20-40
-
-**Recommendation: ElevenLabs for premium, Google for standard**
-
-#### 8. **Calendar Integration**
-
-**Google Calendar API**
-- **Cost:** Free
-- **Setup:** OAuth 2.0 authentication
-
-**Microsoft Graph API (Outlook)**
-- **Cost:** Free
-- **Setup:** OAuth 2.0 authentication
-
-#### 9. **Email Notifications**
-
-**Option A: Resend (Recommended)**
-- **Cost:** Free for 3,000 emails/month, then $20/month for 50k
-- **Pros:** Modern API, easy setup
-- **Best for:** Transactional emails
-
-**Option B: SendGrid**
-- **Cost:** Free for 100 emails/day, then $19.95/month for 50k
-- **Pros:** Established, reliable
-
-**Recommendation: Resend**
-
-#### 10. **File Storage & CDN**
-
-**Supabase Storage (Recommended)**
-- **Cost:** Included in Supabase plan
-- **50 GB storage in free tier**
-- **CDN included**
-
-**Alternative: Cloudflare R2 + CDN**
-- **Cost:** $0.015 per GB storage/month
-- **No egress fees**
-- **Better for large video files**
+#### Voice Settings (Optional):
+- [ ] **Enable voice responses:** Yes / No
+- [ ] **Voice type:** Male / Female / Neutral
+- [ ] **Voice sample:** (upload 30-60 second audio of your voice for cloning)
+- [ ] **Accent/language:** _________________
 
 ---
 
-## 💰 Estimated Monthly Costs (50-100 Active Mentors)
+### 7. **Content Localization Preferences** 🟡 HIGH PRIORITY
 
-| Service | Low Estimate | High Estimate |
-|---------|--------------|---------------|
-| Supabase (Pro) | $25 | $25 |
-| Stripe fees | $300 | $800 |
-| AI API (Gemini) | $50 | $150 |
-| Translation (DeepL) | $0 | $60 |
-| Whisper (Transcription) | $50 | $100 |
-| Text-to-Speech | $20 | $99 |
-| Email (Resend) | $0 | $20 |
-| **Total** | **$445** | **$1,254** |
+#### Languages to Support:
+Which languages should your content be available in?
 
-**Note:** Stripe fees depend on transaction volume (assumed $10-25k GMV)
+- [ ] **English** (original)
+- [ ] **Ukrainian**
+- [ ] **Russian**
+- [ ] **Spanish**
+- [ ] **French**
+- [ ] **German**
+- [ ] **Polish**
+- [ ] **Portuguese**
+- [ ] Other: __________
 
----
+#### Translation Preferences:
+- [ ] **Review translations before publishing:** Yes / No
+  - If yes, who will review? _________________
+- [ ] **Technical terms dictionary:** (list terms that should NOT be translated)
+  - Example: "Machine Learning" → keep in English, don't translate
+  - Term 1: _________________
+  - Term 2: _________________
+- [ ] **Cultural adaptation:** Allow content adaptation for different cultures? Yes / No
 
-## 📊 Estimated Development Effort
+#### Format Conversion Preferences:
+Which formats should be generated from your content?
 
-| Phase | Duration | Complexity |
-|-------|----------|------------|
-| Stripe Configuration | 1 week | Medium |
-| Booking System | 2 weeks | High |
-| Calendar Integration | 1 week | Medium |
-| AI Avatar Consultations | 2 weeks | High |
-| Content Scaling | 2 weeks | High |
-| Integration & Testing | 1 week | Medium |
-| Launch Preparation | 2 weeks | Low |
-| **TOTAL** | **10-11 weeks** | - |
+For **Video content**, create:
+- [ ] Text transcript (searchable document)
+- [ ] PDF guide (formatted document)
+- [ ] Presentation slides (key points extracted)
+- [ ] Audio-only version (MP3)
+- [ ] Subtitles/captions file (SRT)
 
-**Team recommendation:**
-- 1 Full-stack developer
-- 1 AI/ML specialist (part-time)
-- 1 QA tester (part-time)
+For **Text content** (eBooks, guides), create:
+- [ ] PDF (formatted)
+- [ ] EPUB (e-reader format)
+- [ ] Audio version (text-to-speech)
+- [ ] Presentation slides
+- [ ] Summary/cheat sheet
 
----
-
-## 🎯 Success Metrics
-
-After implementation, track these metrics:
-
-### Revenue Metrics:
-- [ ] Consultation booking rate
-- [ ] Digital product purchase rate
-- [ ] Average transaction value
-- [ ] Monthly recurring revenue (MRR)
-- [ ] Mentor payout accuracy
-
-### User Engagement:
-- [ ] AI avatar usage rate
-- [ ] Average consultation duration
-- [ ] Content download rate
-- [ ] Multi-language content adoption
-- [ ] Repeat purchase rate
-
-### Technical Metrics:
-- [ ] Payment success rate (target: >95%)
-- [ ] Calendar sync reliability (target: >99%)
-- [ ] AI response quality (user ratings)
-- [ ] Translation accuracy (manual review)
-- [ ] System uptime (target: 99.9%)
+Pricing for different formats:
+- [ ] **Same price for all formats** (bundle)
+- [ ] **Different pricing:**
+  - Video: $___ 
+  - Text: $___
+  - Audio: $___
+  - Presentation: $___
 
 ---
 
-## 🚨 Risk Mitigation
+### 8. **Communication & Notifications** 📧
 
-### Payment Risks:
-- Implement fraud detection
-- Set up dispute handling process
-- Test thoroughly in Stripe test mode
-- Have backup payment provider ready
+#### Contact Information:
+- [ ] **Email:** _________________ (for bookings, payments)
+- [ ] **Phone:** _________________ (optional, for urgent notifications)
+- [ ] **Preferred notification method:**
+  - [ ] Email
+  - [ ] SMS
+  - [ ] In-app notifications only
 
-### AI Risks:
-- Set usage limits to control costs
-- Monitor for inappropriate responses
-- Implement content filtering
-- Have human fallback option
+#### Notification Preferences:
+Which notifications do you want to receive?
 
-### Data Risks:
-- Regular database backups
-- Encryption for sensitive data
-- GDPR/privacy compliance
-- Data retention policies
+- [ ] **New booking confirmed** (Email / SMS / In-app)
+- [ ] **Booking canceled by user** (Email / SMS / In-app)
+- [ ] **Booking approaching** (1 day before, 1 hour before)
+- [ ] **Payment received** (Email / In-app)
+- [ ] **New message from user** (Email / In-app)
+- [ ] **Product purchased** (Email / In-app)
+- [ ] **Review/rating received** (Email / In-app)
+- [ ] **Monthly earnings report** (Email)
+
+#### Booking Confirmation Settings:
+- [ ] **Automatic confirmation:** Yes (instant) / No (manual approval)
+- [ ] **Confirmation message template:** (customize the message sent to users)
+  - Example: "Thank you for booking! I'm looking forward to our session. Here's what to prepare..."
+- [ ] **Include in confirmation:**
+  - [ ] Video call link (Zoom/Google Meet)
+  - [ ] Phone number
+  - [ ] Preparation instructions
+  - [ ] Cancellation policy reminder
 
 ---
 
-## 📞 Next Steps
+### 9. **Video Call Integration** 🎥
 
-1. Review this roadmap with development team
-2. Gather customer requirements (see CUSTOMER_REQUIREMENTS.md)
-3. Set up development environment for new features
-4. Begin Phase 1 implementation
-5. Set up monitoring and analytics
+#### Video Platform Preference:
+- [ ] **Zoom**
+  - Zoom account email: _________________
+  - Personal Meeting ID: _________________
+  - OR: Generate unique link per booking
+- [ ] **Google Meet**
+  - Google account: _________________
+  - Generate unique link per booking
+- [ ] **Microsoft Teams**
+  - Teams account: _________________
+- [ ] **Other:** _________ (provide details)
+
+#### Meeting Settings:
+- [ ] **Waiting room:** Enabled / Disabled
+- [ ] **Recording allowed:** Yes (with permission) / No
+- [ ] **Screen sharing:** Enabled / Disabled
 
 ---
 
-**Document Status:** Draft for Review  
-**Requires:** Customer requirements gathering + Team approval  
-**Timeline:** 10-11 weeks to fully functional MVP
+### 10. **Legal & Compliance** ⚖️
 
+#### Terms & Policies:
+- [ ] **Accept platform Terms of Service**
+- [ ] **Accept payment processing terms** (Stripe)
+- [ ] **Privacy policy acknowledgment**
+- [ ] **Data handling consent** (customer data, recordings, etc.)
+
+#### Content Rights:
+- [ ] **Confirm you own rights to all uploaded content**
+- [ ] **Grant platform license to:**
+  - [ ] Host and distribute your content
+  - [ ] Create translations
+  - [ ] Create format conversions
+  - [ ] Use for AI avatar training
+  - [ ] Use excerpts for marketing (with attribution)
+
+#### Tax Information:
+- [ ] **Country of tax residence:** _________________
+- [ ] **Tax ID / VAT number:** _________________
+- [ ] **Tax exempt:** Yes / No
+- [ ] **W-9 form** (US mentors) - to be provided
+- [ ] **W-8BEN form** (Non-US mentors) - to be provided
+
+---
+
+### 11. **Marketing & Visibility** 📢
+
+#### Profile Visibility:
+- [ ] **Public profile:** Visible to all users
+- [ ] **Searchable:** Appear in search results
+- [ ] **Featured mentor:** (requires approval + fee)
+
+#### Marketing Materials:
+- [ ] **Professional headshot:** (high resolution, 1000x1000px min)
+- [ ] **Intro video:** (30-60 seconds, optional but recommended)
+- [ ] **Portfolio/work samples:** (links or uploads)
+- [ ] **Testimonials:** (from previous clients, 3-5 recommended)
+- [ ] **Certifications:** (copies of certificates, licenses)
+
+#### Social Proof:
+- [ ] **LinkedIn profile:** https://linkedin.com/in/_________
+- [ ] **Personal website:** https://_________________
+- [ ] **YouTube channel:** https://youtube.com/@_________
+- [ ] **Other professional profiles:** _________________
+
+---
+
+### 12. **Additional Preferences** ⚙️
+
+#### User Matching:
+Help AI match you with right users:
+- [ ] **Ideal client profile:** (who benefits most from your services)
+- [ ] **Experience level you work with:**
+  - [ ] Beginners
+  - [ ] Intermediate
+  - [ ] Advanced
+  - [ ] All levels
+- [ ] **Age group preference:** (if applicable)
+- [ ] **Industry focus:** (if applicable)
+
+#### Special Requirements:
+- [ ] **Accessibility needs:** (e.g., provide captions, transcripts)
+- [ ] **Content warnings:** (if your content discusses sensitive topics)
+- [ ] **Prerequisites:** (what users should know/have before booking)
+
+---
+
+## 📋 Onboarding Checklist
+
+Complete these steps during mentor onboarding:
+
+### Step 1: Profile Setup (10 minutes)
+- [ ] Fill out profile information
+- [ ] Upload profile photo
+- [ ] Write biography
+- [ ] Add expertise tags
+
+### Step 2: Payment Setup (15 minutes)
+- [ ] Create/connect Stripe account
+- [ ] Verify identity with Stripe
+- [ ] Add bank account information
+- [ ] Review and accept fee structure
+
+### Step 3: Services Setup (20 minutes)
+- [ ] Define consultation types
+- [ ] Set pricing for each service
+- [ ] Upload digital products (if applicable)
+- [ ] Set cancellation policies
+
+### Step 4: Calendar Setup (10 minutes)
+- [ ] Connect Google/Outlook calendar
+- [ ] Set weekly availability
+- [ ] Configure booking buffer times
+- [ ] Set time zone
+
+### Step 5: AI Avatar Setup (30 minutes)
+- [ ] Upload knowledge base content
+- [ ] Configure avatar personality
+- [ ] Test avatar responses
+- [ ] Set conversation limits
+
+### Step 6: Content Localization (Optional, 15 minutes)
+- [ ] Select languages for translation
+- [ ] Provide technical terms dictionary
+- [ ] Choose format conversions
+- [ ] Set pricing for formats
+
+### Step 7: Communication Setup (5 minutes)
+- [ ] Configure notification preferences
+- [ ] Set up video call integration
+- [ ] Customize confirmation messages
+
+### Step 8: Legal & Compliance (10 minutes)
+- [ ] Accept Terms of Service
+- [ ] Confirm content ownership
+- [ ] Provide tax information
+- [ ] Sign mentor agreement
+
+### Step 9: Review & Launch (5 minutes)
+- [ ] Preview public profile
+- [ ] Test booking flow
+- [ ] Verify payment connection
+- [ ] Activate profile
+
+**Total Onboarding Time: ~2 hours**
+
+---
+
+## 📝 Data Collection Methods
+
+### Option 1: Interactive Onboarding Wizard
+Create step-by-step web form with sections above, saving progress automatically.
+
+### Option 2: PDF Form + Manual Entry
+Send PDF checklist, mentor fills out, admin enters into system.
+
+### Option 3: Video Call + Screen Share
+Schedule 30-minute onboarding call, collect info live, more personal.
+
+**Recommendation: Option 1 (Interactive Wizard) + Option 3 (support call for complex setups)**
+
+---
+
+## 🎯 Priority Levels
+
+### 🔴 Critical (Required to Go Live):
+- Payment/payout information
+- Consultation services and pricing
+- Availability and calendar
+- Basic profile information
+
+### 🟡 High Priority (Needed Soon):
+- Digital products
+- AI avatar knowledge base
+- Content localization preferences
+
+### 🟢 Optional (Can Add Later):
+- Voice for AI avatar
+- Advanced format conversions
+- Marketing materials beyond basics
+
+---
+
+## 📞 Support During Onboarding
+
+Provide mentors with:
+- [ ] **Email support:** support@gcreators.me
+- [ ] **Video tutorials:** For each onboarding step
+- [ ] **Live chat support:** During business hours
+- [ ] **Onboarding checklist:** Printable PDF
+- [ ] **FAQ document:** Common questions answered
+- [ ] **Sample mentor profile:** To show best practices
+
+---
+
+**Document Status:** Ready for use  
+**Last Updated:** February 20, 2026  
+**Next Step:** Create interactive onboarding form based on this document
