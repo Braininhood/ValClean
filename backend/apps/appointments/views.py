@@ -824,7 +824,7 @@ def available_slots_view(request):
     from apps.core.address import validate_postcode_with_google
     validation_result = validate_postcode_with_google(postcode)
     if not validation_result.get('valid') or not validation_result.get('is_uk'):
-        error_msg = validation_result.get('error', 'Invalid UK postcode. VALClean currently operates only in the UK.')
+        error_msg = validation_result.get('error', 'Invalid UK postcode. MultiBook currently operates only in the UK.')
         return Response({
             'success': False,
             'error': {

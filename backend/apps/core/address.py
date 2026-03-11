@@ -302,7 +302,7 @@ def validate_postcode_with_google(postcode):
             'lng': None,
             'formatted_address': None,
             'is_uk': False,
-            'error': 'Invalid UK postcode format. VALClean currently operates only in the UK.',
+            'error': 'Invalid UK postcode format. MultiBook currently operates only in the UK.',
         }
     
     # Then, verify with Google Maps API (check country is UK)
@@ -329,7 +329,7 @@ def validate_postcode_with_google(postcode):
             'lng': None,
             'formatted_address': geocode_result.get('formatted_address'),
             'is_uk': False,
-            'error': f'This postcode is not in the UK. VALClean currently operates only in the UK. Please enter a UK postcode.',
+            'error': f'This postcode is not in the UK. MultiBook currently operates only in the UK. Please enter a UK postcode.',
         }
     elif geocode_result is None:
         # API call failed, but format is valid - accept it (assume UK)
@@ -351,7 +351,7 @@ def validate_postcode_with_google(postcode):
             'lng': None,
             'formatted_address': None,
             'is_uk': False,
-            'error': 'Postcode not found. VALClean currently operates only in the UK. Please enter a valid UK postcode.',
+            'error': 'Postcode not found. MultiBook currently operates only in the UK. Please enter a valid UK postcode.',
         }
 
 

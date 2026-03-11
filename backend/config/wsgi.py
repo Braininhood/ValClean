@@ -1,5 +1,5 @@
 """
-WSGI config for VALClean booking system.
+WSGI config for MultiBook booking system.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 

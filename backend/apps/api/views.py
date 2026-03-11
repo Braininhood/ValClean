@@ -30,7 +30,7 @@ def api_root(request):
     return Response({
         'success': True,
         'data': {
-            'name': 'VALClean Booking System API',
+            'name': 'MultiBook API',
             'version': '1.0.0',
             'api_version': 'v1',
             'documentation': {

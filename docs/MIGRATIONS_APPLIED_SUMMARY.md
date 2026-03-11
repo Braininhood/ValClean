@@ -266,7 +266,7 @@ All CHECK constraints are now enforced at the database level, providing:
 
 ---
 
-**Project:** VALClean  
+**Project:** MultiBook  
 **Database:** PostgreSQL (Supabase)  
 **Django Version:** 5.0+  
 **Status:** ✅ Production Ready

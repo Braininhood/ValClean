@@ -1,4 +1,4 @@
-# VALClean Documentation
+# MultiBook Documentation
 
 Implementation guides, setup notes, and deployment documentation.
 
@@ -15,7 +15,7 @@ Implementation guides, setup notes, and deployment documentation.
 
 | Document | Description |
 |----------|-------------|
-| [VALCLEAN_BEST_SOLUTION.md](VALCLEAN_BEST_SOLUTION.md) | Complete solution (HouseCallPro + Bookly features) |
+| [MULTIBOOK_BEST_SOLUTION.md](MULTIBOOK_BEST_SOLUTION.md) | Complete solution (HouseCallPro + Bookly features) |
 | [SOLUTION_OVERVIEW.md](SOLUTION_OVERVIEW.md) | Quick start and overview |
 | [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md) | Implementation guide |
 | [FEATURE_COMPARISON.md](FEATURE_COMPARISON.md) | Competitive analysis |

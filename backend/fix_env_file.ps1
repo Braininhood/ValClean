@@ -6,7 +6,7 @@ DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
 # Database (PostgreSQL)
-DATABASE_URL=postgresql://valclean_user:valclean_pass@localhost:5432/valclean_db
+DATABASE_URL=postgresql://multibook_user:multibook_pass@localhost:5432/multibook_db
 
 # Redis
 REDIS_URL=redis://localhost:6379/0

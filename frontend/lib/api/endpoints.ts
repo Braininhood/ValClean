@@ -1,7 +1,7 @@
 /**
  * API Endpoints Configuration
  * 
- * All endpoints use security prefixes as documented in VALCLEAN_BEST_SOLUTION.md
+ * All endpoints use security prefixes as documented in MULTIBOOK_BEST_SOLUTION.md
  */
 
 // Public Endpoints (No authentication required)

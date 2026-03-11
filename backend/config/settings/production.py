@@ -1,5 +1,5 @@
 """
-Django production settings for VALClean booking system.
+Django production settings for MultiBook booking system.
 Uses PostgreSQL database for production.
 """
 
@@ -63,7 +63,7 @@ EMAIL_PORT = env.int('EMAIL_PORT', default=587)
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='apikey')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@valclean.uk')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@yourdomain.com')
 
 # Security settings enforced in production
 SECURE_SSL_REDIRECT = True
@@ -94,7 +94,7 @@ if env('REDIS_URL', default=None):
     CELERY_RESULT_SERIALIZER = 'json'
     CELERY_TIMEZONE = TIME_ZONE
 
-# Logging - Production level (use project logs dir so no /var/log/valclean needed)
+# Logging - Production level (use project logs dir so no /var/log/multibook needed)
 import os
 _log_dir = BASE_DIR / 'logs'
 os.makedirs(_log_dir, exist_ok=True)

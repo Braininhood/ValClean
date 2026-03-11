@@ -1,14 +1,14 @@
-# VALClean Booking System - Detailed Implementation Roadmap
+# MultiBook Booking System - Detailed Implementation Roadmap
 
 ## Overview
 
-This document provides a **step-by-step implementation guide** for building the VALClean booking system. Each phase includes detailed tasks, acceptance criteria, and deliverables.
+This document provides a **step-by-step implementation guide** for building the MultiBook booking system. Each phase includes detailed tasks, acceptance criteria, and deliverables.
 
 ### Supabase (current stack)
 
-**VALClean now uses Supabase.** Keep this in mind across the roadmap:
+**MultiBook now uses Supabase.** Keep this in mind across the roadmap:
 
-| Supabase service | Use in VALClean |
+| Supabase service | Use in MultiBook |
 |-----------------|-----------------|
 | **Database** | PostgreSQL hosted on Supabase. Django connects via `DATABASE_URL`. All app tables (users, orders, appointments, etc.) live here. |
 | **Auth (optional)** | Supabase Auth for sign-in/sign-up; Google OAuth enabled in Dashboard. Frontend: `lib/supabase/client.ts`, `useSupabaseAuth`. |
@@ -810,7 +810,7 @@ This document provides a **step-by-step implementation guide** for building the 
 **Tasks:**
 - [x] Test calendar sync for all roles (backend tests in `apps/calendar_sync/tests.py`: status, manual sync, bulk sync; Staff/Customer paths covered; Admin/Manager use bulk or settings)
 - [x] Test custom event creation (API validation tests: POST without start/end returns 400; GET events returns 200 with `events` array)
-- [ ] Test two-way sync (if enabled) — **not in scope**: current design is one-way (VALClean → external calendar only)
+- [ ] Test two-way sync (if enabled) — **not in scope**: current design is one-way (MultiBook → external calendar only)
 - [x] Performance optimization (sync is per-user, batch of appointments; acceptable for typical load; no N+1 in list)
 - [x] Error recovery mechanisms (`last_sync_error` stored in Profile; "Sync now" retry; UI shows error; friendlier message when all events fail: "Try syncing again or reconnect your calendar")
 - [ ] Sync conflict resolution — **future**: no merge of external calendar edits; conflicts not auto-resolved

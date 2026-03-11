@@ -1,6 +1,6 @@
 # Google Calendar Sync Setup Guide - Step by Step Instructions
 
-This guide will walk you through setting up Google Calendar synchronization for your VALClean application.
+This guide will walk you through setting up Google Calendar synchronization for your MultiBook application.
 
 ## 📋 Prerequisites
 
@@ -20,7 +20,7 @@ This guide will walk you through setting up Google Calendar synchronization for 
 2. **Create a New Project**
    - Click the project dropdown at the top
    - Click "New Project"
-   - Enter project name: `VALClean Calendar Sync` (or your preferred name)
+   - Enter project name: `MultiBook Calendar Sync` (or your preferred name)
    - Click "Create"
    - Wait for the project to be created (may take a few seconds)
 
@@ -57,7 +57,7 @@ This guide will walk you through setting up Google Calendar synchronization for 
    - Click "Create"
    
    **Fill in the OAuth Consent Screen:**
-   - **App name**: `VALClean` (or your app name)
+   - **App name**: `MultiBook` (or your app name)
    - **User support email**: Your email address
    - **Developer contact information**: Your email address
    - Click "Save and Continue"
@@ -82,7 +82,7 @@ This guide will walk you through setting up Google Calendar synchronization for 
    
    **Application Type**: Web application
    
-   **Name**: `VALClean Calendar Sync` (or your preferred name)
+   **Name**: `MultiBook Calendar Sync` (or your preferred name)
    
    **Authorized JavaScript origins**:
    - Click "Add URI"

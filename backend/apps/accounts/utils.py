@@ -35,7 +35,7 @@ def send_verification_email(user):
     
     verification_url = f"{settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else 'http://localhost:3000'}/verify-email?token={token}&code={verification_code}"
     
-    subject = 'Verify your VALClean account'
+    subject = 'Verify your MultiBook account'
     message = f"""
     Hello {user.first_name or user.email},
     
@@ -46,7 +46,7 @@ def send_verification_email(user):
     If you didn't create an account, please ignore this email.
     
     Best regards,
-    VALClean Team
+    MultiBook Team
     """
     
     # In development, print to console
@@ -85,7 +85,7 @@ def send_password_reset_email(user):
     
     reset_url = f"{settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else 'http://localhost:3000'}/reset-password?token={token}&code={reset_code}"
     
-    subject = 'Reset your VALClean password'
+    subject = 'Reset your MultiBook password'
     message = f"""
     Hello {user.first_name or user.email},
     
@@ -98,7 +98,7 @@ def send_password_reset_email(user):
     If you didn't request a password reset, please ignore this email.
     
     Best regards,
-    VALClean Team
+    MultiBook Team
     """
     
     # In development, print to console

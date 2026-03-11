@@ -10,4 +10,4 @@ New time: {{ requested_time|default:"—" }}
 
 You can view your order here: {{ tracking_url }}
 
-VALClean Team
+MultiBook Team

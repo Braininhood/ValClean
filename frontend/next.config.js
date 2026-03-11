@@ -107,7 +107,7 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'https', hostname: 'localhost' },
-      { protocol: 'https', hostname: 'valclean.uk' },
+      { protocol: 'https', hostname: 'yourdomain.com' },
       { protocol: 'https', hostname: '13.135.109.229' },
       { protocol: 'https', hostname: 'ec2-13-135-109-229.eu-west-2.compute.amazonaws.com' },
       { protocol: 'https', hostname: '**.googleusercontent.com' },

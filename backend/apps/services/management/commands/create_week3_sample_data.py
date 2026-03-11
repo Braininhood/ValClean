@@ -145,21 +145,21 @@ class Command(BaseCommand):
         staff_data = [
             {
                 'name': 'John Smith',
-                'email': 'john.smith@valclean.test',
+                'email': 'john.smith@multibook.test',
                 'phone': '020 7123 4567',
                 'bio': 'Experienced window cleaner with 5+ years in the industry',
                 'is_active': True,
             },
             {
                 'name': 'Sarah Johnson',
-                'email': 'sarah.johnson@valclean.test',
+                'email': 'sarah.johnson@multibook.test',
                 'phone': '07700 900123',
                 'bio': 'Specialist in garden maintenance and green spaces',
                 'is_active': True,
             },
             {
                 'name': 'Mike Davis',
-                'email': 'mike.davis@valclean.test',
+                'email': 'mike.davis@multibook.test',
                 'phone': '020 7987 6543',
                 'bio': 'Professional maintenance specialist',
                 'is_active': True,

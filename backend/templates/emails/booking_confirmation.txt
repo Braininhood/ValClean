@@ -2,7 +2,7 @@ BOOKING CONFIRMED! ✅
 
 Dear {{ customer_name }},
 
-Thank you for your booking with VALClean. Your order has been confirmed!
+Thank you for your booking with MultiBook. Your order has been confirmed!
 
 ORDER DETAILS
 -------------
@@ -30,8 +30,8 @@ You can track your order and view details anytime using your tracking link:
 If you have any questions or need to make changes to your booking, please contact us.
 
 Best regards,
-VALClean Team
+MultiBook Team
 
 ---
 This is an automated email. Please do not reply directly to this message.
-VALClean - Professional Cleaning Services
+MultiBook - Professional Cleaning Services

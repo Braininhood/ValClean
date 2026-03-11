@@ -1,8 +1,8 @@
-# VALClean Booking System - Technical Architecture
+# MultiBook Booking System - Technical Architecture
 
 ## Overview
 
-This document provides a detailed technical architecture for the VALClean booking system, covering system design, technology choices, data flow, and scalability considerations.
+This document provides a detailed technical architecture for the MultiBook booking system, covering system design, technology choices, data flow, and scalability considerations.
 
 ---
 

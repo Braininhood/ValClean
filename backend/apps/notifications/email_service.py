@@ -47,7 +47,7 @@ class EmailService:
             bool: True if sent successfully, False otherwise
         """
         try:
-            from_email = from_email or getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@valclean.uk')
+            from_email = from_email or getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourdomain.com')
             
             # Use HTML message if provided
             if html_message:
@@ -340,7 +340,7 @@ def send_welcome_email(user, customer_name: Optional[str] = None) -> bool:
     return EmailService.send_templated_email(
         template_name='welcome',
         context=context,
-        subject='Welcome to VALClean!',
+        subject='Welcome to MultiBook!',
         recipient_list=[recipient],
     )
 

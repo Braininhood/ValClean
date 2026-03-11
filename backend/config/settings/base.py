@@ -1,5 +1,5 @@
 """
-Django base settings for VALClean booking system.
+Django base settings for MultiBook booking system.
 
 For more information on this file, see
 https://docs.djangoproject.com/en/5.0/topics/settings/
@@ -224,9 +224,9 @@ CORS_ALLOW_ALL_ORIGINS = False  # Set to True only in development
 
 # API Documentation (Swagger/OpenAPI)
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'VALClean Booking System API',
+    'TITLE': 'MultiBook Booking System API',
     'DESCRIPTION': '''
-    VALClean Booking System REST API
+    MultiBook Booking System REST API
     
     This API provides endpoints for:
     - Service and staff management
@@ -276,7 +276,7 @@ EMAIL_PORT = env.int('EMAIL_PORT', default=587)
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@valclean.uk')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@yourdomain.com')
 
 # SMS Configuration (Twilio)
 TWILIO_ACCOUNT_SID = env('TWILIO_ACCOUNT_SID', default='')

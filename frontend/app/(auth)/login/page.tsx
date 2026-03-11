@@ -99,7 +99,7 @@ function LoginPageContent() {
         <div>
           <h2 className="text-3xl font-bold text-center">Login</h2>
           <p className="mt-2 text-center text-muted-foreground">
-            Access your VALClean account
+            Access your MultiBook account
           </p>
         </div>
 

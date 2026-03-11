@@ -175,7 +175,7 @@ export default function StaffJobDetail() {
     const s = String(d.getUTCSeconds()).padStart(2, '0')
     return `${y}${m}${day}T${h}${min}${s}Z`
   }
-  const calendarTitle = encodeURIComponent(job.service?.name || `VALClean Job #${job.id}`)
+  const calendarTitle = encodeURIComponent(job.service?.name || `MultiBook Job #${job.id}`)
   const calendarStart = toGoogleDate(job.start_time)
   const calendarEnd = toGoogleDate(job.end_time)
   const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${calendarTitle}&dates=${calendarStart}/${calendarEnd}`
@@ -188,7 +188,7 @@ export default function StaffJobDetail() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `valclean-job-${job.id}.ics`
+      a.download = `multibook-job-${job.id}.ics`
       a.click()
       URL.revokeObjectURL(url)
     } catch (err: any) {

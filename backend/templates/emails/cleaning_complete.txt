@@ -10,12 +10,12 @@ Service: {{ service_name }}
 Date: {{ start_time }}
 Order: {{ order_number }}
 
-Thank you for choosing VALClean. We hope to see you again soon!
+Thank you for choosing MultiBook. We hope to see you again soon!
 
 Book your next cleaning: {{ frontend_url }}/booking
 
 Best regards,
-VALClean Team
+MultiBook Team
 
 ---
 This is an automated email. Please do not reply directly to this message.

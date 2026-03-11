@@ -23,7 +23,7 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: safeJsonLdHtml(webJsonLd) }}
       />
       <div className="text-center space-y-8">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">VALClean Booking System</h1>
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">MultiBook - Multi-Service Booking</h1>
         <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
           Professional booking system for cleaning services
         </p>

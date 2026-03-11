@@ -92,9 +92,9 @@ function orderEventTitle(order: OrderData): string {
     const names = order.items
       .map((i) => (i.quantity && i.quantity > 1 ? `${i.service?.name || 'Service'} × ${i.quantity}` : i.service?.name || 'Service'))
       .filter(Boolean)
-    if (names.length) return `VALClean – ${names.join(', ')}`
+    if (names.length) return `MultiBook – ${names.join(', ')}`
   }
-  return `VALClean Booking – ${order.order_number}`
+  return `MultiBook Booking – ${order.order_number}`
 }
 
 /** Format YYYYMMDD and HHmm for .ics / Google Calendar. */
@@ -130,14 +130,14 @@ function downloadIcs(order: OrderData): void {
   const ics = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//VALClean//Booking//EN',
+    'PRODID:-//MultiBook//Booking//EN',
     'BEGIN:VEVENT',
     `DTSTART:${start}`,
     `DTEND:${end}`,
     `SUMMARY:${title.replace(/\n/g, ' ')}`,
     `DESCRIPTION:${description.replace(/\n/g, ' ')}`,
     location ? `LOCATION:${location.replace(/\n/g, ' ')}` : '',
-    `UID:valclean-${order.order_number}@valclean`,
+    `UID:multibook-${order.order_number}@multibook`,
     'END:VEVENT',
     'END:VCALENDAR',
   ]
@@ -147,7 +147,7 @@ function downloadIcs(order: OrderData): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `valclean-booking-${order.order_number}.ics`
+  a.download = `multibook-booking-${order.order_number}.ics`
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -167,7 +167,7 @@ function openGoogleCalendar(order: OrderData): void {
 /** Build subscription event title for calendar. */
 function subscriptionEventTitle(sub: SubscriptionData): string {
   const name = sub.service?.name || 'Subscription'
-  return `VALClean – ${name} (Subscription)`
+  return `MultiBook – ${name} (Subscription)`
 }
 
 /** Build location string for subscription (address if present). */
@@ -206,14 +206,14 @@ function downloadSubscriptionIcs(sub: SubscriptionData): void {
   const ics = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//VALClean//Subscription//EN',
+    'PRODID:-//MultiBook//Subscription//EN',
     'BEGIN:VEVENT',
     `DTSTART:${start}`,
     `DTEND:${end}`,
     `SUMMARY:${title.replace(/\n/g, ' ')}`,
     `DESCRIPTION:${description.replace(/\n/g, ' ')}`,
     location ? `LOCATION:${location.replace(/\n/g, ' ')}` : '',
-    `UID:valclean-sub-${sub.subscription_number}@valclean`,
+    `UID:multibook-sub-${sub.subscription_number}@multibook`,
     'END:VEVENT',
     'END:VCALENDAR',
   ]
@@ -223,7 +223,7 @@ function downloadSubscriptionIcs(sub: SubscriptionData): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `valclean-subscription-${sub.subscription_number}.ics`
+  a.download = `multibook-subscription-${sub.subscription_number}.ics`
   a.click()
   URL.revokeObjectURL(url)
 }

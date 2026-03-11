@@ -1,6 +1,6 @@
-# PostgreSQL Database Setup for VALClean
+# PostgreSQL Database Setup for MultiBook
 
-This guide will help you create the PostgreSQL database locally for the VALClean project.
+This guide will help you create the PostgreSQL database locally for the MultiBook project.
 
 ## Prerequisites
 
@@ -63,43 +63,43 @@ This script will:
 2. Run the following SQL commands:
    ```sql
    -- Create user
-   CREATE USER valclean_user WITH PASSWORD 'valclean_pass';
+   CREATE USER multibook_user WITH PASSWORD 'multibook_pass';
    
    -- Create database
-   CREATE DATABASE valclean_db OWNER valclean_user;
+   CREATE DATABASE multibook_db OWNER multibook_user;
    
    -- Grant privileges
-   GRANT ALL PRIVILEGES ON DATABASE valclean_db TO valclean_user;
+   GRANT ALL PRIVILEGES ON DATABASE multibook_db TO multibook_user;
    
    -- Connect to new database
-   \c valclean_db
+   \c multibook_db
    
    -- Grant schema privileges
-   GRANT ALL ON SCHEMA public TO valclean_user;
-   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO valclean_user;
-   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO valclean_user;
+   GRANT ALL ON SCHEMA public TO multibook_user;
+   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO multibook_user;
+   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO multibook_user;
    ```
 
 ## Database Details
 
 After setup, you'll have:
 
-- **Database Name**: `valclean_db`
-- **Database User**: `valclean_user`
-- **Password**: `valclean_pass`
+- **Database Name**: `multibook_db`
+- **Database User**: `multibook_user`
+- **Password**: `multibook_pass`
 - **Host**: `localhost`
 - **Port**: `5432`
 
 **Connection String:**
 ```
-postgresql://valclean_user:valclean_pass@localhost:5432/valclean_db
+postgresql://multibook_user:multibook_pass@localhost:5432/multibook_db
 ```
 
 ## Next Steps
 
 1. Update your `.env` file in the `backend` directory:
    ```
-   DATABASE_URL=postgresql://valclean_user:valclean_pass@localhost:5432/valclean_db
+   DATABASE_URL=postgresql://multibook_user:multibook_pass@localhost:5432/multibook_db
    ```
 
 2. Update Django settings if needed (should work automatically if using `DATABASE_URL`)

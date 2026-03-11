@@ -36,7 +36,7 @@ ssh ubuntu@13.135.109.229
 
 ```bash
 # Go to the project directory
-cd /path/to/VALClean
+cd /path/to/MultiBook
 
 # Verify you're in the correct directory
 pwd
@@ -53,13 +53,13 @@ git branch
 ```bash
 # Create a backup of the current code
 cd ..
-tar -czf valclean-backup-$(date +%Y%m%d-%H%M%S).tar.gz VALClean/
+tar -czf multibook-backup-$(date +%Y%m%d-%H%M%S).tar.gz MultiBook/
 
 # Verify backup was created
-ls -lh valclean-backup-*.tar.gz
+ls -lh multibook-backup-*.tar.gz
 
 # Go back to project directory
-cd VALClean
+cd MultiBook
 ```
 
 ---
@@ -224,7 +224,7 @@ cd ../backend
 # Restart Gunicorn (adjust service name if different)
 sudo systemctl restart gunicorn
 # or
-sudo systemctl restart valclean-backend
+sudo systemctl restart multibook-backend
 
 # Check service status
 sudo systemctl status gunicorn
@@ -233,7 +233,7 @@ sudo systemctl status gunicorn
 sudo journalctl -u gunicorn -n 50 --no-pager
 
 # Or if using supervisor
-sudo supervisorctl restart valclean
+sudo supervisorctl restart multibook
 sudo supervisorctl status
 ```
 
@@ -246,17 +246,17 @@ sudo supervisorctl status
 cd ../frontend
 
 # Restart the service
-sudo systemctl restart valclean-frontend
+sudo systemctl restart multibook-frontend
 # or
 sudo systemctl restart nextjs
 
 # Check status
-sudo systemctl status valclean-frontend
+sudo systemctl status multibook-frontend
 
 # Or if using PM2
-pm2 restart valclean-frontend
+pm2 restart multibook-frontend
 pm2 status
-pm2 logs valclean-frontend --lines 50
+pm2 logs multibook-frontend --lines 50
 ```
 
 ---
@@ -304,7 +304,7 @@ celery -A config inspect active
 # Check all services are running
 sudo systemctl status gunicorn
 sudo systemctl status nginx
-sudo systemctl status valclean-frontend  # if applicable
+sudo systemctl status multibook-frontend  # if applicable
 
 # Check application logs
 sudo tail -f /var/log/gunicorn/error.log
@@ -359,9 +359,9 @@ sudo journalctl -u gunicorn -f
 sudo tail -f /var/log/nginx/access.log
 
 # Terminal 3: Frontend logs (if applicable)
-sudo journalctl -u valclean-frontend -f
+sudo journalctl -u multibook-frontend -f
 # or
-pm2 logs valclean-frontend
+pm2 logs multibook-frontend
 
 # Monitor for 5-10 minutes to ensure no errors
 ```
@@ -386,7 +386,7 @@ Open your browser and test:
 ```bash
 # Remove old backups (keep last 5)
 cd /path/to/backups
-ls -t valclean-backup-*.tar.gz | tail -n +6 | xargs rm -f
+ls -t multibook-backup-*.tar.gz | tail -n +6 | xargs rm -f
 
 # Clean up pip cache
 pip cache purge
@@ -469,11 +469,11 @@ sudo systemctl status postgresql
 
 ```bash
 # Fix ownership of files
-sudo chown -R ubuntu:ubuntu /path/to/VALClean
+sudo chown -R ubuntu:ubuntu /path/to/MultiBook
 
 # Fix permissions
-sudo chmod -R 755 /path/to/VALClean
-sudo chmod -R 644 /path/to/VALClean/backend/.env
+sudo chmod -R 755 /path/to/MultiBook
+sudo chmod -R 644 /path/to/MultiBook/backend/.env
 ```
 
 ---
@@ -485,15 +485,15 @@ If something goes wrong, here's how to rollback:
 ```bash
 # Step 1: Stop services
 sudo systemctl stop gunicorn
-sudo systemctl stop valclean-frontend
+sudo systemctl stop multibook-frontend
 
 # Step 2: Restore code from backup
 cd /path/to
-rm -rf VALClean
-tar -xzf valclean-backup-YYYYMMDD-HHMMSS.tar.gz
+rm -rf MultiBook
+tar -xzf multibook-backup-YYYYMMDD-HHMMSS.tar.gz
 
 # Step 3: Restore database (if needed)
-cd VALClean/backend
+cd MultiBook/backend
 python manage.py loaddata backup-YYYYMMDD-HHMMSS.json
 
 # Step 4: Rollback migrations (if needed)
@@ -508,7 +508,7 @@ python manage.py migrate coupons 0001
 
 # Step 5: Restart services
 sudo systemctl start gunicorn
-sudo systemctl start valclean-frontend
+sudo systemctl start multibook-frontend
 sudo systemctl reload nginx
 ```
 

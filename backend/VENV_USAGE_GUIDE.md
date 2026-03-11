@@ -75,7 +75,7 @@ python manage.py runserver  # ❌ Will fail if venv not activated
 
 # Should show venv location
 .\venv\Scripts\python.exe -c "import sys; print(sys.executable)"
-# Output: D:\VALClean\backend\venv\Scripts\python.exe
+# Output: D:\MultiBook\backend\venv\Scripts\python.exe
 ```
 
 ### Check Installed Packages
@@ -94,7 +94,7 @@ python manage.py runserver  # ❌ Will fail if venv not activated
 
 ### Test System Check
 ```powershell
-cd D:\VALClean\backend
+cd D:\MultiBook\backend
 .\venv\Scripts\python.exe manage.py check
 # Should show: "System check identified 9 issues (0 silenced)."
 # All 9 are warnings, not errors - this is CORRECT!
@@ -102,7 +102,7 @@ cd D:\VALClean\backend
 
 ### Test Server Start
 ```powershell
-cd D:\VALClean\backend
+cd D:\MultiBook\backend
 .\venv\Scripts\python.exe manage.py runserver
 # Should start server on http://127.0.0.1:8000/
 ```

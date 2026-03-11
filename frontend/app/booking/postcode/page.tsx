@@ -30,7 +30,7 @@ export default function PostcodePage() {
     
     // First, validate UK postcode format on client side
     if (!validateUKPostcode(formatted)) {
-      setError('Please enter a valid UK postcode (e.g., SW1A 1AA). VALClean currently operates only in the UK.')
+      setError('Please enter a valid UK postcode (e.g., SW1A 1AA). MultiBook currently operates only in the UK.')
       setLoading(false)
       return
     }
@@ -70,7 +70,7 @@ export default function PostcodePage() {
           </p>
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
             <span className="text-sm text-blue-800 dark:text-blue-200">
-              🇬🇧 VALClean currently operates only in the UK
+              🇬🇧 MultiBook currently operates only in the UK
             </span>
           </div>
         </div>

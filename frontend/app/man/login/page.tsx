@@ -53,7 +53,7 @@ export default function ManagerLoginPage() {
         <div>
           <h2 className="text-3xl font-bold text-center">Manager Login</h2>
           <p className="mt-2 text-center text-muted-foreground">
-            Access your VALClean manager/admin account
+            Access your MultiBook manager/admin account
           </p>
         </div>
 

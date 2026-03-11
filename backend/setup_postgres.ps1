@@ -1,15 +1,15 @@
-# PowerShell script to create PostgreSQL database for VALClean
+# PowerShell script to create PostgreSQL database for MultiBook
 # This script helps set up the database using psql
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '')]
 param(
     [string]$SuperUser = "postgres",
-    [string]$DatabaseName = "valclean_db",
-    [string]$DatabaseUser = "valclean_user",
-    [string]$DatabasePassword = "valclean_pass"  # This parameter sets the password VALUE for the database user being created, not a sensitive credential input
+    [string]$DatabaseName = "multibook_db",
+    [string]$DatabaseUser = "multibook_user",
+    [string]$DatabasePassword = "multibook_pass"  # This parameter sets the password VALUE for the database user being created, not a sensitive credential input
 )
 
-Write-Host "PostgreSQL Database Setup for VALClean" -ForegroundColor Cyan
+Write-Host "PostgreSQL Database Setup for MultiBook" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 

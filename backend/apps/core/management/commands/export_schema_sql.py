@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand
 from django.core.management import call_command
 from django.db import connection
 
-# Dependency order for VALClean migrations (matches Django migration graph)
+# Dependency order for MultiBook migrations (matches Django migration graph)
 MIGRATION_ORDER = [
     ('contenttypes', '0001_initial'),
     ('contenttypes', '0002_remove_content_type_name'),
@@ -65,7 +65,7 @@ class Command(BaseCommand):
 
         out_path = options['output']
         buf = StringIO()
-        buf.write('-- VALClean schema: all tables for Supabase (PostgreSQL)\n')
+        buf.write('-- MultiBook schema: all tables for Supabase (PostgreSQL)\n')
         buf.write('-- Generated from Django migrations in dependency order.\n')
         buf.write('-- Run this in Supabase Dashboard -> SQL Editor if you cannot run Django migrate.\n\n')
 

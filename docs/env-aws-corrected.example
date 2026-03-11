@@ -1,5 +1,5 @@
 # =============================================================================
-# Corrected .env for AWS EC2 – paste into /var/www/VALClean/backend/.env
+# Corrected .env for AWS EC2 – paste into /var/www/MultiBook/backend/.env
 # Replace ALL placeholders with your real values. Never commit real secrets.
 # =============================================================================
 

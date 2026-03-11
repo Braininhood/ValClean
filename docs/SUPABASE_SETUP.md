@@ -1,4 +1,4 @@
-# Supabase Setup (VALClean)
+# Supabase Setup (MultiBook)
 
 This project uses **Supabase** for:
 
@@ -39,7 +39,7 @@ This project uses **Supabase** for:
 
 ## Database in Supabase
 
-The **correct DB** is the default `postgres` database on your Supabase project. Django migrations create all app tables there (e.g. `accounts_user`, `services_service`, `orders_order`, `appointments_appointment`, etc.). You do not create a separate “VALClean database”; use the same project and run migrations as above.
+The **correct DB** is the default `postgres` database on your Supabase project. Django migrations create all app tables there (e.g. `accounts_user`, `services_service`, `orders_order`, `appointments_appointment`, etc.). You do not create a separate "MultiBook database"; use the same project and run migrations as above.
 
 **Create all tables from SQL (all role types: customer, staff, manager, admin):** Run `python manage.py export_schema_sql -o supabase_schema.sql --settings=config.settings.development` in `backend`, then run `backend/supabase_schema.sql` in Supabase SQL Editor. Then run `backend/supabase_enable_rls.sql` for RLS.
 
@@ -52,10 +52,10 @@ cd backend
 .\venv\Scripts\python.exe manage.py seed_data --settings=config.settings.development
 ```
 
-- **Admin:** `admin@valclean.local` (default password: `ChangeMe123!`) — Django admin.
-- **Customer:** `customer@valclean.test` (default password: `ChangeMe123!`) — customer portal.
-- **Staff portal:** first staff e.g. `john.smith@valclean.test` (default password: `ChangeMe123!`).
-- **Manager:** `manager@valclean.local` (default password: `ChangeMe123!`).
+- **Admin:** `admin@multibook.local` (default password: `ChangeMe123!`) — Django admin.
+- **Customer:** `customer@multibook.test` (default password: `ChangeMe123!`) — customer portal.
+- **Staff portal:** first staff e.g. `john.smith@multibook.test` (default password: `ChangeMe123!`).
+- **Manager:** `manager@multibook.local` (default password: `ChangeMe123!`).
 
 Override passwords with env: `SEED_ADMIN_PASSWORD`, `SEED_CUSTOMER_PASSWORD`, `SEED_STAFF_PASSWORD`, `SEED_MANAGER_PASSWORD`. Use `--no-sample` to only create users (no categories/services/staff/appointments).
 
@@ -79,7 +79,7 @@ Supabase warns when tables (e.g. `public.django_session`) are exposed via the Su
 
 **Source options:** local **PostgreSQL** (if your data is in Postgres) or local **SQLite** (`backend/db.sqlite3`).
 
-**Option A – From local PostgreSQL:** Set `LOCAL_DATABASE_URL=postgresql://user:password@localhost:5432/valclean_local` in `backend/.env`. Keep `DATABASE_URL` pointing at Supabase. Run `.\migrate_local_to_supabase.ps1` from `backend`.
+**Option A – From local PostgreSQL:** Set `LOCAL_DATABASE_URL=postgresql://user:password@localhost:5432/multibook_local` in `backend/.env`. Keep `DATABASE_URL` pointing at Supabase. Run `.\migrate_local_to_supabase.ps1` from `backend`.
 
 **Option B – From local SQLite:** Put your local DB at `backend/db.sqlite3` (same Django schema; if you see "no such table", the script will run migrate on SQLite first). Ensure `DATABASE_URL` points to Supabase. Run `.\migrate_local_to_supabase.ps1` from `backend`.
 

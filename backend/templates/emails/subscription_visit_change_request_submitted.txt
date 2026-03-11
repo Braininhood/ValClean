@@ -10,4 +10,4 @@ Reason: {{ reason|default:"—" }}
 
 Review in admin panel: {{ admin_url }}
 
-VALClean Team
+MultiBook Team

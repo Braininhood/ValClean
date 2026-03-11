@@ -33,10 +33,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         skip_sample = options['no_sample']
 
-        self.stdout.write(self.style.SUCCESS('\n=== Seeding VALClean data ===\n'))
+        self.stdout.write(self.style.SUCCESS('\n=== Seeding MultiBook data ===\n'))
 
         # 1. Admin (superuser)
-        admin_email = 'admin@valclean.local'
+        admin_email = 'admin@multibook.local'
         admin, created = User.objects.get_or_create(
             email=admin_email,
             defaults={
@@ -55,7 +55,7 @@ class Command(BaseCommand):
             self.stdout.write(f'  - Admin already exists: {admin_email}')
 
         # 2. Manager user + Manager profile
-        manager_email = 'manager@valclean.local'
+        manager_email = 'manager@multibook.local'
         manager_user, created = User.objects.get_or_create(
             email=manager_email,
             defaults={
@@ -85,7 +85,7 @@ class Command(BaseCommand):
         )
 
         # 3. Customer user + Customer record
-        customer_email = 'customer@valclean.test'
+        customer_email = 'customer@multibook.test'
         customer_user, created = User.objects.get_or_create(
             email=customer_email,
             defaults={
@@ -119,7 +119,7 @@ class Command(BaseCommand):
             self.stdout.write('\nCreating Week 3 sample data (categories, services, staff, areas, appointments)...')
             call_command('create_week3_sample_data', verbosity=1)
             # 5. Staff user linked to first Staff (for staff portal login)
-            first_staff = Staff.objects.filter(email__icontains='valclean.test').first()
+            first_staff = Staff.objects.filter(email__icontains='multibook.test').first()
             if first_staff and not first_staff.user_id:
                 staff_email = first_staff.email
                 staff_user, created = User.objects.get_or_create(
@@ -142,7 +142,7 @@ class Command(BaseCommand):
             self.stdout.write('  (Skipped Week 3 sample data; use --no-sample to only create users)')
 
         self.stdout.write(self.style.SUCCESS('\n=== Seed complete ==='))
-        self.stdout.write('Users: admin@valclean.local, manager@valclean.local, customer@valclean.test')
+        self.stdout.write('Users: admin@multibook.local, manager@multibook.local, customer@multibook.test')
         if not skip_sample:
-            self.stdout.write('Staff portal: use first staff email (e.g. john.smith@valclean.test) with password from SEED_STAFF_PASSWORD or default.')
+            self.stdout.write('Staff portal: use first staff email (e.g. john.smith@multibook.test) with password from SEED_STAFF_PASSWORD or default.')
         self.stdout.write('Change default passwords in production (SEED_* env vars).')

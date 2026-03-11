@@ -20,7 +20,7 @@ export function Navbar() {
       <nav className="border-b bg-background sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <Link href="/" className="text-xl font-bold">
-            VALClean
+            MultiBook
           </Link>
           {/* Desktop Navigation */}
           <div className="hidden md:flex gap-4">
@@ -139,7 +139,7 @@ export function Navbar() {
     <nav className="border-b bg-background sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
         <Link href={`/${rolePrefix}/dashboard`} className="text-xl font-bold">
-          VALClean
+          MultiBook
         </Link>
         
         {/* Desktop Navigation */}

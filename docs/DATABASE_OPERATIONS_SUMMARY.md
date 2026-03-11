@@ -1,6 +1,6 @@
-# Database Operations Summary - VALClean
+# Database Operations Summary - MultiBook
 
-Quick reference guide for all database operations in the VALClean application.
+Quick reference guide for all database operations in the MultiBook application.
 
 ## Overview
 

@@ -1,6 +1,6 @@
 """
 Use only for dumping data FROM a local PostgreSQL database.
-Set LOCAL_DATABASE_URL in .env (e.g. postgresql://user:pass@localhost:5432/valclean_local).
+Set LOCAL_DATABASE_URL in .env (e.g. postgresql://user:pass@localhost:5432/multibook_local).
 Then: python manage.py dumpdata --settings=config.settings.local_pg_for_dump ...
 """
 from .development import *  # noqa: F401, F403
@@ -13,7 +13,7 @@ local_url = os.environ.get('LOCAL_DATABASE_URL') or env('LOCAL_DATABASE_URL', de
 if not local_url or not local_url.startswith('postgresql://'):
     raise ValueError(
         'LOCAL_DATABASE_URL must be set and start with postgresql://. '
-        'Example: postgresql://user:pass@localhost:5432/valclean_local'
+        'Example: postgresql://user:pass@localhost:5432/multibook_local'
     )
 
 match = re.match(r'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/([^?\s]*)', local_url)

@@ -1,5 +1,5 @@
 """
-Django development settings for VALClean booking system.
+Django development settings for MultiBook booking system.
 Uses PostgreSQL database if DATABASE_URL is set, otherwise SQLite.
 """
 

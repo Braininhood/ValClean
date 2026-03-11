@@ -53,7 +53,7 @@ export default function StaffLoginPage() {
         <div>
           <h2 className="text-3xl font-bold text-center">Staff Login</h2>
           <p className="mt-2 text-center text-muted-foreground">
-            Access your VALClean staff account
+            Access your MultiBook staff account
           </p>
         </div>
 

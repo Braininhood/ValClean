@@ -17,7 +17,7 @@ User = get_user_model()
 
 # Check if admin user already exists
 username = 'admin'
-email = 'admin@valclean.uk'
+email = 'admin@yourdomain.com'
 password = 'admin123'
 
 try:

@@ -678,9 +678,9 @@ class AppleCalendarService:
         
         ics_content = f"""BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//VALClean//Booking System//EN
+PRODID:-//MultiBook//Booking System//EN
 BEGIN:VEVENT
-UID:{event_data.get('uid', f"valclean-{int(timezone.now().timestamp())}")}
+UID:{event_data.get('uid', f"multibook-{int(timezone.now().timestamp())}")}
 DTSTART:{to_ics_datetime(start_dt)}
 DTEND:{to_ics_datetime(end_dt)}
 SUMMARY:{event_data.get('summary', 'Appointment')}
@@ -710,7 +710,7 @@ Notes: {order.notes or 'None'}""".strip(),
         "location": f"{order.address_line1}, {order.city}, {order.postcode}",
         "start": appointment.start_time.isoformat(),
         "end": appointment.end_time.isoformat(),
-        "uid": f"valclean-customer-{appointment.id}-{order.id}",
+        "uid": f"multibook-customer-{appointment.id}-{order.id}",
     }
 
 
@@ -731,7 +731,7 @@ Address: {order.address_line1}, {order.city}, {order.postcode}""".strip(),
         "location": f"{order.address_line1}, {order.city}, {order.postcode}",
         "start": appointment.start_time.isoformat(),
         "end": appointment.end_time.isoformat(),
-        "uid": f"valclean-staff-{appointment.id}-{order.id}",
+        "uid": f"multibook-staff-{appointment.id}-{order.id}",
     }
 
 
@@ -766,7 +766,7 @@ def build_staff_event_data_from_appointment(appointment) -> Dict[str, Any]:
         "location": location or "N/A",
         "start": appointment.start_time.isoformat(),
         "end": appointment.end_time.isoformat(),
-        "uid": f"valclean-staff-{appointment.id}-{getattr(appointment, 'order_id', 0) or getattr(appointment, 'subscription_id', 0) or 0}",
+        "uid": f"multibook-staff-{appointment.id}-{getattr(appointment, 'order_id', 0) or getattr(appointment, 'subscription_id', 0) or 0}",
     }
 
 
@@ -791,5 +791,5 @@ Notes: {order.notes or 'None'}""".strip(),
         "location": f"{order.address_line1}, {order.city}, {order.postcode}",
         "start": appointment.start_time.isoformat(),
         "end": appointment.end_time.isoformat(),
-        "uid": f"valclean-manager-{appointment.id}-{order.id}",
+        "uid": f"multibook-manager-{appointment.id}-{order.id}",
     }

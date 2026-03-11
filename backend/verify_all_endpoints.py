@@ -137,7 +137,7 @@ def test_public_endpoints():
 def main():
     """Run all tests."""
     print("\n" + "=" * 60)
-    print("VALClean API Endpoints Verification")
+    print("MultiBook API Endpoints Verification")
     print("=" * 60)
     
     results = []

@@ -1,5 +1,5 @@
 """
-ASGI config for VALClean booking system.
+ASGI config for MultiBook booking system.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 

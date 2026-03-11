@@ -1,8 +1,8 @@
-# VALClean Booking System
+# MultiBook — Multi-Service Booking System
 
 **Status: ✅ Complete | Production-ready**
 
-A comprehensive, enterprise-grade appointment booking system combining the best features from HouseCallPro and Bookly, built for VALClean (https://valclean.uk/) and suitable for any service business — cleaning, labour, garden, handy work, property boards, housing associations.
+A comprehensive, enterprise-grade appointment booking system combining the best features from HouseCallPro and Bookly. Built for any service business — cleaning, labour, garden, handy work, property boards, housing associations.
 
 **Tech Stack:** Django REST + Next.js | PostgreSQL (Supabase) | AWS deployment
 
@@ -77,7 +77,7 @@ All core features implemented, tested, and deployed. 35 database tables, 80 CHEC
 ## 📁 Project Structure
 
 ```
-VALClean/
+MultiBook/
 ├── backend/                 # Django REST API
 │   ├── config/              # Settings (base, development, production)
 │   ├── apps/
@@ -118,7 +118,7 @@ VALClean/
 
 ```bash
 # Clone or navigate to the project directory
-cd VALClean
+cd MultiBook
 
 # Backend
 cd backend
@@ -166,7 +166,7 @@ python manage.py createsuperuser
 
 **Default Admin Credentials (Development):**
 - **Username:** `admin`
-- **Email:** `admin@valclean.uk`
+- **Email:** `admin@yourdomain.com`
 - **Password:** `*******`
 - **Admin Panel:** http://localhost:8000/admin/
 
@@ -181,7 +181,7 @@ python manage.py create_sample_data
 
 This will create:
 - 3 Categories (Cleaning Services, Maintenance Services, Green Spaces)
-- 7 Services (based on VALclean website)
+- 7 Services (multi-service booking)
 - 3 Staff members with schedules
 - 3 Test users/customers
 - 5 Sample appointments
@@ -227,7 +227,7 @@ See **[docs/AWS_DEPLOYMENT_GUIDE.md](docs/AWS_DEPLOYMENT_GUIDE.md)** for full de
 ## Documentation
 
 ### 🎯 Solution & Architecture
-- **[docs/VALCLEAN_BEST_SOLUTION.md](docs/VALCLEAN_BEST_SOLUTION.md)** - Complete professional solution (HouseCallPro + Bookly features)
+- **[docs/MULTIBOOK_BEST_SOLUTION.md](docs/MULTIBOOK_BEST_SOLUTION.md)** - Complete professional solution (HouseCallPro + Bookly features)
 - **[docs/SOLUTION_OVERVIEW.md](docs/SOLUTION_OVERVIEW.md)** - Quick start guide and overview
 - **[docs/IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md)** - Implementation guide
 - **[docs/FEATURE_COMPARISON.md](docs/FEATURE_COMPARISON.md)** - Competitive analysis

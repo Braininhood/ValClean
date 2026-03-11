@@ -17,13 +17,13 @@ class UserAdmin(BaseUserAdmin):
     ordering = ('-date_joined',)
     
     fieldsets = BaseUserAdmin.fieldsets + (
-        ('VALClean Custom Fields', {
+        ('MultiBook Custom Fields', {
             'fields': ('role', 'is_verified')
         }),
     )
     
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
-        ('VALClean Custom Fields', {
+        ('MultiBook Custom Fields', {
             'fields': ('role', 'is_verified')
         }),
     )

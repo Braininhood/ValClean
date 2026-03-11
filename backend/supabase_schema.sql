@@ -1,4 +1,4 @@
--- VALClean schema: all tables for Supabase (PostgreSQL)
+-- MultiBook schema: all tables for Supabase (PostgreSQL)
 -- Generated from Django migrations in dependency order.
 -- Run this in Supabase Dashboard -> SQL Editor if you cannot run Django migrate.
 

@@ -1,8 +1,8 @@
-# VALClean Booking System - Best Professional Solution
+# MultiBook - Best Professional Solution
 
 ## Executive Summary
 
-This document outlines the **best-in-class booking and management system** for VALClean (https://valclean.uk/), combining the best features from HouseCallPro and Bookly plugin, designed to be intuitive and easy-to-use for all types of users.
+This document outlines the **best-in-class booking and management system** for MultiBook (https://yourdomain.com/), combining the best features from HouseCallPro and Bookly plugin, designed to be intuitive and easy-to-use for all types of users.
 
 **User Roles:**
 - 👤 **Customer** - Book services, manage appointments, view history
@@ -78,9 +78,9 @@ This document outlines the **best-in-class booking and management system** for V
 - Custom fields capture business-specific data
 - Recurring appointments increase customer retention
 
-### 1.3 VALClean-Specific Requirements
+### 1.3 MultiBook-Specific Requirements
 
-Based on VALClean's cleaning services business:
+Based on MultiBook's cleaning services business:
 
 **Must-Have Features:**
 - 🎯 **Easy Booking** - Simple, fast booking for cleaning services
@@ -106,7 +106,7 @@ Based on VALClean's cleaning services business:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    VALClean Booking System                    │
+│                    MultiBook Booking System                    │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
@@ -812,7 +812,7 @@ Based on VALClean's cleaning services business:
 
 ```
 1. Discovery
-   └─> Finds VALClean website
+   └─> Finds MultiBook website
    └─> Clicks "Book Now" button
 
 2. Postcode Entry
@@ -1618,7 +1618,7 @@ src/
 
 ## 10. Conclusion
 
-This solution combines the best features from HouseCallPro and Bookly, tailored specifically for VALClean's cleaning services business. The system is designed to be:
+This solution combines the best features from HouseCallPro and Bookly, tailored specifically for MultiBook's cleaning services business. The system is designed to be:
 
 - **Easy for customers** - Simple 4-step booking process
 - **Powerful for staff** - Complete mobile and web tools

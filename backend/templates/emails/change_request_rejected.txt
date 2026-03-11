@@ -11,4 +11,4 @@ Requested time: {{ requested_time|default:"—" }}
 
 If you have questions, please contact us.
 
-VALClean Team
+MultiBook Team

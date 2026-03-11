@@ -1,8 +1,8 @@
-# VALClean Booking System - Next.js Frontend
+# MultiBook - Next.js Frontend
 
 ## Overview
 
-This is the Next.js 14+ frontend for the VALClean booking system. Built with TypeScript, Tailwind CSS, and shadcn/ui components.
+This is the Next.js 14+ frontend for the MultiBook multi-service booking system. Built with TypeScript, Tailwind CSS, and shadcn/ui components.
 
 ## Project Structure
 
@@ -152,6 +152,6 @@ After setup, follow the IMPLEMENTATION_ROADMAP.md for:
 ## Documentation
 
 See the main project documentation:
-- `../VALCLEAN_BEST_SOLUTION.md` - Complete solution
+- `../MULTIBOOK_BEST_SOLUTION.md` - Complete solution
 - `../IMPLEMENTATION_ROADMAP.md` - Step-by-step guide
 - `../TECHNICAL_ARCHITECTURE.md` - Technical specifications

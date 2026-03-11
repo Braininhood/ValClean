@@ -1,13 +1,13 @@
-# VALClean Booking System - Project Setup Guide
+# MultiBook Booking System - Project Setup Guide
 
 ## Overview
 
-This document provides step-by-step instructions for setting up the VALClean booking system project structure based on the solution documents.
+This document provides step-by-step instructions for setting up the MultiBook booking system project structure based on the solution documents.
 
 ## Project Structure
 
 ```
-VALClean/
+MultiBook/
 ├── backend/              # Django Backend (localhost:8000)
 │   ├── config/          # Django settings
 │   ├── apps/            # Django apps
@@ -21,7 +21,7 @@ VALClean/
 │   └── package.json
 │
 └── docs/               # Documentation (already created)
-    ├── VALCLEAN_BEST_SOLUTION.md
+    ├── MULTIBOOK_BEST_SOLUTION.md
     ├── IMPLEMENTATION_ROADMAP.md
     ├── TECHNICAL_ARCHITECTURE.md
     └── ...
@@ -158,7 +158,7 @@ After setup, follow the IMPLEMENTATION_ROADMAP.md for:
 
 ## Documentation References
 
-- **VALCLEAN_BEST_SOLUTION.md** - Complete solution details
+- **MULTIBOOK_BEST_SOLUTION.md** - Complete solution details
 - **IMPLEMENTATION_ROADMAP.md** - Step-by-step implementation guide
 - **TECHNICAL_ARCHITECTURE.md** - Technical specifications
 - **README.md** - Project overview

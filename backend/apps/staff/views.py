@@ -63,7 +63,7 @@ class StaffPublicViewSet(viewsets.ReadOnlyModelViewSet):
         """
         Get staff available in a postcode area (public).
         GET /api/stf/by-postcode/?postcode=SW1A1AA
-        IMPORTANT: Only accepts UK postcodes - VALClean operates only in the UK.
+        IMPORTANT: Only accepts UK postcodes - MultiBook operates only in the UK.
         """
         postcode = request.query_params.get('postcode')
         if not postcode:
@@ -80,7 +80,7 @@ class StaffPublicViewSet(viewsets.ReadOnlyModelViewSet):
         validation_result = validate_postcode_with_google(postcode)
         
         if not validation_result.get('valid') or not validation_result.get('is_uk'):
-            error_msg = validation_result.get('error', 'Invalid UK postcode. VALClean currently operates only in the UK.')
+            error_msg = validation_result.get('error', 'Invalid UK postcode. MultiBook currently operates only in the UK.')
             return Response({
                 'success': False,
                 'error': {

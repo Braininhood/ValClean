@@ -1,8 +1,8 @@
-# VALClean Booking System - Django Backend
+# MultiBook - Django Backend
 
 ## Overview
 
-This is the Django backend for the VALClean booking system. It provides RESTful API endpoints with security-focused shortened prefixes.
+This is the Django backend for the MultiBook multi-service booking system. It provides RESTful API endpoints with security-focused shortened prefixes.
 
 ## Project Structure
 
@@ -153,6 +153,6 @@ Follow the IMPLEMENTATION_ROADMAP.md for:
 ## Documentation
 
 See the main project documentation:
-- `../VALCLEAN_BEST_SOLUTION.md` - Complete solution
+- `../MULTIBOOK_BEST_SOLUTION.md` - Complete solution
 - `../IMPLEMENTATION_ROADMAP.md` - Step-by-step guide
 - `../TECHNICAL_ARCHITECTURE.md` - Technical specifications

@@ -2,7 +2,7 @@ APPOINTMENT REMINDER ⏰
 
 Dear Customer,
 
-This is a friendly reminder that you have an appointment with VALClean TOMORROW.
+This is a friendly reminder that you have an appointment with MultiBook TOMORROW.
 
 APPOINTMENT DETAILS
 -------------------
@@ -19,8 +19,8 @@ Address:
 We look forward to seeing you!
 
 Best regards,
-VALClean Team
+MultiBook Team
 
 ---
 This is an automated reminder email. Please do not reply directly to this message.
-VALClean - Professional Cleaning Services
+MultiBook - Professional Cleaning Services

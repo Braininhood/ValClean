@@ -1,6 +1,6 @@
-# VALClean – GitHub Setup Guide
+# MultiBook – GitHub Setup Guide
 
-This guide helps you put VALClean on GitHub in a clean, professional way and keep the repository structure correct.
+This guide helps you put MultiBook on GitHub in a clean, professional way and keep the repository structure correct.
 
 ---
 
@@ -8,7 +8,7 @@ This guide helps you put VALClean on GitHub in a clean, professional way and kee
 
 - **Git** installed ([git-scm.com](https://git-scm.com/)).
 - **GitHub account** ([github.com](https://github.com/)).
-- Project already in a folder (e.g. `d:\VALClean`).
+- Project already in a folder (e.g. `d:\MultiBook`).
 
 ---
 
@@ -17,7 +17,7 @@ This guide helps you put VALClean on GitHub in a clean, professional way and kee
 Your repo should look like this:
 
 ```
-VALClean/
+MultiBook/
 ├── .gitignore              # Root ignore (env, venv, node_modules, .next, etc.)
 ├── README.md                # Main project readme
 ├── GITHUB_SETUP.md          # This file
@@ -53,7 +53,7 @@ VALClean/
 In PowerShell (or Git Bash), from the project root:
 
 ```powershell
-cd d:\VALClean
+cd d:\MultiBook
 
 # Initialize repository (only if not already a git repo)
 git init
@@ -100,7 +100,7 @@ git add .
 git status
 
 # Commit with a clear message
-git commit -m "Initial commit: VALClean booking system (Django + Next.js)"
+git commit -m "Initial commit: MultiBook booking system (Django + Next.js)"
 ```
 
 Use a different message if this is not the first commit (e.g. “Add GitHub setup and AWS deployment docs”).
@@ -111,8 +111,8 @@ Use a different message if this is not the first commit (e.g. “Add GitHub setu
 
 1. Go to [github.com](https://github.com/) and sign in.
 2. Click **“+”** → **“New repository”**.
-3. **Repository name:** e.g. `VALClean` (or `valclean-booking`).
-4. **Description:** e.g. `VALClean booking system – Django + Next.js`.
+3. **Repository name:** e.g. `MultiBook` (or `multibook`).
+4. **Description:** e.g. `MultiBook booking system – Django + Next.js`.
 5. **Public** (or Private if you prefer).
 6. **Do not** add a README, .gitignore, or license here (you already have them in the project).
 7. Click **Create repository**.
@@ -125,10 +125,10 @@ GitHub will show commands; use these (replace with your GitHub username and repo
 
 ```powershell
 # Add GitHub as remote (use HTTPS or SSH)
-git remote add origin https://github.com/YOUR_USERNAME/VALClean.git
+git remote add origin https://github.com/YOUR_USERNAME/MultiBook.git
 
 # If you prefer SSH (after adding your SSH key to GitHub):
-# git remote add origin git@github.com:YOUR_USERNAME/VALClean.git
+# git remote add origin git@github.com:YOUR_USERNAME/MultiBook.git
 
 # Push main branch and set upstream
 git push -u origin main
@@ -137,7 +137,7 @@ git push -u origin main
 If the remote `origin` already exists but points to another URL:
 
 ```powershell
-git remote set-url origin https://github.com/YOUR_USERNAME/VALClean.git
+git remote set-url origin https://github.com/YOUR_USERNAME/MultiBook.git
 git push -u origin main
 ```
 

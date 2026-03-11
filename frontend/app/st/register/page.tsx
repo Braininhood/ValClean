@@ -116,7 +116,7 @@ function StaffRegisterPageContent() {
         <div>
           <h2 className="text-3xl font-bold text-center">Staff Registration</h2>
           <p className="mt-2 text-center text-muted-foreground">
-            Register for VALClean staff account
+            Register for MultiBook staff account
           </p>
           {validatingInvitation && (
             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">

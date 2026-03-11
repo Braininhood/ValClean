@@ -10,4 +10,4 @@ Reason: {{ reason|default:"—" }}
 Please review and approve or reject in the admin panel:
 {{ admin_url }}
 
-VALClean Team
+MultiBook Team

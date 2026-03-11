@@ -8,14 +8,14 @@ if (-not (Test-Path $psqlPath)) {
     exit 1
 }
 
-Write-Host "Creating PostgreSQL database for VALClean..." -ForegroundColor Cyan
+Write-Host "Creating PostgreSQL database for MultiBook..." -ForegroundColor Cyan
 Write-Host "psql path: $psqlPath" -ForegroundColor Gray
 Write-Host ""
 
 # Database configuration
-$dbName = "valclean_db"
-$dbUser = "valclean_user"
-$dbPassword = "valclean_pass"
+$dbName = "multibook_db"
+$dbUser = "multibook_user"
+$dbPassword = "multibook_pass"
 $superUser = "postgres"
 
 # Create SQL commands

@@ -2,9 +2,9 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'VALClean Booking System',
-    short_name: 'VALClean',
-    description: 'Professional booking system for VALClean cleaning services',
+    name: 'MultiBook Booking System',
+    short_name: 'MultiBook',
+    description: 'Professional booking system for MultiBook cleaning services',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

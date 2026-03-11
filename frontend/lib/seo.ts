@@ -3,7 +3,7 @@
  * Used for metadata, Open Graph, JSON-LD.
  * All values are safe strings (no empty or unterminated literals in serialized output).
  */
-const siteName = 'VALClean'
+const siteName = 'MultiBook'
 const siteTagline = 'Professional booking system for cleaning services'
 const defaultTitle = siteName + ' Booking System'
 const defaultDescription = siteTagline + '. Book cleaning services online.'
@@ -27,7 +27,7 @@ export const siteConfig = {
   description: defaultDescription,
   url: getBaseUrl(),
   locale: 'en_GB',
-  twitterHandle: 'VALClean',
+  twitterHandle: 'MultiBook',
 }
 
 export function getAbsoluteUrl(path: string): string {

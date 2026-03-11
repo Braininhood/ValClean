@@ -1,5 +1,5 @@
 """
-Script to create PostgreSQL database and user for VALClean project.
+Script to create PostgreSQL database and user for MultiBook project.
 Run this script to set up the database locally.
 
 Usage:
@@ -15,14 +15,14 @@ from psycopg2 import sql
 import sys
 
 # Database configuration
-DB_NAME = 'valclean_db'
-DB_USER = 'valclean_user'
-DB_PASSWORD = 'valclean_pass'
+DB_NAME = 'multibook_db'
+DB_USER = 'multibook_user'
+DB_PASSWORD = 'multibook_pass'
 
 def create_database(superuser='postgres', superuser_password=''):
     """Create PostgreSQL database and user."""
     
-    print("Setting up PostgreSQL database for VALClean...")
+    print("Setting up PostgreSQL database for MultiBook...")
     print(f"Using superuser: {superuser}")
     
     # First, connect to postgres database to create new database
