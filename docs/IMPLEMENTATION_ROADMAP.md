@@ -292,7 +292,7 @@ This document provides a **step-by-step implementation guide** for building the 
 **Note: We now work with Supabase.** Use Supabase where it fits to avoid duplicating work:
 - **Supabase Auth → OAuth (callback URL):**  
   **Callback URL (for OAuth):** `https://[PROJECT_REF].supabase.co/auth/v1/callback`  
-  Example: `https://lonmjafmvdvzevaggwem.supabase.co/auth/v1/callback`  
+  Example: `https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback`  
   Configure this in [Supabase Dashboard](https://supabase.com/dashboard) → Authentication → URL Configuration, and in each provider (Google, etc.) as the redirect URI.
 - **Supabase Auth → OAuth providers:** Enable Google in Dashboard → Authentication → Providers. **Microsoft (Azure AD / Outlook):** *Temporarily unavailable – waiting for customer access.* Reuse Google OAuth for calendar where possible (e.g. same token for Auth + Calendar scope).
 - **Supabase Database:** Calendar connection state (tokens, refresh tokens, provider, user link) lives in our Django models/tables already in Supabase (e.g. `calendar_sync` or profile-related tables).

@@ -31,7 +31,7 @@ This project uses **Supabase** for:
 - **Google OAuth**: Enable in [Supabase Dashboard](https://supabase.com/dashboard) → your project → **Authentication** → **Providers** → **Google**, then add your Google OAuth client ID/secret.
 - **Fix "Error 400: redirect_uri_mismatch"**: Google must allow Supabase’s callback URL. In [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services** → **Credentials** → open your **OAuth 2.0 Client ID** (Web application) → **Authorized redirect URIs** → add:
   - **`https://[YOUR_PROJECT_REF].supabase.co/auth/v1/callback`**
-  - Replace `[YOUR_PROJECT_REF]` with your Supabase project reference (e.g. `lonmjafmvdvzevaggwem`). Find it in Supabase Dashboard → **Settings** → **API** (Project URL contains it). Save the client; try “Sign in with Google” again.
+  - Replace `[YOUR_PROJECT_REF]` with your Supabase project reference (from your Supabase Dashboard). Find it in Supabase Dashboard → **Settings** → **API** (Project URL contains it). Save the client; try “Sign in with Google” again.
 - **Usage**: `lib/supabase/client.ts` creates the Supabase client; `hooks/use-supabase-auth.ts` provides `signIn`, `signUp`, `signOut`, etc. Use these for Supabase Auth (including Google OAuth).
 - **Secrets**: Never put the service role key on the frontend. Only anon/publishable key is safe in `NEXT_PUBLIC_*`.
 

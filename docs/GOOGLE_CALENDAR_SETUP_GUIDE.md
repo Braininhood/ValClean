@@ -144,10 +144,10 @@ GOOGLE_REDIRECT_URI=http://localhost:8000/api/calendar/google/callback/
 # GOOGLE_REDIRECT_URI=https://yourdomain.com/api/calendar/google/callback/
 ```
 
-**Example:**
+**Example (use placeholders, never commit real values):**
 ```bash
-GOOGLE_CLIENT_ID=123456789-abcdefghijklmnop.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=GOCSPX-abcdefghijklmnopqrstuvwxyz
+GOOGLE_CLIENT_ID=YOUR_CLIENT_ID.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=YOUR_CLIENT_SECRET
 GOOGLE_REDIRECT_URI=http://localhost:8000/api/calendar/google/callback/
 ```
 

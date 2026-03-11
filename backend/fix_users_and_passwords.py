@@ -35,14 +35,14 @@ for user in users:
         user.save()
         print(f"  Updated: superuser={user.is_superuser}, staff={user.is_staff}, active={user.is_active}")
     
-    # Reset password for all users to 'admin123'
-    user.set_password('admin123')
+    # Reset password (use env var or default for local dev only - change in production!)
+    default_pw = os.environ.get('FIX_USERS_PASSWORD', 'ChangeMe123!')
+    user.set_password(default_pw)
     user.save()
-    print(f"  ✓ Password reset to: admin123")
+    print(f"  ✓ Password reset (use FIX_USERS_PASSWORD env to override)")
     print()
 
 print("=" * 80)
 print("All users fixed!")
-print("\nDefault password for all users: admin123")
-print("Please change passwords after logging in!")
+print("\nPassword set via FIX_USERS_PASSWORD env or default. Change in production!")
 print("=" * 80)
